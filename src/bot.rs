@@ -57,6 +57,7 @@ impl DiceBot {
     }
 
     pub async fn sync(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // TODO: handle http 429
         let mut url = format!("https://{}/_matrix/client/r0/sync?access_token={}&timeout=3000",
                 self.config.matrix.home_server,
                 self.access_token);
@@ -75,6 +76,7 @@ impl DiceBot {
     }
 
     pub async fn logout(self) -> Result<(), Box<dyn std::error::Error>> {
+        // TODO: Write out next_batch
         self.client.post(&format!("https://{}/_matrix/client/r0/logout?access_token={}", self.config.matrix.home_server, self.access_token))
             .body("{}")
             .send()
