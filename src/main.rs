@@ -1,16 +1,14 @@
-use tokio::select;
-use tokio::signal::unix::{SignalKind, signal};
-use std::env;
+use serde::{self, Deserialize, Serialize};
 use std::collections::HashMap;
-use serde::{self, Serialize, Deserialize};
+use std::env;
+use tokio::select;
+use tokio::signal::unix::{signal, SignalKind};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "msgtype")]
 enum MessageContent {
     #[serde(rename = "m.text")]
-    Text {
-        body: String,
-    },
+    Text { body: String },
 
     #[serde(other)]
     Other,
@@ -77,10 +75,13 @@ struct SyncCommand {
 }
 
 async fn sync<S: AsRef<str>>(key: S) -> Result<(), Box<dyn std::error::Error>> {
-    let body = reqwest::get(&format!("https://matrix.org/_matrix/client/r0/sync?access_token={}&timeout=3000", key.as_ref()))
-        .await?
-        .text()
-        .await?;
+    let body = reqwest::get(&format!(
+        "https://matrix.org/_matrix/client/r0/sync?access_token={}&timeout=3000",
+        key.as_ref()
+    ))
+    .await?
+    .text()
+    .await?;
     let sync: SyncCommand = serde_json::from_str(&body)?;
     println!("{:#?}", sync);
     Ok(())
@@ -88,7 +89,10 @@ async fn sync<S: AsRef<str>>(key: S) -> Result<(), Box<dyn std::error::Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let key = std::env::args().skip(1).next().expect("Need a key as an argument");
+    let key = std::env::args()
+        .skip(1)
+        .next()
+        .expect("Need a key as an argument");
     let mut sigint = signal(SignalKind::interrupt())?;
 
     loop {
