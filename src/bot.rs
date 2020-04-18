@@ -1,33 +1,34 @@
 use serde::{self, Deserialize, Serialize};
-use reqwest::Client;
+use reqwest::{Client, Url};
 use crate::matrix::SyncCommand;
+use std::path::PathBuf;
+use std::fs;
 
+const USER_AGENT: &str = "AxFive Matrix DiceBot/0.1.0 (+https://gitlab.com/Taywee/axfive-matrix-dicebot)";
+
+/// The "matrix" section of the config, which gives home server, login information, and etc.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MatrixConfig {
-    user: String,
-    password: String,
-    home_server: String,
-    next_batch: Option<String>,
+    /// Your homeserver of choice, as an FQDN without scheme or path
+    pub home_server: String,
+
+    /// The next batch to grab.  This should be set automatically
+    pub next_batch: Option<String>,
+    pub login: toml::Value,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    matrix: MatrixConfig,
+    pub matrix: MatrixConfig,
 }
 
 pub struct DiceBot {
+    config_path: Option<PathBuf>,
     config: Config,
     access_token: String,
     next_batch: Option<String>,
     client: Client,
-}
-
-#[derive(Serialize, Debug)]
-struct LoginRequest<'a, 'b, 'c> {
-    #[serde(rename = "type")]
-    type_: &'a str,
-    user: &'b str,
-    password: &'c str,
+    home_server: Url,
 }
 
 #[derive(Deserialize, Debug)]
@@ -36,35 +37,65 @@ struct LoginResponse {
 }
 
 impl DiceBot {
-    pub async fn new(config: Config) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(config_path: Option<PathBuf>, config: Config) -> Result<Self, Box<dyn std::error::Error>> {
+        let home_server: Url = format!("https://{}", config.matrix.home_server).parse()?;
         let client = Client::new();
-        let request = LoginRequest {
-            type_: "m.login.password",
-            user: &config.matrix.user,
-            password: &config.matrix.password,
-        };
-        let response = client.post(&format!("https://{}/_matrix/client/r0/login", config.matrix.home_server))
-            .body(serde_json::to_string(&request)?)
+        let request = serde_json::to_string(&config.matrix.login)?;
+        let mut login_url = home_server.clone();
+        login_url.set_path("/_matrix/client/r0/login");
+        let response = client.post(login_url)
+            .header("user-agent", USER_AGENT)
+            .body(request)
             .send()
             .await?;
         let body: LoginResponse = serde_json::from_str(&response.text().await?)?;
+        let next_batch = config.matrix.next_batch.clone();
         Ok(DiceBot{
+            home_server,
+            config_path,
             client,
             config,
             access_token: body.access_token,
-            next_batch: None,
+            next_batch,
         })
     }
 
-    pub async fn sync(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        // TODO: handle http 429
-        let mut url = format!("https://{}/_matrix/client/r0/sync?access_token={}&timeout=3000",
-                self.config.matrix.home_server,
-                self.access_token);
-        if let Some(since) = &self.next_batch {
-            url.push_str(&format!("&since={}", since));
+    pub async fn from_path<P: Into<PathBuf>>(config_path: P) -> Result<Self, Box<dyn std::error::Error>> {
+        let config_path = config_path.into();
+        let config = {
+            let contents = fs::read_to_string(&config_path)?;
+            toml::from_str(&contents)?
+        };
+        DiceBot::new(Some(config_path), config).await
+    }
+
+    /// Build a url using the current home server and the given path, as well as appending the
+    /// access token
+    fn url(&self, path: &str, query: &[(&str, &str)]) -> Url {
+        let mut url = self.home_server.clone();
+        url.set_path(path);
+        {
+            let mut query_pairs = url.query_pairs_mut();
+            query_pairs.append_pair("access_token", &self.access_token);
+
+            for pair in query.iter() {
+                query_pairs.append_pair(pair.0, pair.1);
+            }
         }
-        let body = self.client.get(&url)
+
+        url
+    }
+
+    pub async fn sync(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut sync_url = self.url("/_matrix/client/r0/sync", &[("timeout", "30000")]);
+
+        // TODO: handle http 429
+        if let Some(since) = &self.next_batch {
+            sync_url.query_pairs_mut()
+                .append_pair("since", since);
+        }
+        let body = self.client.get(sync_url)
+            .header("user-agent", USER_AGENT)
             .send()
             .await?
             .text()
@@ -75,12 +106,21 @@ impl DiceBot {
         Ok(())
     }
 
-    pub async fn logout(self) -> Result<(), Box<dyn std::error::Error>> {
-        // TODO: Write out next_batch
-        self.client.post(&format!("https://{}/_matrix/client/r0/logout?access_token={}", self.config.matrix.home_server, self.access_token))
+    pub async fn logout(mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let logout_url = self.url("/_matrix/client/r0/logout", &[]);
+        self.client.post(logout_url)
+            .header("user-agent", USER_AGENT)
             .body("{}")
             .send()
             .await?;
+
+        self.config.matrix.next_batch = self.next_batch;
+
+        if let Some(config_path) = self.config_path {
+            let config = toml::to_string_pretty(&self.config)?;
+            fs::write(config_path, config)?;
+        }
+
         Ok(())
     }
 }

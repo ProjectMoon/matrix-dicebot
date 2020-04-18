@@ -1,8 +1,6 @@
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
-use axfive_matrix_dicebot::matrix::SyncCommand;
-use axfive_matrix_dicebot::bot::{DiceBot, Config};
-use std::fs::read_to_string;
+use axfive_matrix_dicebot::bot::DiceBot;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -10,12 +8,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .skip(1)
         .next()
         .expect("Need a config as an argument");
-    let config = {
-        let contents = read_to_string(config_path)?;
-        toml::from_str(&contents)?
-    };
     println!("Logging in");
-    let mut bot = DiceBot::new(config).await?;
+    let mut bot = DiceBot::from_path(config_path).await?;
     println!("Logged in");
 
     let mut sigint = signal(SignalKind::interrupt())?;
@@ -26,7 +20,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             _ = sigint.recv() => {
                 break;
             }
-            _ = bot.sync() => {
+            result = bot.sync() => {
+                result?;
             }
         }
     }
