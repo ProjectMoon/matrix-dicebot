@@ -17,11 +17,15 @@ pub struct MatrixConfig {
     pub login: toml::Value,
 }
 
+/// The base config, which is read from and written to by the bot
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub matrix: MatrixConfig,
 }
 
+/// The actual dicebot structure, which drives the entire operation.
+/// 
+/// This is the core of the dicebot program.
 pub struct DiceBot {
     config_path: Option<PathBuf>,
     config: Config,
@@ -37,6 +41,7 @@ struct LoginResponse {
 }
 
 impl DiceBot {
+    /// Create a new dicebot from the given config path and config
     pub async fn new(config_path: Option<PathBuf>, config: Config) -> Result<Self, Box<dyn std::error::Error>> {
         let home_server: Url = format!("https://{}", config.matrix.home_server).parse()?;
         let client = Client::new();
@@ -60,6 +65,7 @@ impl DiceBot {
         })
     }
 
+    /// Create a new dicebot, storing the config path to write it out  
     pub async fn from_path<P: Into<PathBuf>>(config_path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let config_path = config_path.into();
         let config = {
@@ -86,6 +92,7 @@ impl DiceBot {
         url
     }
 
+    /// Sync to the matrix homeserver, acting on events as necessary
     pub async fn sync(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let mut sync_url = self.url("/_matrix/client/r0/sync", &[("timeout", "30000")]);
 
@@ -106,6 +113,8 @@ impl DiceBot {
         Ok(())
     }
 
+    /// Log off of the matrix server, also writing out the config file if one was given in
+    /// construction
     pub async fn logout(mut self) -> Result<(), Box<dyn std::error::Error>> {
         let logout_url = self.url("/_matrix/client/r0/logout", &[]);
         self.client.post(logout_url)
