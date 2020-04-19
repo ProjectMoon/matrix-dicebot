@@ -1,10 +1,11 @@
-use serde::{self, Deserialize, Serialize};
-use reqwest::{Client, Url};
 use crate::matrix::SyncCommand;
-use std::path::PathBuf;
+use reqwest::{Client, Url};
+use serde::{self, Deserialize, Serialize};
 use std::fs;
+use std::path::PathBuf;
 
-const USER_AGENT: &str = "AxFive Matrix DiceBot/0.1.0 (+https://gitlab.com/Taywee/axfive-matrix-dicebot)";
+const USER_AGENT: &str =
+    "AxFive Matrix DiceBot/0.1.0 (+https://gitlab.com/Taywee/axfive-matrix-dicebot)";
 
 /// The "matrix" section of the config, which gives home server, login information, and etc.
 #[derive(Serialize, Deserialize, Debug)]
@@ -24,7 +25,7 @@ pub struct Config {
 }
 
 /// The actual dicebot structure, which drives the entire operation.
-/// 
+///
 /// This is the core of the dicebot program.
 pub struct DiceBot {
     config_path: Option<PathBuf>,
@@ -42,20 +43,24 @@ struct LoginResponse {
 
 impl DiceBot {
     /// Create a new dicebot from the given config path and config
-    pub async fn new(config_path: Option<PathBuf>, config: Config) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(
+        config_path: Option<PathBuf>,
+        config: Config,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let home_server: Url = format!("https://{}", config.matrix.home_server).parse()?;
         let client = Client::new();
         let request = serde_json::to_string(&config.matrix.login)?;
         let mut login_url = home_server.clone();
         login_url.set_path("/_matrix/client/r0/login");
-        let response = client.post(login_url)
+        let response = client
+            .post(login_url)
             .header("user-agent", USER_AGENT)
             .body(request)
             .send()
             .await?;
         let body: LoginResponse = serde_json::from_str(&response.text().await?)?;
         let next_batch = config.matrix.next_batch.clone();
-        Ok(DiceBot{
+        Ok(DiceBot {
             home_server,
             config_path,
             client,
@@ -66,7 +71,9 @@ impl DiceBot {
     }
 
     /// Create a new dicebot, storing the config path to write it out  
-    pub async fn from_path<P: Into<PathBuf>>(config_path: P) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn from_path<P: Into<PathBuf>>(
+        config_path: P,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let config_path = config_path.into();
         let config = {
             let contents = fs::read_to_string(&config_path)?;
@@ -98,10 +105,11 @@ impl DiceBot {
 
         // TODO: handle http 429
         if let Some(since) = &self.next_batch {
-            sync_url.query_pairs_mut()
-                .append_pair("since", since);
+            sync_url.query_pairs_mut().append_pair("since", since);
         }
-        let body = self.client.get(sync_url)
+        let body = self
+            .client
+            .get(sync_url)
             .header("user-agent", USER_AGENT)
             .send()
             .await?
@@ -117,7 +125,8 @@ impl DiceBot {
     /// construction
     pub async fn logout(mut self) -> Result<(), Box<dyn std::error::Error>> {
         let logout_url = self.url("/_matrix/client/r0/logout", &[]);
-        self.client.post(logout_url)
+        self.client
+            .post(logout_url)
             .header("user-agent", USER_AGENT)
             .body("{}")
             .send()

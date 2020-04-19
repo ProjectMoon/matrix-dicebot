@@ -1,2 +1,2 @@
-pub mod matrix;
 pub mod bot;
+pub mod matrix;

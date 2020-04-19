@@ -1,6 +1,6 @@
+use axfive_matrix_dicebot::bot::DiceBot;
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
-use axfive_matrix_dicebot::bot::DiceBot;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

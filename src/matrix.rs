@@ -5,7 +5,7 @@ use std::collections::HashMap;
 #[serde(tag = "msgtype")]
 #[serde(rename = "m.text")]
 pub struct TextMessage {
-    body: String
+    body: String,
 }
 
 // Need untagged because redactions are blank
