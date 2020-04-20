@@ -71,8 +71,8 @@ fn parse_bonus(input: &str) -> IResult<&str, u32> {
 fn parse_sign(input: &str) -> IResult<&str, Sign> {
     let (input, _) = eat_whitespace(input)?;
     named!(sign(&str) -> Sign, alt!(
-            tag!("+") => { |_| Sign::Plus } |
-            tag!("-") => { |_| Sign::Minus }
+            complete!(tag!("+")) => { |_| Sign::Plus } |
+            complete!(tag!("-")) => { |_| Sign::Minus }
     ));
 
     let (input, sign) = sign(input)?;
@@ -115,7 +115,7 @@ fn parse_element_expression(input: &str) -> IResult<&str, ElementExpression> {
     let (input, rest) = if input.trim().is_empty() {
         (input, vec![first])
     } else {
-        named!(rest_elements(&str) -> Vec<SignedElement>, many0!(complete!(parse_signed_element)));
+        named!(rest_elements(&str) -> Vec<SignedElement>, many0!(parse_signed_element));
         let (input, mut rest) = rest_elements(input)?;
         rest.insert(0, first);
         (input, rest)
