@@ -7,38 +7,13 @@ use nom::{
     tag, IResult,
 };
 
-#[derive(Debug, PartialEq, Eq)]
-struct Dice {
-    count: u32,
-    sides: u32,
-}
+use crate::dice::{Dice, Element, SignedElement, ElementExpression};
 
-impl Dice {
-    fn new(count: u32, sides: u32) -> Dice {
-        Dice { count, sides }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-enum Element {
-    Dice(Dice),
-    Bonus(u32),
-}
-
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum Sign {
     Plus,
     Minus,
 }
-
-#[derive(Debug, PartialEq, Eq)]
-enum SignedElement {
-    Positive(Element),
-    Negative(Element),
-}
-
-#[derive(Debug, PartialEq, Eq)]
-struct ElementExpression(Vec<SignedElement>);
 
 fn is_whitespace(input: char) -> bool {
     input == ' ' || input == '\n' || input == '\t' || input == '\r'
@@ -205,3 +180,4 @@ mod tests {
         );
     }
 }
+
