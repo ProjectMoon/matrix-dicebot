@@ -1,4 +1,4 @@
-use crate::matrix::SyncCommand;
+use crate::matrix::{SyncCommand, Event, RoomEvent, MessageContent};
 use reqwest::{Client, Url};
 use serde::{self, Deserialize, Serialize};
 use std::fs;
@@ -116,7 +116,27 @@ impl DiceBot {
             .text()
             .await?;
         let sync: SyncCommand = serde_json::from_str(&body).unwrap();
-        println!("{:#?}", sync);
+        // First join invited rooms
+        for room in sync.rooms.invite.keys() {
+            let mut join_url = self.url(&format!("/_matrix/client/r0/rooms/{}/join", room), &[]);
+            self.client.post(join_url)
+                .header("user-agent", USER_AGENT)
+                .send()
+                .await?;
+        }
+
+        for (room_id, room) in sync.rooms.join.iter() {
+            for event in &room.timeline.events {
+                if let Event::Room(RoomEvent{
+                    content: MessageContent::Text(message),
+                    ..
+                }) = event {
+                    // TODO: create command parser (maybe command.rs) to parse !roll/!r commands
+                    // and reply
+                    println!("Body: {}", message.body());
+                }
+            }
+        }
         self.next_batch = Some(sync.next_batch);
         Ok(())
     }

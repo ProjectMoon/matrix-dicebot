@@ -8,6 +8,12 @@ pub struct TextMessage {
     body: String,
 }
 
+impl TextMessage {
+    pub fn body(&self) -> &str {
+        &self.body
+    }
+}
+
 // Need untagged because redactions are blank
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
@@ -17,29 +23,9 @@ pub enum MessageContent {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "membership")]
-pub enum MemberContent {
-    #[serde(rename = "invite")]
-    Invite {
-        // TODO: maybe leave empty?
-        #[serde(default)]
-        #[serde(alias = "displayname")]
-        display_name: Option<String>,
-    },
-
-    #[serde(other)]
-    Other,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct RoomEvent {
     pub content: MessageContent,
     pub event_id: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MemberEvent {
-    pub content: MemberContent,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -47,8 +33,6 @@ pub struct MemberEvent {
 pub enum Event {
     #[serde(rename = "m.room.message")]
     Room(RoomEvent),
-    #[serde(rename = "m.room.member")]
-    Member(MemberEvent),
 
     #[serde(other)]
     Other,
