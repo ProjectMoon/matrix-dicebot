@@ -1,9 +1,13 @@
+use axfive_matrix_dicebot::dice::parser::parse_element_expression;
+use axfive_matrix_dicebot::roll::{Roll, Rolled};
 use std::error::Error;
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let _roll_string = std::env::args().skip(1).collect::<Vec<String>>().join(" ");
-    // first regex needs to be different because the sign is mandatory for the rest
-    //let expression = parse_expression(&roll_string);
-    //println!("{:?}", expression);
+fn main() -> Result<(), String> {
+    let roll_string = std::env::args().skip(1).collect::<Vec<String>>().join(" ");
+    let (_tail, expression) = match parse_element_expression(&roll_string) {
+        Ok(response) => response,
+        Err(e) => return Err(e.to_string()),
+    };
+    println!("{}", expression.roll());
     Ok(())
 }

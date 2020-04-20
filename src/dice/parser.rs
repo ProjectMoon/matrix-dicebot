@@ -7,7 +7,7 @@ use nom::{
     tag, IResult,
 };
 
-use crate::dice::{Dice, Element, SignedElement, ElementExpression};
+use crate::dice::{Dice, Element, ElementExpression, SignedElement};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum Sign {
@@ -78,7 +78,7 @@ fn parse_signed_element(input: &str) -> IResult<&str, SignedElement> {
 }
 
 // Parse a full element expression.  Eats whitespace.
-fn parse_element_expression(input: &str) -> IResult<&str, ElementExpression> {
+pub fn parse_element_expression(input: &str) -> IResult<&str, ElementExpression> {
     named!(first_element(&str) -> SignedElement, alt!(
             parse_signed_element => { |e| e } |
             parse_element => { |e| SignedElement::Positive(e) }
@@ -180,4 +180,3 @@ mod tests {
         );
     }
 }
-
