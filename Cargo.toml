@@ -11,6 +11,7 @@ reqwest = "0.10"
 serde_json = "1"
 toml = "0.5"
 nom = "5"
+rand = "0.7"
 
 [dependencies.serde]
 version = "1"

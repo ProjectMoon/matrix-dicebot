@@ -1,13 +1,10 @@
 use nom::{
     alt,
-    tag,
-    complete,
-    named,
-    many0,
-    IResult,
     bytes::complete::{tag, take_while},
     character::complete::digit1,
-    sequence::tuple
+    complete, many0, named,
+    sequence::tuple,
+    tag, IResult,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -18,10 +15,7 @@ struct Dice {
 
 impl Dice {
     fn new(count: u32, sides: u32) -> Dice {
-        Dice {
-            count,
-            sides,
-        }
+        Dice { count, sides }
     }
 }
 
@@ -58,7 +52,10 @@ fn eat_whitespace(input: &str) -> IResult<&str, ()> {
 // Parse a dice expression.  Does not eat whitespace
 fn parse_dice(input: &str) -> IResult<&str, Dice> {
     let (input, (count, _, sides)) = tuple((digit1, tag("d"), digit1))(input)?;
-    Ok((input, Dice::new(count.parse().unwrap(), sides.parse().unwrap())))
+    Ok((
+        input,
+        Dice::new(count.parse().unwrap(), sides.parse().unwrap()),
+    ))
 }
 
 // Parse a single digit expression.  Does not eat whitespace
@@ -136,29 +133,75 @@ mod tests {
 
     #[test]
     fn element_test() {
-        assert_eq!(parse_element("  \t\n\r\n 8d7 \n"), Ok((" \n", Element::Dice(Dice::new(8, 7)))));
-        assert_eq!(parse_element("  \t\n\r\n 8 \n"), Ok((" \n", Element::Bonus(8))));
+        assert_eq!(
+            parse_element("  \t\n\r\n 8d7 \n"),
+            Ok((" \n", Element::Dice(Dice::new(8, 7))))
+        );
+        assert_eq!(
+            parse_element("  \t\n\r\n 8 \n"),
+            Ok((" \n", Element::Bonus(8)))
+        );
     }
 
     #[test]
     fn signed_element_test() {
-        assert_eq!(parse_signed_element("+ 7"), Ok(("", SignedElement::Positive(Element::Bonus(7)))));
-        assert_eq!(parse_signed_element("  \t\n\r\n- 8 \n"), Ok((" \n", SignedElement::Negative(Element::Bonus(8)))));
-        assert_eq!(parse_signed_element("  \t\n\r\n- 8d4 \n"), Ok((" \n", SignedElement::Negative(Element::Dice(Dice::new(8, 4))))));
-        assert_eq!(parse_signed_element("  \t\n\r\n+ 8d4 \n"), Ok((" \n", SignedElement::Positive(Element::Dice(Dice::new(8, 4))))));
+        assert_eq!(
+            parse_signed_element("+ 7"),
+            Ok(("", SignedElement::Positive(Element::Bonus(7))))
+        );
+        assert_eq!(
+            parse_signed_element("  \t\n\r\n- 8 \n"),
+            Ok((" \n", SignedElement::Negative(Element::Bonus(8))))
+        );
+        assert_eq!(
+            parse_signed_element("  \t\n\r\n- 8d4 \n"),
+            Ok((
+                " \n",
+                SignedElement::Negative(Element::Dice(Dice::new(8, 4)))
+            ))
+        );
+        assert_eq!(
+            parse_signed_element("  \t\n\r\n+ 8d4 \n"),
+            Ok((
+                " \n",
+                SignedElement::Positive(Element::Dice(Dice::new(8, 4)))
+            ))
+        );
     }
 
     #[test]
     fn element_expression_test() {
-        assert_eq!(parse_element_expression("8d4"), Ok(("", ElementExpression(vec![SignedElement::Positive(Element::Dice(Dice::new(8, 4)))]))));
-        assert_eq!(parse_element_expression(" -  8d4 \n "), Ok((" \n ", ElementExpression(vec![SignedElement::Negative(Element::Dice(Dice::new(8, 4)))]))));
-        assert_eq!(parse_element_expression("\t3d4 + 7 - 5 - 6d12 + 1d1 + 53 1d5 "), Ok((" 1d5 ", ElementExpression(vec![
-            SignedElement::Positive(Element::Dice(Dice::new(3, 4))),
-            SignedElement::Positive(Element::Bonus(7)),
-            SignedElement::Negative(Element::Bonus(5)),
-            SignedElement::Negative(Element::Dice(Dice::new(6, 12))),
-            SignedElement::Positive(Element::Dice(Dice::new(1, 1))),
-            SignedElement::Positive(Element::Bonus(53)),
-        ]))));
+        assert_eq!(
+            parse_element_expression("8d4"),
+            Ok((
+                "",
+                ElementExpression(vec![SignedElement::Positive(Element::Dice(Dice::new(
+                    8, 4
+                )))])
+            ))
+        );
+        assert_eq!(
+            parse_element_expression(" -  8d4 \n "),
+            Ok((
+                " \n ",
+                ElementExpression(vec![SignedElement::Negative(Element::Dice(Dice::new(
+                    8, 4
+                )))])
+            ))
+        );
+        assert_eq!(
+            parse_element_expression("\t3d4 + 7 - 5 - 6d12 + 1d1 + 53 1d5 "),
+            Ok((
+                " 1d5 ",
+                ElementExpression(vec![
+                    SignedElement::Positive(Element::Dice(Dice::new(3, 4))),
+                    SignedElement::Positive(Element::Bonus(7)),
+                    SignedElement::Negative(Element::Bonus(5)),
+                    SignedElement::Negative(Element::Dice(Dice::new(6, 12))),
+                    SignedElement::Positive(Element::Dice(Dice::new(1, 1))),
+                    SignedElement::Positive(Element::Bonus(53)),
+                ])
+            ))
+        );
     }
 }
