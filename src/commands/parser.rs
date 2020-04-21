@@ -1,8 +1,5 @@
 use nom::{
-    bytes::complete::{tag, take_while},
-    character::complete::digit1,
-    character::is_alphabetic,
-    complete, many0, named,
+    complete, named,
     sequence::tuple,
     switch, tag, take_while, tuple, IResult,
 };
