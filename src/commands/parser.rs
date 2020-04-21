@@ -1,7 +1,10 @@
 use nom::{
-    alt,
+    tuple,
+    switch,
+    take_while,
     bytes::complete::{tag, take_while},
     character::complete::digit1,
+    character::is_alphabetic,
     complete, many0, named,
     sequence::tuple,
     tag, IResult,
@@ -12,104 +15,30 @@ use crate::commands::{Command, RollCommand};
 use crate::dice::parser::parse_element_expression;
 
 // Parse a roll expression.
-fn parse_roll(input: &str) -> IResult<&str, Command> {
-    named!(invocation(&str) -> &str, alt!(complete!(tag!("!r")) | complete!(tag!("!roll"))));
-    let (input, _) = eat_whitespace(input)?;
-    let (input, _) = invocation(input)?;
+fn parse_roll(input: &str) -> IResult<&str, RollCommand> {
     let (input, _) = eat_whitespace(input)?;
     let (input, expression) = parse_element_expression(input)?;
-    Ok((input, Command::Roll(RollCommand(expression))))
+    Ok((input, RollCommand(expression)))
 }
 
-// Parse a command expression.
-pub fn parse_command(input: &str) -> IResult<&str, Command> {
-    // Add new commands to alt!
-    named!(command(&str) -> Command, alt!(parse_roll));
-    command(input)
+// Potentially parse a command expression.  If we recognize the command, an error should be raised
+// if the command is misparsed.  If we don't recognize the command, ignore it.
+pub fn parse_command(original_input: &str) -> IResult<&str, Option<Box<dyn Command>>> {
+    let (input, _) = eat_whitespace(original_input)?;
+    named!(command(&str) -> (&str, &str), tuple!(complete!(tag!("!")), complete!(take_while!(char::is_alphabetic))));
+    let (input, command) = match command(input) {
+        // Strip the exclamation mark
+        Ok((input, (_, result))) => (input, result),
+        Err(e) => return Ok((original_input, None)),
+    };
+    let (input, command): (&str, Box<dyn Command>) = match command {
+        "r" | "roll" => {
+            let (input, command) = parse_roll(input)?;
+            let command: Box<dyn Command> = Box::new(command);
+            (input, command)
+        },
+        // No recognized command, ignore this.
+        _ => return Ok((original_input, None)),
+    };
+    Ok((input, Some(command)))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn dice_test() {
-        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4))));
-        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40))));
-        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7))));
-    }
-
-    #[test]
-    fn element_test() {
-        assert_eq!(
-            parse_element("  \t\n\r\n 8d7 \n"),
-            Ok((" \n", Element::Dice(Dice::new(8, 7))))
-        );
-        assert_eq!(
-            parse_element("  \t\n\r\n 8 \n"),
-            Ok((" \n", Element::Bonus(8)))
-        );
-    }
-
-    #[test]
-    fn signed_element_test() {
-        assert_eq!(
-            parse_signed_element("+ 7"),
-            Ok(("", SignedElement::Positive(Element::Bonus(7))))
-        );
-        assert_eq!(
-            parse_signed_element("  \t\n\r\n- 8 \n"),
-            Ok((" \n", SignedElement::Negative(Element::Bonus(8))))
-        );
-        assert_eq!(
-            parse_signed_element("  \t\n\r\n- 8d4 \n"),
-            Ok((
-                " \n",
-                SignedElement::Negative(Element::Dice(Dice::new(8, 4)))
-            ))
-        );
-        assert_eq!(
-            parse_signed_element("  \t\n\r\n+ 8d4 \n"),
-            Ok((
-                " \n",
-                SignedElement::Positive(Element::Dice(Dice::new(8, 4)))
-            ))
-        );
-    }
-
-    #[test]
-    fn element_expression_test() {
-        assert_eq!(
-            parse_element_expression("8d4"),
-            Ok((
-                "",
-                ElementExpression(vec![SignedElement::Positive(Element::Dice(Dice::new(
-                    8, 4
-                )))])
-            ))
-        );
-        assert_eq!(
-            parse_element_expression(" -  8d4 \n "),
-            Ok((
-                " \n ",
-                ElementExpression(vec![SignedElement::Negative(Element::Dice(Dice::new(
-                    8, 4
-                )))])
-            ))
-        );
-        assert_eq!(
-            parse_element_expression("\t3d4 + 7 - 5 - 6d12 + 1d1 + 53 1d5 "),
-            Ok((
-                " 1d5 ",
-                ElementExpression(vec![
-                    SignedElement::Positive(Element::Dice(Dice::new(3, 4))),
-                    SignedElement::Positive(Element::Bonus(7)),
-                    SignedElement::Negative(Element::Bonus(5)),
-                    SignedElement::Negative(Element::Dice(Dice::new(6, 12))),
-                    SignedElement::Positive(Element::Dice(Dice::new(1, 1))),
-                    SignedElement::Positive(Element::Bonus(53)),
-                ])
-            ))
-        );
-    }
-}
-

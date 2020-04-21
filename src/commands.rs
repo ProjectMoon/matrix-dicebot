@@ -4,27 +4,44 @@ use nom::error::ErrorKind;
 use nom::IResult;
 pub mod parser;
 
-pub struct RollCommand(ElementExpression);
-
-pub enum Command {
-    Roll(RollCommand),
+pub struct Execution {
+    plain: String,
+    html: String,
 }
 
-impl Command {
-    pub fn parse<'a>(input: &'a str) -> IResult<&'a str, Command> {
-        parser::parse_command(input)
+impl Execution {
+    pub fn plain(&self) -> &str {
+        &self.plain
     }
 
-    // Type subject to change
-    pub fn execute(self) -> String {
-        match self {
-            Command::Roll(command) => command.execute(),
+    pub fn html(&self) -> &str {
+        &self.html
+    }
+}
+
+pub struct RollCommand(ElementExpression);
+
+pub trait Command {
+    fn execute(&self) -> Execution;
+}
+
+impl Command for RollCommand {
+    fn execute(&self) -> Execution {
+        let roll = self.0.roll();
+        let plain = format!("Dice: {}\nResult: {}", self.0, roll);
+        let html = format!("<strong>Dice:</strong> {}<br><strong>Result</strong>: {}", self.0, roll);
+        Execution {
+            plain,
+            html,
         }
     }
 }
 
-impl RollCommand {
-    pub fn execute(self) -> String {
-        self.0.roll().to_string()
+pub fn parse_command(s: &str) -> Option<Result<Box<dyn Command>, String>> {
+    // Ignore trailing input, if any.
+    match parser::parse_command(s) {
+        Ok((_, Some(command))) => Some(Ok(command)),
+        Ok((_, None)) => None,
+        Err(err) => Some(Err(err.to_string())),
     }
 }
