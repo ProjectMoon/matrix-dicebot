@@ -36,11 +36,10 @@ impl Command for RollCommand {
     }
 }
 
-pub fn parse_command(s: &str) -> Option<Result<Box<dyn Command>, String>> {
+pub fn parse_command(s: &str) -> Result<Option<Box<dyn Command>>, String> {
     // Ignore trailing input, if any.
     match parser::parse_command(s) {
-        Ok((_, Some(command))) => Some(Ok(command)),
-        Ok((_, None)) => None,
-        Err(err) => Some(Err(err.to_string())),
+        Ok((_, result)) => Ok(result),
+        Err(err) => Err(err.to_string()),
     }
 }
