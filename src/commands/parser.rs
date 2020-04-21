@@ -7,85 +7,25 @@ use nom::{
     tag, IResult,
 };
 
-use crate::dice::{Dice, Element, ElementExpression, SignedElement};
 use crate::parser::eat_whitespace;
+use crate::commands::{Command, RollCommand};
+use crate::dice::parser::parse_element_expression;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum Sign {
-    Plus,
-    Minus,
-}
-
-// Parse a dice expression.  Does not eat whitespace
-fn parse_dice(input: &str) -> IResult<&str, Dice> {
-    let (input, (count, _, sides)) = tuple((digit1, tag("d"), digit1))(input)?;
-    Ok((
-        input,
-        Dice::new(count.parse().unwrap(), sides.parse().unwrap()),
-    ))
-}
-
-// Parse a single digit expression.  Does not eat whitespace
-fn parse_bonus(input: &str) -> IResult<&str, u32> {
-    let (input, bonus) = digit1(input)?;
-    Ok((input, bonus.parse().unwrap()))
-}
-
-// Parse a sign expression.  Eats whitespace.
-fn parse_sign(input: &str) -> IResult<&str, Sign> {
+// Parse a roll expression.
+fn parse_roll(input: &str) -> IResult<&str, Command> {
+    named!(invocation(&str) -> &str, alt!(complete!(tag!("!r")) | complete!(tag!("!roll"))));
     let (input, _) = eat_whitespace(input)?;
-    named!(sign(&str) -> Sign, alt!(
-            complete!(tag!("+")) => { |_| Sign::Plus } |
-            complete!(tag!("-")) => { |_| Sign::Minus }
-    ));
-
-    let (input, sign) = sign(input)?;
-    Ok((input, sign))
+    let (input, _) = invocation(input)?;
+    let (input, _) = eat_whitespace(input)?;
+    let (input, expression) = parse_element_expression(input)?;
+    Ok((input, Command::Roll(RollCommand(expression))))
 }
 
-// Parse an element expression.  Eats whitespace.
-fn parse_element(input: &str) -> IResult<&str, Element> {
-    let (input, _) = eat_whitespace(input)?;
-    named!(element(&str) -> Element, alt!(
-            parse_dice => { |d| Element::Dice(d) } |
-            parse_bonus => { |b| Element::Bonus(b) }
-    ));
-
-    let (input, element) = element(input)?;
-    Ok((input, element))
-}
-
-// Parse a signed element expression.  Eats whitespace.
-fn parse_signed_element(input: &str) -> IResult<&str, SignedElement> {
-    let (input, _) = eat_whitespace(input)?;
-    let (input, sign) = parse_sign(input)?;
-    let (input, _) = eat_whitespace(input)?;
-
-    let (input, element) = parse_element(input)?;
-    let element = match sign {
-        Sign::Plus => SignedElement::Positive(element),
-        Sign::Minus => SignedElement::Negative(element),
-    };
-    Ok((input, element))
-}
-
-// Parse a full element expression.  Eats whitespace.
-pub fn parse_element_expression(input: &str) -> IResult<&str, ElementExpression> {
-    named!(first_element(&str) -> SignedElement, alt!(
-            parse_signed_element => { |e| e } |
-            parse_element => { |e| SignedElement::Positive(e) }
-    ));
-    let (input, first) = first_element(input)?;
-    let (input, rest) = if input.trim().is_empty() {
-        (input, vec![first])
-    } else {
-        named!(rest_elements(&str) -> Vec<SignedElement>, many0!(parse_signed_element));
-        let (input, mut rest) = rest_elements(input)?;
-        rest.insert(0, first);
-        (input, rest)
-    };
-
-    Ok((input, ElementExpression(rest)))
+// Parse a command expression.
+pub fn parse_command(input: &str) -> IResult<&str, Command> {
+    // Add new commands to alt!
+    named!(command(&str) -> Command, alt!(parse_roll));
+    command(input)
 }
 
 #[cfg(test)]
@@ -172,3 +112,4 @@ mod tests {
         );
     }
 }
+
