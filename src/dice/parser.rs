@@ -1,10 +1,6 @@
 use nom::{
-    alt,
-    bytes::complete::{tag, take_while},
-    character::complete::digit1,
-    complete, many0, named,
-    sequence::tuple,
-    tag, IResult,
+    alt, bytes::complete::tag, character::complete::digit1, complete, many0, named,
+    sequence::tuple, tag, IResult,
 };
 
 use crate::dice::{Dice, Element, ElementExpression, SignedElement};

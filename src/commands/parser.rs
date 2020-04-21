@@ -1,18 +1,15 @@
 use nom::{
-    tuple,
-    switch,
-    take_while,
     bytes::complete::{tag, take_while},
     character::complete::digit1,
     character::is_alphabetic,
     complete, many0, named,
     sequence::tuple,
-    tag, IResult,
+    switch, tag, take_while, tuple, IResult,
 };
 
-use crate::parser::eat_whitespace;
 use crate::commands::{Command, RollCommand};
 use crate::dice::parser::parse_element_expression;
+use crate::parser::eat_whitespace;
 
 // Parse a roll expression.
 fn parse_roll(input: &str) -> IResult<&str, RollCommand> {
@@ -29,14 +26,14 @@ pub fn parse_command(original_input: &str) -> IResult<&str, Option<Box<dyn Comma
     let (input, command) = match command(input) {
         // Strip the exclamation mark
         Ok((input, (_, result))) => (input, result),
-        Err(e) => return Ok((original_input, None)),
+        Err(_e) => return Ok((original_input, None)),
     };
     let (input, command) = match command {
         "r" | "roll" => {
             let (input, command) = parse_roll(input)?;
             let command: Box<dyn Command> = Box::new(command);
             (input, command)
-        },
+        }
         // No recognized command, ignore this.
         _ => return Ok((original_input, None)),
     };

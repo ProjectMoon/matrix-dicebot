@@ -1,7 +1,4 @@
-use nom::{
-    bytes::complete::take_while,
-    IResult,
-};
+use nom::{bytes::complete::take_while, IResult};
 
 fn is_whitespace(input: char) -> bool {
     input == ' ' || input == '\n' || input == '\t' || input == '\r'

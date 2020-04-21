@@ -1,7 +1,6 @@
 use crate::dice::ElementExpression;
-use crate::roll::{Roll, Rolled};
-use nom::error::ErrorKind;
-use nom::IResult;
+use crate::roll::Roll;
+
 pub mod parser;
 
 pub struct Execution {
@@ -29,11 +28,11 @@ impl Command for RollCommand {
     fn execute(&self) -> Execution {
         let roll = self.0.roll();
         let plain = format!("Dice: {}\nResult: {}", self.0, roll);
-        let html = format!("<strong>Dice:</strong> {}<br><strong>Result</strong>: {}", self.0, roll);
-        Execution {
-            plain,
-            html,
-        }
+        let html = format!(
+            "<strong>Dice:</strong> {}<br><strong>Result</strong>: {}",
+            self.0, roll
+        );
+        Execution { plain, html }
     }
 }
 
