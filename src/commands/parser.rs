@@ -31,7 +31,7 @@ pub fn parse_command(original_input: &str) -> IResult<&str, Option<Box<dyn Comma
         Ok((input, (_, result))) => (input, result),
         Err(e) => return Ok((original_input, None)),
     };
-    let (input, command): (&str, Box<dyn Command>) = match command {
+    let (input, command) = match command {
         "r" | "roll" => {
             let (input, command) = parse_roll(input)?;
             let command: Box<dyn Command> = Box::new(command);
