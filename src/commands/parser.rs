@@ -1,8 +1,4 @@
-use nom::{
-    complete, named,
-    sequence::tuple,
-    switch, tag, take_while, tuple, IResult,
-};
+use nom::{complete, named, tag, take_while, tuple, IResult};
 
 use crate::commands::{Command, RollCommand};
 use crate::dice::parser::parse_element_expression;
