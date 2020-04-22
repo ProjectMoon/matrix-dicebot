@@ -136,7 +136,7 @@ impl DiceBot {
             for event in &room.timeline.events {
                 if let Event::Room(RoomEvent {
                     sender,
-                    event_id,
+                    event_id: _,
                     content: MessageContent::Text(message),
                     ..
                 }) = event
@@ -155,7 +155,7 @@ impl DiceBot {
                     };
 
                     let plain = format!("{}\n{}", sender, plain);
-                    let html = format!("<p>{}</p>\n{}", sender, plain);
+                    let html = format!("<p>{}</p>\n{}", sender, html);
 
                     let message = NoticeMessage {
                         body: plain,
@@ -164,7 +164,7 @@ impl DiceBot {
                     };
 
                     self.txn_id += 1;
-                    let mut send_url = self.url(format!("/_matrix/client/r0/rooms/{}/send/m.room.message/{}", room_id, self.txn_id), &[]);
+                    let send_url = self.url(format!("/_matrix/client/r0/rooms/{}/send/m.room.message/{}", room_id, self.txn_id), &[]);
                     self.client
                         .put(send_url)
                         .header("user-agent", USER_AGENT)
