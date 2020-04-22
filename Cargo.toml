@@ -1,10 +1,9 @@
 [package]
 name = "axfive-matrix-dicebot"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Taylor C. Richberger <taywee@gmx.com>"]
 edition = "2018"
 license = 'MIT'
-license-file = 'LICENSE'
 description = 'A simple async Matrix dicebot'
 readme = 'README.md'
 repository = 'https://gitlab.com/Taywee/axfive-matrix-dicebot'
