@@ -15,9 +15,15 @@ pub struct MatrixConfig {
     pub home_server: String,
 
     /// The next batch to grab.  This should be set automatically
+    #[serde(default)]
     pub next_batch: Option<String>,
+
+    /// The transaction ID.  This should be set automatically
     #[serde(default)]
     pub txn_id: u64,
+    
+    /// The login table.  This may be set to whatever you wish, depending on your login method,
+    /// though multi-step logins (like challenge-based) won't work here.
     pub login: toml::Value,
 }
 

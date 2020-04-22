@@ -15,7 +15,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut sigint = signal(SignalKind::interrupt())?;
 
     loop {
-        println!("Loop");
         select! {
             _ = sigint.recv() => {
                 break;
