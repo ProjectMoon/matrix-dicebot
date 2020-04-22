@@ -1,4 +1,5 @@
-use crate::matrix::{Event, MessageContent, RoomEvent, SyncCommand};
+use crate::matrix::{Event, MessageContent, RoomEvent, SyncCommand, NoticeMessage};
+use crate::commands::parse_command;
 use reqwest::{Client, Url};
 use serde::{self, Deserialize, Serialize};
 use std::fs;
@@ -15,6 +16,8 @@ pub struct MatrixConfig {
 
     /// The next batch to grab.  This should be set automatically
     pub next_batch: Option<String>,
+    #[serde(default)]
+    pub txn_id: u64,
     pub login: toml::Value,
 }
 
@@ -34,6 +37,7 @@ pub struct DiceBot {
     next_batch: Option<String>,
     client: Client,
     home_server: Url,
+    txn_id: u64,
 }
 
 #[derive(Deserialize, Debug)]
@@ -60,6 +64,7 @@ impl DiceBot {
             .await?;
         let body: LoginResponse = serde_json::from_str(&response.text().await?)?;
         let next_batch = config.matrix.next_batch.clone();
+        let txn_id = config.matrix.txn_id;
         Ok(DiceBot {
             home_server,
             config_path,
@@ -67,6 +72,7 @@ impl DiceBot {
             config,
             access_token: body.access_token,
             next_batch,
+            txn_id,
         })
     }
 
@@ -84,9 +90,9 @@ impl DiceBot {
 
     /// Build a url using the current home server and the given path, as well as appending the
     /// access token
-    fn url(&self, path: &str, query: &[(&str, &str)]) -> Url {
+    fn url<S: AsRef<str>>(&self, path: S, query: &[(&str, &str)]) -> Url {
         let mut url = self.home_server.clone();
-        url.set_path(path);
+        url.set_path(path.as_ref());
         {
             let mut query_pairs = url.query_pairs_mut();
             query_pairs.append_pair("access_token", &self.access_token);
@@ -118,7 +124,7 @@ impl DiceBot {
         let sync: SyncCommand = serde_json::from_str(&body).unwrap();
         // First join invited rooms
         for room in sync.rooms.invite.keys() {
-            let join_url = self.url(&format!("/_matrix/client/r0/rooms/{}/join", room), &[]);
+            let join_url = self.url(format!("/_matrix/client/r0/rooms/{}/join", room), &[]);
             self.client
                 .post(join_url)
                 .header("user-agent", USER_AGENT)
@@ -126,16 +132,45 @@ impl DiceBot {
                 .await?;
         }
 
-        for (_room_id, room) in sync.rooms.join.iter() {
+        for (room_id, room) in sync.rooms.join.iter() {
             for event in &room.timeline.events {
                 if let Event::Room(RoomEvent {
+                    sender,
+                    event_id,
                     content: MessageContent::Text(message),
                     ..
                 }) = event
                 {
-                    // TODO: create command parser (maybe command.rs) to parse !roll/!r commands
-                    // and reply
-                    println!("Body: {}", message.body());
+                    let (plain, html): (String, String) = match parse_command(message.body()) {
+                        Ok(Some(command)) => {
+                            let command = command.execute();
+                            (command.plain().into(), command.html().into())
+                        },
+                        Ok(None) => continue,
+                        Err(e) => {
+                            let message = format!("Error parsing command: {}", e);
+                            let html_message = format!("<p><strong>{}</strong></p>", message);
+                            (message, html_message)
+                        },
+                    };
+
+                    let plain = format!("{}\n{}", sender, plain);
+                    let html = format!("<p>{}</p>\n{}", sender, plain);
+
+                    let message = NoticeMessage {
+                        body: plain,
+                        format: Some("org.matrix.custom.html".into()),
+                        formatted_body: Some(html),
+                    };
+
+                    self.txn_id += 1;
+                    let mut send_url = self.url(format!("/_matrix/client/r0/rooms/{}/send/m.room.message/{}", room_id, self.txn_id), &[]);
+                    self.client
+                        .put(send_url)
+                        .header("user-agent", USER_AGENT)
+                        .body(serde_json::to_string(&message)?)
+                        .send()
+                        .await?;
                 }
             }
         }
@@ -155,6 +190,7 @@ impl DiceBot {
             .await?;
 
         self.config.matrix.next_batch = self.next_batch;
+        self.config.matrix.txn_id = self.txn_id;
 
         if let Some(config_path) = self.config_path {
             let config = toml::to_string_pretty(&self.config)?;

@@ -3,9 +3,28 @@ use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "msgtype")]
+#[serde(rename = "m.notice")]
+pub struct NoticeMessage {
+    pub body: String,
+
+    #[serde(default)]
+    pub format: Option<String>,
+
+    #[serde(default)]
+    pub formatted_body: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "msgtype")]
 #[serde(rename = "m.text")]
 pub struct TextMessage {
     body: String,
+
+    #[serde(default)]
+    format: Option<String>,
+
+    #[serde(default)]
+    formatted_body: Option<String>,
 }
 
 impl TextMessage {
@@ -26,6 +45,7 @@ pub enum MessageContent {
 pub struct RoomEvent {
     pub content: MessageContent,
     pub event_id: String,
+    pub sender: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

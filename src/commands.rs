@@ -29,13 +29,16 @@ impl Command for RollCommand {
         let roll = self.0.roll();
         let plain = format!("Dice: {}\nResult: {}", self.0, roll);
         let html = format!(
-            "<strong>Dice:</strong> {}<br><strong>Result</strong>: {}",
+            "<p><strong>Dice:</strong> {}</p><p><strong>Result</strong>: {}</p>",
             self.0, roll
         );
         Execution { plain, html }
     }
 }
 
+/// Parse a command string into a dynamic command execution trait object.
+/// Returns an error if a command was recognized but not parsed correctly.  Returns None if no
+/// command was recognized.
 pub fn parse_command(s: &str) -> Result<Option<Box<dyn Command>>, String> {
     // Ignore trailing input, if any.
     match parser::parse_command(s) {
