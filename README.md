@@ -30,7 +30,8 @@ expression as such:
 And the dicebot should reply with the result in short order.
 
 You can also run it yourself by creating a bot account, building the dicebot
-program, and creating a config file that looks like this:
+program (either from this repo or by running `cargo install
+axfive-matrix-dicebot`, and creating a config file that looks like this:
 
 ```ini
 [matrix]
@@ -42,9 +43,8 @@ type = 'm.login.password'
 user = 'axfive-dicebot'
 ```
 
-Of course replacing all the necessary fields.  Then you can run the built
-"dicebot" binary pointing at that, and it will log in and hum along and do its
-thing.
+Of course replacing all the necessary fields.  Then you can run the "dicebot"
+binary pointing at that, and it will log in and hum along and do its thing.
 
 You can also just run it on the command line with the `dicebot-cmd` command,
 which expects you to feed it one of the command expressions as shown above, and
