@@ -14,7 +14,7 @@ pub trait Rolled {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct DiceRoll(Vec<u32>);
+pub struct DiceRoll(pub Vec<u32>);
 
 impl DiceRoll {
     pub fn rolls(&self) -> &[u32] {
@@ -53,9 +53,10 @@ impl Roll for dice::Dice {
 
     fn roll(&self) -> DiceRoll {
         let mut rng = rand::thread_rng();
-        let rolls = (0..self.count)
+        let rolls: Vec<_> = (0..self.count)
             .map(|_| rng.gen_range(1, self.sides + 1))
             .collect();
+
         DiceRoll(rolls)
     }
 }
