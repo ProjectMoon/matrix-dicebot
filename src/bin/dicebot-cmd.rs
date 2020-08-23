@@ -1,4 +1,4 @@
-use axfive_matrix_dicebot::commands::parse_command;
+use chronicle_dicebot::commands::parse_command;
 
 fn main() -> Result<(), String> {
     let command = std::env::args().skip(1).collect::<Vec<String>>().join(" ");
