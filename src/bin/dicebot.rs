@@ -1,4 +1,4 @@
-use axfive_matrix_dicebot::bot::DiceBot;
+use chronicle_dicebot::bot::DiceBot;
 use tokio::select;
 use tokio::signal::unix::{signal, SignalKind};
 
