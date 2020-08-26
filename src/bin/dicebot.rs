@@ -1,6 +1,17 @@
-use chronicle_dicebot::bot::DiceBot;
-use tokio::select;
-use tokio::signal::unix::{signal, SignalKind};
+use chronicle_dicebot::bot::run_bot;
+use chronicle_dicebot::bot::Config;
+use std::fs;
+use std::path::PathBuf;
+
+fn read_config<P: Into<PathBuf>>(config_path: P) -> Result<Config, Box<dyn std::error::Error>> {
+    let config_path = config_path.into();
+    let config = {
+        let contents = fs::read_to_string(&config_path)?;
+        toml::from_str(&contents)?
+    };
+
+    Ok(config)
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -8,23 +19,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .skip(1)
         .next()
         .expect("Need a config as an argument");
-    println!("Logging in");
-    let mut bot = DiceBot::from_path(config_path).await?;
-    println!("Logged in");
 
-    let mut sigint = signal(SignalKind::interrupt())?;
+    let cfg = read_config(config_path)?;
 
-    loop {
-        select! {
-            _ = sigint.recv() => {
-                break;
-            }
-            result = bot.sync() => {
-                result?;
-            }
-        }
-    }
-
-    println!("Logging out");
-    bot.logout().await
+    run_bot(cfg.matrix).await?;
+    Ok(())
 }

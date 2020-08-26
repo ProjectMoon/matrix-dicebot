@@ -1,12 +1,19 @@
-use crate::matrix::{Event, MessageContent, RoomEvent, SyncCommand, NoticeMessage};
 use crate::commands::parse_command;
-use reqwest::{Client, Url};
+use dirs;
+use matrix_sdk::{
+    self,
+    events::{
+        room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
+        SyncMessageEvent,
+    },
+    Client, ClientConfig, EventEmitter, JsonStore, SyncRoom, SyncSettings,
+};
+use matrix_sdk_common_macros::async_trait;
 use serde::{self, Deserialize, Serialize};
-use std::fs;
-use std::path::PathBuf;
+use thiserror::Error;
+use url::Url;
 
-const USER_AGENT: &str =
-    "AxFive Matrix DiceBot/0.1.0 (+https://gitlab.com/Taywee/axfive-matrix-dicebot)";
+//TODO move the config structs and read_config into their own file.
 
 /// The "matrix" section of the config, which gives home server, login information, and etc.
 #[derive(Serialize, Deserialize, Debug)]
@@ -14,195 +21,137 @@ pub struct MatrixConfig {
     /// Your homeserver of choice, as an FQDN without scheme or path
     pub home_server: String,
 
-    /// The next batch to grab.  This should be set automatically
-    #[serde(default)]
-    pub next_batch: Option<String>,
+    /// Username to login as. Only the localpart.
+    pub username: String,
 
-    /// The transaction ID.  This should be set automatically
-    #[serde(default)]
-    pub txn_id: u64,
-    
-    /// The login table.  This may be set to whatever you wish, depending on your login method,
-    /// though multi-step logins (like challenge-based) won't work here.
-    pub login: toml::Value,
+    /// Bot account password.
+    pub password: String,
 }
 
-/// The base config, which is read from and written to by the bot
+/// Represents the toml config file for the dicebot.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub matrix: MatrixConfig,
 }
 
-/// The actual dicebot structure, which drives the entire operation.
-///
-/// This is the core of the dicebot program.
+/// The DiceBot struct itself is the core of the program, essentially the entrypoint
+/// to the bot.
 pub struct DiceBot {
-    config_path: Option<PathBuf>,
-    config: Config,
-    access_token: String,
-    next_batch: Option<String>,
     client: Client,
-    home_server: Url,
-    txn_id: u64,
-}
-
-#[derive(Deserialize, Debug)]
-struct LoginResponse {
-    access_token: String,
 }
 
 impl DiceBot {
-    /// Create a new dicebot from the given config path and config
-    pub async fn new(
-        config_path: Option<PathBuf>,
-        config: Config,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let home_server: Url = format!("https://{}", config.matrix.home_server).parse()?;
-        let client = Client::new();
-        let request = serde_json::to_string(&config.matrix.login)?;
-        let mut login_url = home_server.clone();
-        login_url.set_path("/_matrix/client/r0/login");
-        let response = client
-            .post(login_url)
-            .header("user-agent", USER_AGENT)
-            .body(request)
-            .send()
-            .await?;
-        let body: LoginResponse = serde_json::from_str(&response.text().await?)?;
-        let next_batch = config.matrix.next_batch.clone();
-        let txn_id = config.matrix.txn_id;
-        Ok(DiceBot {
-            home_server,
-            config_path,
-            client,
-            config,
-            access_token: body.access_token,
-            next_batch,
-            txn_id,
-        })
+    /// Create a new dicebot with the given Matrix client.
+    pub fn new(client: Client) -> Self {
+        DiceBot { client }
     }
+}
 
-    /// Create a new dicebot, storing the config path to write it out  
-    pub async fn from_path<P: Into<PathBuf>>(
-        config_path: P,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let config_path = config_path.into();
-        let config = {
-            let contents = fs::read_to_string(&config_path)?;
-            toml::from_str(&contents)?
-        };
-        DiceBot::new(Some(config_path), config).await
-    }
+/// This event emitter listens for messages with dice rolling commands.
+/// Originally adapted from the matrix-rust-sdk command bot example.
+#[async_trait]
+impl EventEmitter for DiceBot {
+    async fn on_room_message(&self, room: SyncRoom, event: &SyncMessageEvent<MessageEventContent>) {
+        if let SyncRoom::Joined(room) = room {
+            let (msg_body, sender_username) = if let SyncMessageEvent {
+                content: MessageEventContent::Text(TextMessageEventContent { body, .. }),
+                sender,
+                ..
+            } = event
+            {
+                (
+                    body.clone(),
+                    format!("@{}:{}", sender.localpart(), sender.server_name()),
+                )
+            } else {
+                (String::new(), String::new())
+            };
 
-    /// Build a url using the current home server and the given path, as well as appending the
-    /// access token
-    fn url<S: AsRef<str>>(&self, path: S, query: &[(&str, &str)]) -> Url {
-        let mut url = self.home_server.clone();
-        url.set_path(path.as_ref());
-        {
-            let mut query_pairs = url.query_pairs_mut();
-            query_pairs.append_pair("access_token", &self.access_token);
-
-            for pair in query.iter() {
-                query_pairs.append_pair(pair.0, pair.1);
-            }
-        }
-
-        url
-    }
-
-    /// Sync to the matrix homeserver, acting on events as necessary
-    pub async fn sync(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut sync_url = self.url("/_matrix/client/r0/sync", &[("timeout", "30000")]);
-
-        // TODO: handle http 429
-        if let Some(since) = &self.next_batch {
-            sync_url.query_pairs_mut().append_pair("since", since);
-        }
-        let body = self
-            .client
-            .get(sync_url)
-            .header("user-agent", USER_AGENT)
-            .send()
-            .await?
-            .text()
-            .await?;
-        let sync: SyncCommand = serde_json::from_str(&body).unwrap();
-        // First join invited rooms
-        for room in sync.rooms.invite.keys() {
-            let join_url = self.url(format!("/_matrix/client/r0/rooms/{}/join", room), &[]);
-            self.client
-                .post(join_url)
-                .header("user-agent", USER_AGENT)
-                .send()
-                .await?;
-        }
-
-        for (room_id, room) in sync.rooms.join.iter() {
-            for event in &room.timeline.events {
-                if let Event::Room(RoomEvent {
-                    sender,
-                    event_id: _,
-                    content: MessageContent::Text(message),
-                    ..
-                }) = event
-                {
-                    let (plain, html): (String, String) = match parse_command(message.body()) {
-                        Ok(Some(command)) => {
-                            let command = command.execute();
-                            (command.plain().into(), command.html().into())
-                        },
-                        Ok(None) => continue,
-                        Err(e) => {
-                            let message = format!("Error parsing command: {}", e);
-                            let html_message = format!("<p><strong>{}</strong></p>", message);
-                            (message, html_message)
-                        },
-                    };
-
-                    let plain = format!("{}\n{}", sender, plain);
-                    let html = format!("<p>{}</p>\n{}", sender, html);
-
-                    let message = NoticeMessage {
-                        body: plain,
-                        format: Some("org.matrix.custom.html".into()),
-                        formatted_body: Some(html),
-                    };
-
-                    self.txn_id += 1;
-                    let send_url = self.url(format!("/_matrix/client/r0/rooms/{}/send/m.room.message/{}", room_id, self.txn_id), &[]);
-                    self.client
-                        .put(send_url)
-                        .header("user-agent", USER_AGENT)
-                        .body(serde_json::to_string(&message)?)
-                        .send()
-                        .await?;
+            let (plain, html) = match parse_command(&msg_body) {
+                Ok(Some(command)) => {
+                    let command = command.execute();
+                    (command.plain().into(), command.html().into())
                 }
+                Ok(None) => return,
+                Err(e) => {
+                    let message = format!("Error parsing command: {}", e);
+                    let html_message = format!("<p><strong>{}</strong></p>", message);
+                    (message, html_message)
+                }
+            };
+
+            let plain = format!("{}\n{}", sender_username, plain);
+            let html = format!("<p>{}</p>\n{}", sender_username, html);
+            let content = MessageEventContent::Notice(NoticeMessageEventContent::html(plain, html));
+
+            //we clone here to hold the lock for as little time as possible.
+            let room_id = room.read().await.room_id.clone();
+            let result = self.client.room_send(&room_id, content, None).await;
+
+            match result {
+                Err(e) => println!("Error sending message: {}", e.to_string()),
+                Ok(_) => (),
             }
         }
-        self.next_batch = Some(sync.next_batch);
-        Ok(())
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum BotError {
+    /// Sync token couldn't be found.
+    #[error("the sync token could not be retrieved")]
+    SyncTokenRequired,
+}
+
+/// Run the matrix dice bot until program terminated, or a panic occurs.
+/// Originally adapted from the matrix-rust-sdk command bot example.
+pub async fn run_bot(config: MatrixConfig) -> Result<(), Box<dyn std::error::Error>> {
+    let homeserver_url = config.home_server;
+    let username = config.username;
+    let password = config.password;
+
+    let mut cache_dir = dirs::cache_dir().expect("no cache directory found");
+    cache_dir.push("matrix-dicebot");
+
+    //If the local json store has not been created yet, we need to do a single initial sync.
+    //It stores data under username's localpart.
+    let should_sync = {
+        let mut cache = cache_dir.clone();
+        cache.push(username.clone());
+        !cache.exists()
+    };
+
+    let store = JsonStore::open(&cache_dir)?;
+    let client_config = ClientConfig::new().state_store(Box::new(store));
+
+    let homeserver_url = Url::parse(&homeserver_url).expect("Couldn't parse the homeserver URL");
+    let mut client = Client::new_with_config(homeserver_url, client_config).unwrap();
+
+    client
+        .login(&username, &password, None, Some("matrix dice bot"))
+        .await?;
+
+    println!("Logged in as {}", username);
+
+    if should_sync {
+        println!("Performing initial sync");
+        client.sync(SyncSettings::default()).await?;
     }
 
-    /// Log off of the matrix server, also writing out the config file if one was given in
-    /// construction
-    pub async fn logout(mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let logout_url = self.url("/_matrix/client/r0/logout", &[]);
-        self.client
-            .post(logout_url)
-            .header("user-agent", USER_AGENT)
-            .body("{}")
-            .send()
-            .await?;
+    //Attach event handler.
+    client
+        .add_event_emitter(Box::new(DiceBot::new(client.clone())))
+        .await;
 
-        self.config.matrix.next_batch = self.next_batch;
-        self.config.matrix.txn_id = self.txn_id;
+    let token = client
+        .sync_token()
+        .await
+        .ok_or(BotError::SyncTokenRequired)?;
+    let settings = SyncSettings::default().token(token);
 
-        if let Some(config_path) = self.config_path {
-            let config = toml::to_string_pretty(&self.config)?;
-            fs::write(config_path, config)?;
-        }
+    //this keeps state from the server streaming in to the dice bot via the EventEmitter trait
+    println!("Listening for commands");
+    client.sync_forever(settings, |_| async {}).await;
 
-        Ok(())
-    }
+    Ok(())
 }
