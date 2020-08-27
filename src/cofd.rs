@@ -70,9 +70,20 @@ impl DicePool {
 ///Store all rolls of the dice pool dice into one struct.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DicePoolRoll {
+    quality: DicePoolQuality,
     success_on: u32,
     exceptional_on: u32,
     rolls: Vec<u32>,
+}
+
+fn fmt_for_failure(pool: &DicePoolRoll) -> String {
+    match pool.quality {
+        //There should only be 1 die in a chance die roll.
+        DicePoolQuality::ChanceDie if pool.rolls().first() == Some(&1) => {
+            String::from("dramatic failure!")
+        }
+        _ => String::from("failure!"),
+    }
 }
 
 impl DicePoolRoll {
@@ -121,7 +132,12 @@ impl fmt::Display for DicePoolRoll {
 
             write!(f, "{} ({})", success_msg, self.rolls().iter().join(", "))?;
         } else {
-            write!(f, "failure! ({})", self.rolls().iter().join(", "))?;
+            write!(
+                f,
+                "{} ({})",
+                fmt_for_failure(&self),
+                self.rolls().iter().join(", ")
+            )?;
         }
 
         Ok(())
@@ -200,6 +216,7 @@ fn roll_dice(pool: &DicePool) -> DicePoolRoll {
         .collect();
 
     DicePoolRoll {
+        quality: pool.quality,
         rolls: rolls,
         exceptional_on: pool.exceptional_success,
         success_on: pool.success_on,
@@ -281,6 +298,7 @@ mod tests {
     #[test]
     fn is_successful_on_equal_test() {
         let result = DicePoolRoll {
+            quality: DicePoolQuality::TenAgain,
             rolls: vec![8],
             exceptional_on: 5,
             success_on: 8,
@@ -292,6 +310,7 @@ mod tests {
     #[test]
     fn is_exceptional_test() {
         let result = DicePoolRoll {
+            quality: DicePoolQuality::TenAgain,
             rolls: vec![8, 8, 9, 10, 8],
             exceptional_on: 5,
             success_on: 8,
@@ -304,6 +323,7 @@ mod tests {
     #[test]
     fn is_not_exceptional_test() {
         let result = DicePoolRoll {
+            quality: DicePoolQuality::TenAgain,
             rolls: vec![8, 8, 9, 10],
             exceptional_on: 5,
             success_on: 8,
@@ -311,5 +331,30 @@ mod tests {
 
         assert_eq!(4, result.successes());
         assert_eq!(false, result.is_exceptional());
+    }
+
+    //Format tests
+    #[test]
+    fn formats_dramatic_failure_test() {
+        let result = DicePoolRoll {
+            quality: DicePoolQuality::ChanceDie,
+            rolls: vec![1],
+            exceptional_on: 5,
+            success_on: 10,
+        };
+
+        assert_eq!("dramatic failure!", fmt_for_failure(&result));
+    }
+
+    #[test]
+    fn formats_regular_failure_when_not_chance_die_test() {
+        let result = DicePoolRoll {
+            quality: DicePoolQuality::TenAgain,
+            rolls: vec![1],
+            exceptional_on: 5,
+            success_on: 10,
+        };
+
+        assert_eq!("failure!", fmt_for_failure(&result));
     }
 }
