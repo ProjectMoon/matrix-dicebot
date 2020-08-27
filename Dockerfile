@@ -25,11 +25,13 @@ RUN . /root/.cargo/env && cargo build --release
 
 # Final image
 FROM bougyman/voidlinux:latest
-RUN xbps-install -Sy ca-certificates libstdc++ libressl
+RUN xbps-install -Sy ca-certificates libstdc++
 COPY --from=builder \
     /root/src/target/release/dicebot \
     /usr/local/bin/
 COPY --from=builder \
     /usr/local/bin/tini \
     /usr/local/bin/
+
+ENV XDG_CACHE_HOME "/cache"
 ENTRYPOINT [ "/usr/local/bin/tini", "-v", "--", "/usr/local/bin/dicebot", "/config/dicebot-config.toml" ]
