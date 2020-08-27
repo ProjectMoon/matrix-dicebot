@@ -4,7 +4,7 @@ use matrix_sdk::{
     self,
     events::{
         room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
-        SyncMessageEvent,
+        AnyMessageEventContent, SyncMessageEvent,
     },
     Client, ClientConfig, EventEmitter, JsonStore, SyncRoom, SyncSettings,
 };
@@ -82,7 +82,9 @@ impl EventEmitter for DiceBot {
 
             let plain = format!("{}\n{}", sender_username, plain);
             let html = format!("<p>{}</p>\n{}", sender_username, html);
-            let content = MessageEventContent::Notice(NoticeMessageEventContent::html(plain, html));
+            let content = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
+                NoticeMessageEventContent::html(plain, html),
+            ));
 
             //we clone here to hold the lock for as little time as possible.
             let room_id = room.read().await.room_id.clone();

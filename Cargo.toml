@@ -1,6 +1,6 @@
 [package]
 name = "chronicle-dicebot"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Taylor C. Richberger <taywee@gmx.com>", "projectmoon <projectmoon@agnos.is>"]
 edition = "2018"
 license = 'MIT'
@@ -11,22 +11,21 @@ keywords = ["games", "dice", "matrix", "bot"]
 categories = ["games"]
 
 [dependencies]
-reqwest = { git = "https://github.com/seanmonstar/reqwest", rev = "cff487ff58630cf0ac59f3e46cbf20cf50a28b3f", default_features = false }
-serde_json = "1"
 toml = "0.5"
 nom = "5"
 rand = "0.7"
 thiserror = "1.0"
 itertools = "0.9"
+async-trait = "0.1"
+url = "2.1"
+dirs = "3.0"
+
+# The versioning of the matrix SDK follows its Cargo.toml. The SDK and
+# macros are on master, but it imports the common and base from 0.1.0.
 matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "master" }
 matrix-sdk-common-macros = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "master" }
 matrix-sdk-common = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "0.1.0" }
 matrix-sdk-base = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "0.1.0", default_features = false }
-async-trait = "0.1.38"
-# these aren't really necessary for matrix. just used in support of example
-tracing-subscriber = "0.2.11"
-url = "2.1.1"
-dirs = "3.0.1"
 
 [dependencies.serde]
 version = "1"
