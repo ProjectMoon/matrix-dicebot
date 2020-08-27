@@ -3,8 +3,9 @@ use dirs;
 use matrix_sdk::{
     self,
     events::{
+        room::member::MemberEventContent,
         room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
-        AnyMessageEventContent, SyncMessageEvent,
+        AnyMessageEventContent, StrippedStateEvent, SyncMessageEvent,
     },
     Client, ClientConfig, EventEmitter, JsonStore, SyncRoom, SyncSettings,
 };
@@ -48,9 +49,32 @@ impl DiceBot {
 }
 
 /// This event emitter listens for messages with dice rolling commands.
-/// Originally adapted from the matrix-rust-sdk command bot example.
+/// Originally adapted from the matrix-rust-sdk  examples.
 #[async_trait]
 impl EventEmitter for DiceBot {
+    async fn on_stripped_state_member(
+        &self,
+        room: SyncRoom,
+        room_member: &StrippedStateEvent<MemberEventContent>,
+        _: Option<MemberEventContent>,
+    ) {
+        if let SyncRoom::Invited(room) = room {
+            if let Some(user_id) = self.client.user_id().await {
+                if room_member.state_key != user_id {
+                    return;
+                }
+            }
+
+            let room = room.read().await;
+            println!("Autojoining room {}", room.display_name());
+
+            match self.client.join_room_by_id(&room.room_id).await {
+                Err(e) => println!("Could not join room: {}", e.to_string()),
+                _ => (),
+            }
+        }
+    }
+
     async fn on_room_message(&self, room: SyncRoom, event: &SyncMessageEvent<MessageEventContent>) {
         if let SyncRoom::Joined(room) = room {
             let (msg_body, sender_username) = if let SyncMessageEvent {
