@@ -1,4 +1,4 @@
-use crate::cofd::DicePool;
+use crate::cofd::dice::DicePool;
 use crate::dice::ElementExpression;
 use crate::roll::Roll;
 

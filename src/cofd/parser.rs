@@ -3,7 +3,7 @@ use nom::{
     sequence::tuple, tag, IResult,
 };
 
-use crate::cofd::{DicePool, DicePoolQuality};
+use crate::cofd::dice::{DicePool, DicePoolQuality};
 use crate::parser::eat_whitespace;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
