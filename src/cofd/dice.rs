@@ -74,6 +74,21 @@ pub struct DicePoolRoll {
     rolls: Vec<u32>,
 }
 
+fn fmt_rolls(pool: &DicePoolRoll) -> String {
+    let max_displayed_rolls = 15;
+    let rolls = pool.rolls();
+    if rolls.len() > max_displayed_rolls {
+        let first_ten = rolls.iter().take(max_displayed_rolls).join(", ");
+        format!(
+            "{}, and {} more",
+            first_ten,
+            rolls.len() - max_displayed_rolls
+        )
+    } else {
+        rolls.iter().take(10).join(", ")
+    }
+}
+
 fn fmt_for_failure(pool: &DicePoolRoll) -> String {
     match pool.quality {
         //There should only be 1 die in a chance die roll.
@@ -128,14 +143,9 @@ impl fmt::Display for DicePoolRoll {
                 format!("{} successes", successes)
             };
 
-            write!(f, "{} ({})", success_msg, self.rolls().iter().join(", "))?;
+            write!(f, "{} ({})", success_msg, fmt_rolls(&self))?;
         } else {
-            write!(
-                f,
-                "{} ({})",
-                fmt_for_failure(&self),
-                self.rolls().iter().join(", ")
-            )?;
+            write!(f, "{} ({})", fmt_for_failure(&self), fmt_rolls(&self))?;
         }
 
         Ok(())
@@ -179,6 +189,7 @@ fn roll_exploding_die<R: DieRoller>(
 ///can keep track of the actual dice that were rolled.
 fn roll_rote_die<R: DieRoller>(roller: &mut R, sides: u32) -> Vec<u32> {
     let mut rolls = roll_exploding_die(roller, sides, 10);
+
     if rolls.len() == 1 && rolls[0] < 8 {
         rolls.append(&mut roll_exploding_die(roller, sides, 10));
     }
@@ -354,5 +365,20 @@ mod tests {
         };
 
         assert_eq!("failure!", fmt_for_failure(&result));
+    }
+
+    #[test]
+    fn formats_lots_of_dice_test() {
+        let result = DicePoolRoll {
+            quality: DicePoolQuality::TenAgain,
+            rolls: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            exceptional_on: 5,
+            success_on: 10,
+        };
+
+        assert_eq!(
+            "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, and 4 more",
+            fmt_rolls(&result)
+        );
     }
 }
