@@ -21,6 +21,7 @@ itertools = "0.9"
 async-trait = "0.1"
 url = "2.1"
 dirs = "3.0"
+indoc = "1.0"
 
 # The versioning of the matrix SDK follows its Cargo.toml. The SDK and
 # macros are on master, but it imports the common and base from 0.1.0.

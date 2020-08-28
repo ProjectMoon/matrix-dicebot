@@ -1,5 +1,6 @@
 use crate::cofd::dice::DicePool;
 use crate::dice::ElementExpression;
+use crate::help::HelpTopic;
 use crate::parser::trim;
 use crate::roll::Roll;
 
@@ -61,10 +62,29 @@ impl Command for PoolRollCommand {
     }
 }
 
-/// Parse a command string into a dynamic command execution trait object.
-/// Returns an error if a command was recognized but not parsed correctly.  Returns None if no
-/// command was recognized.
-pub fn parse_command(s: &str) -> Result<Option<Box<dyn Command>>, String> {
+pub struct HelpCommand(Option<HelpTopic>);
+
+impl Command for HelpCommand {
+    fn name(&self) -> &'static str {
+        "help information"
+    }
+
+    fn execute(&self) -> Execution {
+        let help = match &self.0 {
+            Some(topic) => topic.message(),
+            _ => "There is no help for this topic",
+        };
+
+        let plain = format!("Help: {}", help);
+        let html = format!("<p><strong>Help:</strong> {}", help.replace("\n", "<br/>"));
+        Execution { plain, html }
+    }
+}
+
+/// Parse a command string into a dynamic command execution trait
+/// object. Returns an error if a command was recognized but not
+/// parsed correctly. Returns None if no command was recognized.
+pub fn parse_command<'a>(s: &'a str) -> Result<Option<Box<dyn Command + 'a>>, String> {
     match parser::parse_command(s) {
         Ok((input, command)) => match (input, &command) {
             //This clause prevents bot from spamming messages to itself
@@ -111,6 +131,19 @@ mod tests {
             .map(|p| p.is_some())
             .expect("was error"));
         assert!(parse_command("   !pool 8ns3   ")
+            .map(|p| p.is_some())
+            .expect("was error"));
+    }
+
+    #[test]
+    fn help_whitespace_test() {
+        assert!(parse_command("!help stuff   ")
+            .map(|p| p.is_some())
+            .expect("was error"));
+        assert!(parse_command("   !help stuff")
+            .map(|p| p.is_some())
+            .expect("was error"));
+        assert!(parse_command("   !help stuff   ")
             .map(|p| p.is_some())
             .expect("was error"));
     }
