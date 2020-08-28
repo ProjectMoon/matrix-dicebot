@@ -65,9 +65,9 @@ impl Command for PoolRollCommand {
 /// command was recognized.
 pub fn parse_command(s: &str) -> Result<Option<Box<dyn Command>>, String> {
     match parser::parse_command(s) {
-        //The first clause prevents bot from spamming messages to itself
-        //after executing a previous command.
         Ok((input, result)) => match (input, &result) {
+            //This clause prevents bot from spamming messages to itself
+            //after executing a previous command.
             ("", Some(_)) | (_, None) => Ok(result),
             _ => Err(format!("{}: malformed dice expression", s)),
         },

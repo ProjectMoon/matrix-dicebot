@@ -1,5 +1,6 @@
 use crate::commands::parse_command;
 use dirs;
+use log::{error, info, warn};
 use matrix_sdk::{
     self,
     events::{
@@ -66,10 +67,10 @@ impl EventEmitter for DiceBot {
             }
 
             let room = room.read().await;
-            println!("Autojoining room {}", room.display_name());
+            info!("Autojoining room {}", room.display_name());
 
             match self.client.join_room_by_id(&room.room_id).await {
-                Err(e) => println!("Could not join room: {}", e.to_string()),
+                Err(e) => warn!("Could not join room: {}", e.to_string()),
                 _ => (),
             }
         }
@@ -110,12 +111,14 @@ impl EventEmitter for DiceBot {
                 NoticeMessageEventContent::html(plain, html),
             ));
 
+            info!("{} executed: {}", sender_username, msg_body);
+
             //we clone here to hold the lock for as little time as possible.
             let room_id = room.read().await.room_id.clone();
             let result = self.client.room_send(&room_id, content, None).await;
 
             match result {
-                Err(e) => println!("Error sending message: {}", e.to_string()),
+                Err(e) => error!("Error sending message: {}", e.to_string()),
                 Ok(_) => (),
             }
         }
@@ -157,10 +160,10 @@ pub async fn run_bot(config: MatrixConfig) -> Result<(), Box<dyn std::error::Err
         .login(&username, &password, None, Some("matrix dice bot"))
         .await?;
 
-    println!("Logged in as {}", username);
+    info!("Logged in as {}", username);
 
     if should_sync {
-        println!("Performing initial sync");
+        info!("Performing initial sync");
         client.sync(SyncSettings::default()).await?;
     }
 
@@ -176,7 +179,7 @@ pub async fn run_bot(config: MatrixConfig) -> Result<(), Box<dyn std::error::Err
     let settings = SyncSettings::default().token(token);
 
     //this keeps state from the server streaming in to the dice bot via the EventEmitter trait
-    println!("Listening for commands");
+    info!("Listening for commands");
     client.sync_forever(settings, |_| async {}).await;
 
     Ok(())
