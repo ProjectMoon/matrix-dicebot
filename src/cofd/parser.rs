@@ -24,7 +24,8 @@ fn parse_quality(input: &str) -> IResult<&str, DicePoolQuality> {
     named!(quality(&str) -> DicePoolQuality, alt!(
         complete!(tag!("n")) => { |_| DicePoolQuality::NineAgain } |
         complete!(tag!("e")) => { |_| DicePoolQuality::EightAgain } |
-        complete!(tag!("r")) => { |_| DicePoolQuality::Rote }
+        complete!(tag!("r")) => { |_| DicePoolQuality::Rote } |
+        complete!(tag!("x")) => { |_| DicePoolQuality::NoExplode }
     ));
 
     let (input, dice_pool_quality) = quality(input)?;
@@ -143,6 +144,7 @@ mod tests {
         assert_eq!(parse_quality("n"), Ok(("", DicePoolQuality::NineAgain)));
         assert_eq!(parse_quality("e"), Ok(("", DicePoolQuality::EightAgain)));
         assert_eq!(parse_quality("r"), Ok(("", DicePoolQuality::Rote)));
+        assert_eq!(parse_quality("x"), Ok(("", DicePoolQuality::NoExplode)));
         assert_eq!(parse_quality("b"), Err(Err::Error(("b", ErrorKind::Alt))));
     }
 

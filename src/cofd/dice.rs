@@ -10,6 +10,7 @@ pub enum DicePoolQuality {
     EightAgain,
     Rote,
     ChanceDie,
+    NoExplode,
 }
 
 impl fmt::Display for DicePoolQuality {
@@ -20,6 +21,7 @@ impl fmt::Display for DicePoolQuality {
             DicePoolQuality::EightAgain => write!(f, "eight-again"),
             DicePoolQuality::Rote => write!(f, "rote quality"),
             DicePoolQuality::ChanceDie => write!(f, "chance die"),
+            DicePoolQuality::NoExplode => write!(f, "no roll-agains"),
         }
     }
 }
@@ -47,8 +49,12 @@ impl DicePool {
     pub fn new(count: u32, successes_for_exceptional: u32, quality: DicePoolQuality) -> DicePool {
         DicePool {
             count: count,
-            sides: 10,     //TODO make configurable
-            success_on: 8, //TODO make configurable
+            sides: 10, //TODO make configurable
+            //TODO make configurable
+            success_on: match quality {
+                DicePoolQuality::ChanceDie => 10,
+                _ => 8,
+            },
             exceptional_success: successes_for_exceptional,
             quality: quality,
         }
@@ -123,7 +129,7 @@ impl Roll for DicePool {
     type Output = DicePoolRoll;
 
     fn roll(&self) -> DicePoolRoll {
-        roll_dice(self)
+        roll_dice(self, &mut RngDieRoller(rand::thread_rng()))
     }
 }
 
@@ -209,7 +215,9 @@ fn roll_die<R: DieRoller>(roller: &mut R, sides: u32, quality: DicePoolQuality) 
         DicePoolQuality::NineAgain => results.append(&mut roll_exploding_die(roller, sides, 9)),
         DicePoolQuality::EightAgain => results.append(&mut roll_exploding_die(roller, sides, 8)),
         DicePoolQuality::Rote => results.append(&mut roll_rote_die(roller, sides)),
-        DicePoolQuality::ChanceDie => results.push(roller.roll_number(sides)),
+        DicePoolQuality::ChanceDie | DicePoolQuality::NoExplode => {
+            results.push(roller.roll_number(sides))
+        }
     }
 
     results
@@ -217,11 +225,9 @@ fn roll_die<R: DieRoller>(roller: &mut R, sides: u32, quality: DicePoolQuality) 
 
 ///Roll the dice in a dice pool, according to behavior documented in the various rolling
 ///methods.
-fn roll_dice(pool: &DicePool) -> DicePoolRoll {
-    let mut roller = RngDieRoller(rand::thread_rng());
-
+fn roll_dice<R: DieRoller>(pool: &DicePool, roller: &mut R) -> DicePoolRoll {
     let rolls: Vec<u32> = (0..pool.count)
-        .flat_map(|_| roll_die(&mut roller, pool.sides, pool.quality))
+        .flat_map(|_| roll_die(roller, pool.sides, pool.quality))
         .collect();
 
     DicePoolRoll {
@@ -258,6 +264,28 @@ mod tests {
             self.position += 1;
             roll
         }
+    }
+
+    //Sanity checks
+    #[test]
+    pub fn chance_die_has_success_on_10_test() {
+        assert_eq!(
+            10,
+            DicePool::new(1, 5, DicePoolQuality::ChanceDie).success_on
+        );
+    }
+
+    #[test]
+    pub fn non_chance_die_has_success_on_8_test() {
+        fn check_success_on(quality: DicePoolQuality) {
+            assert_eq!(8, DicePool::new(1, 5, quality).success_on);
+        }
+
+        check_success_on(DicePoolQuality::TenAgain);
+        check_success_on(DicePoolQuality::NineAgain);
+        check_success_on(DicePoolQuality::EightAgain);
+        check_success_on(DicePoolQuality::Rote);
+        check_success_on(DicePoolQuality::NoExplode);
     }
 
     //Dice rolling tests.
@@ -303,7 +331,15 @@ mod tests {
         assert_eq!(vec![5, 10, 8], rolls);
     }
 
-    //DiceRoll tests
+    #[test]
+    pub fn no_explode_roll_test() {
+        let pool = DicePool::new(1, 5, DicePoolQuality::NoExplode);
+        let mut roller = SequentialDieRoller::new(vec![10, 8]);
+        let roll: DicePoolRoll = roll_dice(&pool, &mut roller);
+        assert_eq!(vec![10], roll.rolls());
+    }
+
+    //DicePool tests
     #[test]
     fn is_successful_on_equal_test() {
         let result = DicePoolRoll {
@@ -314,6 +350,30 @@ mod tests {
         };
 
         assert_eq!(1, result.successes());
+    }
+
+    #[test]
+    fn chance_die_success_test() {
+        let result = DicePoolRoll {
+            quality: DicePoolQuality::TenAgain,
+            rolls: vec![10],
+            exceptional_on: 5,
+            success_on: 10,
+        };
+
+        assert_eq!(1, result.successes());
+    }
+
+    #[test]
+    fn chance_die_fail_test() {
+        let result = DicePoolRoll {
+            quality: DicePoolQuality::TenAgain,
+            rolls: vec![9],
+            exceptional_on: 5,
+            success_on: 10,
+        };
+
+        assert_eq!(0, result.successes());
     }
 
     #[test]
