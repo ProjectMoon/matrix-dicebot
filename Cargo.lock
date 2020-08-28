@@ -810,7 +810,7 @@ checksum = "7ffc5c5338469d4d3ea17d269fa8ea3512ad247247c30bd2df69e68309ed0a08"
 [[package]]
 name = "matrix-sdk"
 version = "0.1.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#977e29c3af485f3b86afdbd10f561c098e926cba"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#6872cc717b8b7746ea4c4bec8d143e8653f965ed"
 dependencies = [
  "async-trait",
  "dashmap",
@@ -844,7 +844,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-base"
 version = "0.1.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#977e29c3af485f3b86afdbd10f561c098e926cba"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#6872cc717b8b7746ea4c4bec8d143e8653f965ed"
 dependencies = [
  "async-trait",
  "matrix-sdk-common 0.1.0 (git+https://github.com/matrix-org/matrix-rust-sdk?rev=master)",
@@ -877,7 +877,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-common"
 version = "0.1.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#977e29c3af485f3b86afdbd10f561c098e926cba"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#6872cc717b8b7746ea4c4bec8d143e8653f965ed"
 dependencies = [
  "assign",
  "futures-locks 0.5.1-pre",
@@ -891,7 +891,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-common-macros"
 version = "0.1.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#977e29c3af485f3b86afdbd10f561c098e926cba"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#6872cc717b8b7746ea4c4bec8d143e8653f965ed"
 dependencies = [
  "quote",
  "syn",
@@ -900,7 +900,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-crypto"
 version = "0.1.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#977e29c3af485f3b86afdbd10f561c098e926cba"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?rev=master#6872cc717b8b7746ea4c4bec8d143e8653f965ed"
 dependencies = [
  "async-trait",
  "atomic",
@@ -1314,14 +1314,14 @@ dependencies = [
 [[package]]
 name = "ruma"
 version = "0.0.1"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "ruma-api 0.17.0-alpha.1",
  "ruma-client-api 0.10.0-alpha.1",
  "ruma-common 0.2.0",
  "ruma-events 0.22.0-alpha.1",
  "ruma-identifiers 0.17.4",
- "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54)",
+ "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30)",
 ]
 
 [[package]]
@@ -1343,13 +1343,13 @@ dependencies = [
 [[package]]
 name = "ruma-api"
 version = "0.17.0-alpha.1"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "http",
  "percent-encoding",
  "ruma-api-macros 0.17.0-alpha.1",
  "ruma-identifiers 0.17.4",
- "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54)",
+ "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30)",
  "serde",
  "serde_json",
  "strum 0.19.2",
@@ -1369,7 +1369,7 @@ dependencies = [
 [[package]]
 name = "ruma-api-macros"
 version = "0.17.0-alpha.1"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1398,7 +1398,7 @@ dependencies = [
 [[package]]
 name = "ruma-client-api"
 version = "0.10.0-alpha.1"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "assign",
  "http",
@@ -1408,7 +1408,7 @@ dependencies = [
  "ruma-common 0.2.0",
  "ruma-events 0.22.0-alpha.1",
  "ruma-identifiers 0.17.4",
- "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54)",
+ "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30)",
  "serde",
  "serde_json",
  "strum 0.19.2",
@@ -1430,12 +1430,12 @@ dependencies = [
 [[package]]
 name = "ruma-common"
 version = "0.2.0"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "js_int",
  "ruma-api 0.17.0-alpha.1",
  "ruma-identifiers 0.17.4",
- "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54)",
+ "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30)",
  "serde",
  "serde_json",
  "strum 0.19.2",
@@ -1459,13 +1459,13 @@ dependencies = [
 [[package]]
 name = "ruma-events"
 version = "0.22.0-alpha.1"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "js_int",
  "ruma-common 0.2.0",
  "ruma-events-macros 0.22.0-alpha.1",
  "ruma-identifiers 0.17.4",
- "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54)",
+ "ruma-serde 0.2.3 (git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30)",
  "serde",
  "serde_json",
  "strum 0.19.2",
@@ -1485,7 +1485,7 @@ dependencies = [
 [[package]]
 name = "ruma-events-macros"
 version = "0.22.0-alpha.1"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1505,7 +1505,7 @@ dependencies = [
 [[package]]
 name = "ruma-identifiers"
 version = "0.17.4"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "ruma-identifiers-macros",
  "ruma-identifiers-validation",
@@ -1516,7 +1516,7 @@ dependencies = [
 [[package]]
 name = "ruma-identifiers-macros"
 version = "0.17.4"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1527,7 +1527,7 @@ dependencies = [
 [[package]]
 name = "ruma-identifiers-validation"
 version = "0.1.1"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "serde",
  "strum 0.19.2",
@@ -1536,7 +1536,7 @@ dependencies = [
 [[package]]
 name = "ruma-serde"
 version = "0.2.3"
-source = "git+https://github.com/ruma/ruma?rev=e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54#e4cd59e7e5f8ce4c8b90948155c3d031e45f9c54"
+source = "git+https://github.com/ruma/ruma?rev=409fbcc9d745fb7290327cb7f5defc714229ab30#409fbcc9d745fb7290327cb7f5defc714229ab30"
 dependencies = [
  "form_urlencoded",
  "itoa",
