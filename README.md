@@ -4,9 +4,39 @@ This is a fork of the
 [axfive-matrix-dicebot](https://gitlab.com/Taywee/axfive-matrix-dicebot)
 with basic support for the Chronicles of Darkness 2E Storytelling
 System, with future plans to extend the codebase further to support
-variables and perhaps character sheet management. It also contains
-various fixes, uses the Matrix SDK for connectivity, and has a Docker
-image.
+variables and perhaps character sheet management.
+
+## Features
+
+`matrix-dicebot` is a basic dice rolling bot. It currently has the
+following features:
+
+* Rolling arbitrary dice expressions (e.g. 1d4, 1d20+5, 1d8+1d6, etc).
+* Rolling dice pools for the Chronicles of Darkness 2E Storytelling
+System.
+* Works in encrypted or unencrypted Matrix rooms.
+
+## Building and Installation
+
+The easiest way to install matrix-dicebot is to clone this repository
+and run `cargo install`. Precompiled executables are not yet
+available.
+
+Building the project requires:
+
+* Rust 1.45.0 or higher.
+* OpenSSL/LibreSSL development headers installed.
+* glibc (probably)
+
+### Why doesn't it build on musl libc?
+
+As far as I can tell, the project doesn't build on musl libc. It
+certainly doesn't build a static binary out of the box using the
+rust-musl-builder. This appears to be due to a transitive dependency
+of the Rust Matrix SDK.
+
+Any PRs to get the project or Matrix SDK to properly be built into a
+static binary using musl would be very useful.
 
 ## Usage
 
@@ -40,13 +70,12 @@ Examples:
 !pool 8n    //roll 8 dice, 9-again
 !pool 8ns3  //roll 8 dice, 9-again with only 3 successes for exceptional
 !pool 5rs2  //5 dice, rote quality, 2 successes for exceptional
-
 ```
 
 ## Running the Bot
-You can run the bot by creating a bot account, building the dicebot
-program (either from this repo, and creating a config file that looks
-like this:
+
+You can run the bot by creating a Matrix account for it, building the
+application, and creating a config file that looks like this:
 
 ```ini
 [matrix]
@@ -55,11 +84,11 @@ username = 'thisismyusername'
 password = 'thisismypassword'
 ```
 
-Of course replacing all the necessary fields. Then you can run the
-"dicebot" binary pointing at that, and it will log in and hum along
-and do its thing.
+Make sure to replace the information with your own. Then you can run
+the "dicebot" binary. It takes the path to the configuration file as
+its single argument.
 
-You can also just run it on the command line with the `dicebot-cmd`
+You can also run it on the command line with the `dicebot-cmd`
 command, which expects you to feed it one of the command expressions
 as shown above, and will give you the plaintext response.
 
@@ -74,7 +103,7 @@ A typical docker run command should look something like this:
 VERSION="0.3.0"
 docker run --rm -d --name dicebot \
 -v /path/to/dicebot-config.toml:/config/dicebot-config.toml:ro \
--v /path/to/cache//:/cache \
+-v /path/to/cache/:/cache \
 chronicle-dicebot:$VERSION
 ```
 
@@ -93,5 +122,5 @@ The most basic plans are:
   a name to a value (`gnosis = 3`) and then using those in dice rolls.
 * Perhaps some sort of character sheet integration. But for that, we
   would need a sheet service.
-* Automation of Docker builds.
+* Automation of Docker builds and precompiled binaries.
 * Use environment variables instead of config file in Docker image.
