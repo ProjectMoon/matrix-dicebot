@@ -1,4 +1,4 @@
-# axfive-matrix-dicebot
+# matrix-dicebot
 
 This is a fork of the
 [axfive-matrix-dicebot](https://gitlab.com/Taywee/axfive-matrix-dicebot)
