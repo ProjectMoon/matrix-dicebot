@@ -44,7 +44,11 @@ To use it, you can invite the bot to any room you want, and it will
 automatically jump in. Then you can simply give a dice expressions for
 either the Storytelling System or more traditional RPG dice rolls.
 
-The commands `!roll` and `!r` can handle arbitrary dice roll expressions.
+The bot supports a `!help` command for basic help information about
+its capabilities.
+
+The commands `!roll` and `!r` can handle arbitrary dice roll
+expressions.
 
 ```
 !roll 4d6
