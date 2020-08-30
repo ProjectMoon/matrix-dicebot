@@ -1,5 +1,6 @@
 use crate::cofd::dice::DicePool;
 use crate::dice::ElementExpression;
+use crate::parser::trim;
 use crate::roll::Roll;
 
 pub mod parser;
@@ -65,11 +66,16 @@ impl Command for PoolRollCommand {
 /// command was recognized.
 pub fn parse_command(s: &str) -> Result<Option<Box<dyn Command>>, String> {
     match parser::parse_command(s) {
-        Ok((input, result)) => match (input, &result) {
+        Ok((input, command)) => match (input, &command) {
             //This clause prevents bot from spamming messages to itself
             //after executing a previous command.
-            ("", Some(_)) | (_, None) => Ok(result),
-            _ => Err(format!("{}: malformed dice expression", s)),
+            ("", Some(_)) | (_, None) => Ok(command),
+
+            //Any unconsumed input (except whitespace) is considered a parsing error.
+            (extra, _) => match trim(extra).as_str() {
+                "" => Ok(command),
+                _ => Err(format!("{}: malformed dice expression", s)),
+            },
         },
         Err(err) => Err(err.to_string()),
     }
@@ -87,10 +93,38 @@ mod tests {
     #[test]
     fn roll_malformed_expression_test() {
         assert!(parse_command("!roll 1d20asdlfkj").is_err());
+        assert!(parse_command("!roll 1d20asdlfkj   ").is_err());
     }
 
     #[test]
-    fn roll_dice_pool_expression_test() {
+    fn roll_dice_pool_malformed_expression_test() {
         assert!(parse_command("!pool 8abc").is_err());
+        assert!(parse_command("!pool 8abc    ").is_err());
+    }
+
+    #[test]
+    fn pool_whitespace_test() {
+        assert!(parse_command("!pool 8ns3   ")
+            .map(|p| p.is_some())
+            .expect("was error"));
+        assert!(parse_command("   !pool 8ns3")
+            .map(|p| p.is_some())
+            .expect("was error"));
+        assert!(parse_command("   !pool 8ns3   ")
+            .map(|p| p.is_some())
+            .expect("was error"));
+    }
+
+    #[test]
+    fn roll_whitespace_test() {
+        assert!(parse_command("!roll 1d4 + 5d6 -3   ")
+            .map(|p| p.is_some())
+            .expect("was error"));
+        assert!(parse_command("!roll 1d4 + 5d6 -3   ")
+            .map(|p| p.is_some())
+            .expect("was error"));
+        assert!(parse_command("   !roll 1d4 + 5d6 -3   ")
+            .map(|p| p.is_some())
+            .expect("was error"));
     }
 }
