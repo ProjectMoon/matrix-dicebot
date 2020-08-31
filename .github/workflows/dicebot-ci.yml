@@ -1,4 +1,4 @@
-name: Docker
+name: Dicebot CI
 
 on:
   push:
@@ -14,13 +14,22 @@ on:
   pull_request:
 
 env:
-  # TODO: Change variable to your image's name.
-  IMAGE_NAME: image
+  IMAGE_NAME: chronicle-dicebot
+  CARGO_TERM_COLOR: always
 
 jobs:
   # Run tests.
   # See also https://docs.docker.com/docker-hub/builds/automated-testing/
-  test:
+  build_and_test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+
+  docker_test:
     runs-on: ubuntu-latest
 
     steps:
@@ -37,9 +46,9 @@ jobs:
 
   # Push image to GitHub Packages.
   # See also https://docs.docker.com/docker-hub/builds/
-  push:
+  docker_push:
     # Ensure test job passes before pushing image.
-    needs: test
+    needs: [ build_and_test, docker_test ]
 
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
