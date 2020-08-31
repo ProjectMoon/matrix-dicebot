@@ -29,26 +29,11 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 
-  docker_test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Run tests
-        run: |
-          if [ -f docker-compose.test.yml ]; then
-            docker-compose --file docker-compose.test.yml build
-            docker-compose --file docker-compose.test.yml run sut
-          else
-            docker build . --file Dockerfile
-          fi
-
   # Push image to GitHub Packages.
   # See also https://docs.docker.com/docker-hub/builds/
   docker_push:
     # Ensure test job passes before pushing image.
-    needs: [ build_and_test, docker_test ]
+    needs: build_and_test
 
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
