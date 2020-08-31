@@ -1,7 +1,6 @@
 use crate::cofd::dice::DicePool;
 use crate::dice::ElementExpression;
 use crate::help::HelpTopic;
-use crate::parser::trim;
 use crate::roll::Roll;
 
 pub mod parser;
@@ -84,18 +83,16 @@ impl Command for HelpCommand {
 /// Parse a command string into a dynamic command execution trait
 /// object. Returns an error if a command was recognized but not
 /// parsed correctly. Returns None if no command was recognized.
-pub fn parse_command<'a>(s: &'a str) -> Result<Option<Box<dyn Command + 'a>>, String> {
+pub fn parse_command(s: &str) -> Result<Option<Box<dyn Command>>, String> {
     match parser::parse_command(s) {
         Ok((input, command)) => match (input, &command) {
             //This clause prevents bot from spamming messages to itself
             //after executing a previous command.
             ("", Some(_)) | (_, None) => Ok(command),
 
-            //Any unconsumed input (except whitespace) is considered a parsing error.
-            (extra, _) => match trim(extra).as_str() {
-                "" => Ok(command),
-                _ => Err(format!("{}: malformed dice expression", s)),
-            },
+            //Any unconsumed input (whitespace should already be
+            // stripped) is considered a parsing error.
+            _ => Err(format!("{}: malformed expression", s)),
         },
         Err(err) => Err(err.to_string()),
     }
