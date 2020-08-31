@@ -82,14 +82,15 @@ impl Command for HelpCommand {
 
 /// Parse a command string into a dynamic command execution trait
 /// object. Returns an error if a command was recognized but not
-/// parsed correctly. Returns None if no command was recognized.
+/// parsed correctly. Returns Ok(None) if no command was recognized.
 pub fn parse_command(s: &str) -> Result<Option<Box<dyn Command>>, String> {
     match parser::parse_command(s) {
         Ok((input, command)) => match (input, &command) {
-            //This clause prevents bot from spamming messages to itself
-            //after executing a previous command.
+            //Any command, or text transformed into non-command is
+            //sent upwards.
             ("", Some(_)) | (_, None) => Ok(command),
 
+            //TODO replcae with nom all_consuming?
             //Any unconsumed input (whitespace should already be
             // stripped) is considered a parsing error.
             _ => Err(format!("{}: malformed expression", s)),

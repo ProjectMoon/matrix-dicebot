@@ -1,6 +1,6 @@
 use crate::commands::parse_command;
 use dirs;
-use log::{error, info, warn};
+use log::{error, info, trace, warn};
 use matrix_sdk::{
     self,
     events::{
@@ -92,12 +92,19 @@ impl EventEmitter for DiceBot {
                 (String::new(), String::new())
             };
 
+            //Command parser can handle non-commands, but faster to
+            //not parse them.
+            if !msg_body.starts_with("!") {
+                trace!("Ignoring non-command: {}", msg_body);
+                return;
+            }
+
             let (plain, html) = match parse_command(&msg_body) {
                 Ok(Some(command)) => {
                     let command = command.execute();
                     (command.plain().into(), command.html().into())
                 }
-                Ok(None) => return,
+                Ok(None) => return, //Ignore non-commands.
                 Err(e) => {
                     let message = format!("Error parsing command: {}", e);
                     let html_message = format!("<p><strong>{}</strong></p>", message);
