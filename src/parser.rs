@@ -10,6 +10,23 @@ pub fn eat_whitespace(input: &str) -> IResult<&str, &str> {
     Ok((input, whitespace))
 }
 
+/// Remove the whitespace on the ends of the string.
 pub fn trim(input: &str) -> String {
-    input.chars().filter(|c| !c.is_whitespace()).collect()
+    //2 allocations, how fun
+    String::from(input).trim().to_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basic_trim_test() {
+        assert_eq!(String::from("blah"), trim("   blah   "));
+    }
+
+    #[test]
+    fn trim_only_removes_ends_test() {
+        assert_eq!(String::from("b l a h"), trim("   b l a h   "));
+    }
 }
