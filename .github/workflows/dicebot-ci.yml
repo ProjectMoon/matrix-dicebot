@@ -43,7 +43,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: myorg/myrepository
           tags: latest
-          push: ${{ startsWith(github.ref, 'master') }}
+          push: ${{ github.ref == 'refs/heads/master' }}
 
   docker_push_tag:
     needs: build_and_test
