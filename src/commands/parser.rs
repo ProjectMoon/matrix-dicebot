@@ -87,9 +87,24 @@ mod tests {
     }
 
     #[test]
-    fn just_exclamation_point_test() {
+    fn just_exclamation_mark_test() {
         let result = parse_command("!");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn word_with_exclamation_mark_test() {
+        let result1 = parse_command("hello !notacommand");
+        assert!(result1.is_ok());
+        assert!(result1.unwrap().1.is_none());
+
+        let result2 = parse_command("hello!");
+        assert!(result2.is_ok());
+        assert!(result2.unwrap().1.is_none());
+
+        let result3 = parse_command("hello!notacommand");
+        assert!(result3.is_ok());
+        assert!(result3.unwrap().1.is_none());
     }
 
     #[test]
