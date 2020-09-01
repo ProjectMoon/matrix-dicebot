@@ -18,9 +18,29 @@ System.
 
 ## Building and Installation
 
-The easiest way to install matrix-dicebot is to clone this repository
-and run `cargo install`. Precompiled executables are not yet
-available.
+### Running with Docker
+
+The dice bot can run in a minimal Docker image based on [Void
+Linux](https://voidlinux.org/). You can either pull it from [Docker
+Hub](https://hub.docker.com/r/projectmoon/chronicle-dicebot) or build
+it yourself. The easiest way is to use the prebuilt image. It is
+updated on Docker Hub via a CI/CD pipeline. The `latest` tag always
+points to the most recent successful master commit and is considered
+unstable, while individual tags are considered stable:
+
+* Unstable: `docker pull projectmoon/chronicle-dicebot:latest`
+* Stable: `docker pull projectmoon/chronicle-dicebot:vX.Y.Z`
+
+To create the Docker image, run `docker build -t chronicle-dicebot .`
+in the root of the repository.
+
+After pulling or building the image, see [instructions on how to use
+the Docker image](#docker-image).
+
+### Build from Source
+
+Precompiled executables are not yet available. Clone this repository
+and run `cargo install`.
 
 Building the project requires:
 
@@ -28,7 +48,7 @@ Building the project requires:
 * OpenSSL/LibreSSL development headers installed.
 * glibc (probably)
 
-### Why doesn't it build on musl libc?
+#### Why doesn't it build on musl libc?
 
 As far as I can tell, the project doesn't build on musl libc. It
 certainly doesn't build a static binary out of the box using the
@@ -83,7 +103,7 @@ application, and creating a config file that looks like this:
 
 ```ini
 [matrix]
-home_server = https://'matrix.org'
+home_server = https://example.com'
 username = 'thisismyusername'
 password = 'thisismypassword'
 ```
@@ -96,27 +116,23 @@ You can also run it on the command line with the `dicebot-cmd`
 command, which expects you to feed it one of the command expressions
 as shown above, and will give you the plaintext response.
 
-## Docker Image
+### Docker Image
 
-The dice bot can run in a minimal Docker image based on [Void
-Linux](https://voidlinux.org/). To create the Docker image, run
-`docker build -t chronicle-dicebot .` in the root of the repository.
+A typical docker run command using the Docker Hub image should look
+something like this:
 
-A typical docker run command should look something like this:
 ```
-VERSION="0.3.0"
+VERSION="latest"
 docker run --rm -d --name dicebot \
 -v /path/to/dicebot-config.toml:/config/dicebot-config.toml:ro \
 -v /path/to/cache/:/cache \
-chronicle-dicebot:$VERSION
+projectmoon/chronicle-dicebot:$VERSION
 ```
 
 The Docker image requires two volume mounts: the location of the
 config file, which should be mounted at `/config/dicebot-config.toml`,
 and a cache directory to store client state after initial sync. That
 should be mounted at `/cache/`in the container.
-
-Properly automated docker builds are forthcoming.
 
 ## Future plans
 
