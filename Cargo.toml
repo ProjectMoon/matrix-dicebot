@@ -1,6 +1,6 @@
 [package]
 name = "chronicle-dicebot"
-version = "0.5.0"
+version = "0.5.2"
 authors = ["Taylor C. Richberger <taywee@gmx.com>", "projectmoon <projectmoon@agnos.is>"]
 edition = "2018"
 license = 'MIT'
@@ -25,6 +25,7 @@ indoc = "1.0"
 
 # The versioning of the matrix SDK follows its Cargo.toml. The SDK and
 # macros are on master, but it imports the common and base from 0.1.0.
+# https://github.com/matrix-org/matrix-rust-sdk/blob/master/matrix_sdk/Cargo.toml
 matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "master" }
 matrix-sdk-common-macros = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "master" }
 matrix-sdk-common = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "0.1.0" }

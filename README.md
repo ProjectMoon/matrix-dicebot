@@ -40,13 +40,20 @@ the Docker image](#docker-image).
 ### Build from Source
 
 Precompiled executables are not yet available. Clone this repository
-and run `cargo install`.
+and run `OLM_LINK_VARIANT=dylib cargo install`.
 
 Building the project requires:
 
+* Basic build environment (`build-essential` on Ubuntu, `base-devel`
+  on Void and Arch, etc).
 * Rust 1.45.0 or higher.
 * OpenSSL/LibreSSL development headers installed.
-* glibc (probably)
+* `olm-sys` crate dependencies: cmake, libstdc++, libolm and its
+  development headers.
+* glibc.
+
+Note: The `olm-sys` crate must be built in dynamic linking mode until
+a [bug][1] in its build process is fixed.
 
 #### Why doesn't it build on musl libc?
 
@@ -144,3 +151,5 @@ The most basic plans are:
   would need a sheet service.
 * Automation of Docker builds and precompiled binaries.
 * Use environment variables instead of config file in Docker image.
+
+[1]: https://gitlab.gnome.org/BrainBlasted/olm-sys/-/issues/6

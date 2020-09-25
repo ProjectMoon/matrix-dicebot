@@ -1,7 +1,8 @@
-# Builder image
+# Builder image with development dependencies.
 FROM bougyman/voidlinux:glibc as builder
-RUN xbps-install -Sy base-devel libressl-devel wget gnupg rustup
-RUN rustup-init -qy
+RUN xbps-install -Sy base-devel rust cargo cmake wget gnupg
+RUN xbps-install -Sy libressl-devel olm-devel libstdc++-devel
+#RUN rustup-init -qy
 
 # Install tini for signal processing and zombie killing
 ENV TINI_VERSION v0.18.0
@@ -18,14 +19,16 @@ RUN set -eux; \
 	tini --version
 
 # Build dicebot
+# OLM is temporarily built with dynamic linking due to a bug in
+# olm-sys: https://gitlab.gnome.org/BrainBlasted/olm-sys/-/issues/6
 RUN mkdir -p /root/src
 WORKDIR /root/src
 ADD . ./
-RUN . /root/.cargo/env && cargo build --release
+RUN OLM_LINK_VARIANT=dylib cargo build --release
 
 # Final image
 FROM bougyman/voidlinux:latest
-RUN xbps-install -Sy ca-certificates libstdc++
+RUN xbps-install -Sy ca-certificates libstdc++ olm
 COPY --from=builder \
     /root/src/target/release/dicebot \
     /usr/local/bin/
