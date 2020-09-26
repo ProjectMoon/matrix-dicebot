@@ -32,18 +32,35 @@ pub struct MatrixConfig {
     pub password: String,
 }
 
+const DEFAULT_OLDEST_MESSAGE: u64 = 15 * 60;
+
 /// The "bot" section of the config file, for bot settings.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BotConfig {
     /// How far back from current time should we process a message?
-    pub oldest_message_sec: u64,
+    oldest_message_age: Option<u64>,
+}
+
+impl BotConfig {
+    pub fn new() -> BotConfig {
+        BotConfig {
+            oldest_message_age: Some(DEFAULT_OLDEST_MESSAGE),
+        }
+    }
+
+    pub fn oldest_message_age(&self) -> u64 {
+        match self.oldest_message_age {
+            Some(seconds) => seconds,
+            None => DEFAULT_OLDEST_MESSAGE,
+        }
+    }
 }
 
 /// Represents the toml config file for the dicebot.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub matrix: MatrixConfig,
-    pub bot: BotConfig,
+    pub bot: Option<BotConfig>,
 }
 
 /// The DiceBot struct itself is the core of the program, essentially the entrypoint
@@ -60,13 +77,29 @@ impl DiceBot {
     }
 }
 
+fn get_oldest_message_age(config: &Config) -> u64 {
+    let none_cfg;
+    let bot_cfg = match &config.bot {
+        Some(cfg) => cfg,
+        None => {
+            none_cfg = BotConfig::new();
+            &none_cfg
+        }
+    };
+
+    bot_cfg.oldest_message_age()
+}
+
+/// Check if a message is recent enough to actually process. If the
+/// message is within "oldest_message_age" seconds, this function
+/// returns true. If it's older than that, it returns false and logs a
+/// debug message.
 fn check_message_age(
     event: &SyncMessageEvent<MessageEventContent>,
-    oldest_message_sec: u64,
+    oldest_message_age: u64,
 ) -> bool {
     let sending_time = event.origin_server_ts;
-    let now = SystemTime::now();
-    let oldest_timestamp = now.sub(Duration::new(oldest_message_sec, 0));
+    let oldest_timestamp = SystemTime::now().sub(Duration::new(oldest_message_age, 0));
 
     if sending_time > oldest_timestamp {
         true
@@ -110,24 +143,22 @@ impl EventEmitter for DiceBot {
 
     async fn on_room_message(&self, room: SyncRoom, event: &SyncMessageEvent<MessageEventContent>) {
         if let SyncRoom::Joined(room) = room {
-            let (msg_body, sender_username, sending_time) = if let SyncMessageEvent {
+            let (msg_body, sender_username) = if let SyncMessageEvent {
                 content: MessageEventContent::Text(TextMessageEventContent { body, .. }),
                 sender,
-                origin_server_ts,
                 ..
             } = event
             {
                 (
                     body.clone(),
                     format!("@{}:{}", sender.localpart(), sender.server_name()),
-                    origin_server_ts,
                 )
             } else {
-                (String::new(), String::new(), &SystemTime::UNIX_EPOCH)
+                (String::new(), String::new())
             };
 
             //Ignore messages that are older than configured duration.
-            if !check_message_age(event, self.config.bot.oldest_message_sec) {
+            if !check_message_age(event, get_oldest_message_age(&self.config)) {
                 return;
             }
 
@@ -229,4 +260,39 @@ pub async fn run_bot(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     client.sync_forever(settings, |_| async {}).await;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn oldest_message_default_no_setting_test() {
+        let cfg = Config {
+            matrix: MatrixConfig {
+                home_server: "".to_owned(),
+                username: "".to_owned(),
+                password: "".to_owned(),
+            },
+            bot: Some(BotConfig {
+                oldest_message_age: None,
+            }),
+        };
+
+        assert_eq!(15 * 60, get_oldest_message_age(&cfg));
+    }
+
+    #[test]
+    fn oldest_message_default_no_bot_config_test() {
+        let cfg = Config {
+            matrix: MatrixConfig {
+                home_server: "".to_owned(),
+                username: "".to_owned(),
+                password: "".to_owned(),
+            },
+            bot: None,
+        };
+
+        assert_eq!(15 * 60, get_oldest_message_age(&cfg));
+    }
 }

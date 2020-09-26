@@ -8,9 +8,14 @@ fn read_config<P: Into<PathBuf>>(config_path: P) -> Result<Config, Box<dyn std::
     let config_path = config_path.into();
     let config = {
         let contents = fs::read_to_string(&config_path)?;
-        toml::from_str(&contents)?
+        deserialize_config(&contents)?
     };
 
+    Ok(config)
+}
+
+fn deserialize_config(contents: &str) -> Result<Config, Box<dyn std::error::Error>> {
+    let config = { toml::from_str(&contents)? };
     Ok(config)
 }
 
@@ -27,4 +32,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     run_bot(cfg).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use indoc::indoc;
+
+    #[test]
+    fn deserialize_config_without_bot_section_test() {
+        let contents = indoc! {"
+            [matrix]
+            home_server = 'https://matrix.example.com'
+            username = 'username'
+            password = 'password'
+        "};
+
+        let cfg: Result<_, _> = deserialize_config(contents);
+        assert_eq!(true, cfg.is_ok());
+    }
+
+    #[test]
+    fn deserialize_config_without_oldest_message_setting_test() {
+        let contents = indoc! {"
+            [matrix]
+            home_server = 'https://matrix.example.com'
+            username = 'username'
+            password = 'password'
+
+            [bot]
+            not_a_real_setting = 2
+        "};
+
+        let cfg: Result<_, _> = deserialize_config(contents);
+        assert_eq!(true, cfg.is_ok());
+    }
 }
