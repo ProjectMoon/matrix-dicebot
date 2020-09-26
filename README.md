@@ -28,8 +28,8 @@ updated on Docker Hub via a CI/CD pipeline. The `latest` tag always
 points to the most recent successful master commit and is considered
 unstable, while individual tags are considered stable:
 
-* Unstable: `docker pull projectmoon/chronicle-dicebot:latest`
-* Stable: `docker pull projectmoon/chronicle-dicebot:vX.Y.Z`
+* Unstable: `docker pull ghcr.io/projectmoon/chronicle-dicebot:latest`
+* Stable: `docker pull ghcr.io/projectmoon/chronicle-dicebot:X.Y.Z`
 
 To create the Docker image, run `docker build -t chronicle-dicebot .`
 in the root of the repository.
@@ -125,15 +125,15 @@ as shown above, and will give you the plaintext response.
 
 ### Docker Image
 
-A typical docker run command using the Docker Hub image should look
-something like this:
+A typical docker run command using the official Docker image should
+look something like this:
 
 ```
 VERSION="latest"
 docker run --rm -d --name dicebot \
 -v /path/to/dicebot-config.toml:/config/dicebot-config.toml:ro \
 -v /path/to/cache/:/cache \
-projectmoon/chronicle-dicebot:$VERSION
+ghcr.io/projectmoon/chronicle-dicebot:$VERSION
 ```
 
 The Docker image requires two volume mounts: the location of the
