@@ -1,6 +1,6 @@
 use crate::commands::parse_command;
 use dirs;
-use log::{error, info, trace, warn};
+use log::{debug, error, info, trace, warn};
 use matrix_sdk::{
     self,
     events::{
@@ -12,6 +12,8 @@ use matrix_sdk::{
 };
 use matrix_sdk_common_macros::async_trait;
 use serde::{self, Deserialize, Serialize};
+use std::ops::Sub;
+use std::time::{Duration, SystemTime};
 use thiserror::Error;
 use url::Url;
 
@@ -30,27 +32,57 @@ pub struct MatrixConfig {
     pub password: String,
 }
 
+/// The "bot" section of the config file, for bot settings.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BotConfig {
+    /// How far back from current time should we process a message?
+    pub oldest_message_sec: u64,
+}
+
 /// Represents the toml config file for the dicebot.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub matrix: MatrixConfig,
+    pub bot: BotConfig,
 }
 
 /// The DiceBot struct itself is the core of the program, essentially the entrypoint
 /// to the bot.
 pub struct DiceBot {
+    config: Config,
     client: Client,
 }
 
 impl DiceBot {
     /// Create a new dicebot with the given Matrix client.
-    pub fn new(client: Client) -> Self {
-        DiceBot { client }
+    pub fn new(config: Config, client: Client) -> Self {
+        DiceBot { config, client }
+    }
+}
+
+fn check_message_age(
+    event: &SyncMessageEvent<MessageEventContent>,
+    oldest_message_sec: u64,
+) -> bool {
+    let sending_time = event.origin_server_ts;
+    let now = SystemTime::now();
+    let oldest_timestamp = now.sub(Duration::new(oldest_message_sec, 0));
+
+    if sending_time > oldest_timestamp {
+        true
+    } else {
+        let age = match oldest_timestamp.duration_since(sending_time) {
+            Ok(n) => format!("{} seconds too old", n.as_secs()),
+            Err(_) => "before the UNIX epoch".to_owned(),
+        };
+
+        debug!("Ignoring message because it is {}: {:?}", age, event);
+        false
     }
 }
 
 /// This event emitter listens for messages with dice rolling commands.
-/// Originally adapted from the matrix-rust-sdk  examples.
+/// Originally adapted from the matrix-rust-sdk examples.
 #[async_trait]
 impl EventEmitter for DiceBot {
     async fn on_stripped_state_member(
@@ -78,19 +110,26 @@ impl EventEmitter for DiceBot {
 
     async fn on_room_message(&self, room: SyncRoom, event: &SyncMessageEvent<MessageEventContent>) {
         if let SyncRoom::Joined(room) = room {
-            let (msg_body, sender_username) = if let SyncMessageEvent {
+            let (msg_body, sender_username, sending_time) = if let SyncMessageEvent {
                 content: MessageEventContent::Text(TextMessageEventContent { body, .. }),
                 sender,
+                origin_server_ts,
                 ..
             } = event
             {
                 (
                     body.clone(),
                     format!("@{}:{}", sender.localpart(), sender.server_name()),
+                    origin_server_ts,
                 )
             } else {
-                (String::new(), String::new())
+                (String::new(), String::new(), &SystemTime::UNIX_EPOCH)
             };
+
+            //Ignore messages that are older than configured duration.
+            if !check_message_age(event, self.config.bot.oldest_message_sec) {
+                return;
+            }
 
             //Command parser can handle non-commands, but faster to
             //not parse them.
@@ -141,10 +180,10 @@ pub enum BotError {
 
 /// Run the matrix dice bot until program terminated, or a panic occurs.
 /// Originally adapted from the matrix-rust-sdk command bot example.
-pub async fn run_bot(config: MatrixConfig) -> Result<(), Box<dyn std::error::Error>> {
-    let homeserver_url = config.home_server;
-    let username = config.username;
-    let password = config.password;
+pub async fn run_bot(config: Config) -> Result<(), Box<dyn std::error::Error>> {
+    let homeserver_url = &config.matrix.home_server;
+    let username = &config.matrix.username;
+    let password = &config.matrix.password;
 
     let mut cache_dir = dirs::cache_dir().expect("no cache directory found");
     cache_dir.push("matrix-dicebot");
@@ -160,11 +199,11 @@ pub async fn run_bot(config: MatrixConfig) -> Result<(), Box<dyn std::error::Err
     let store = JsonStore::open(&cache_dir)?;
     let client_config = ClientConfig::new().state_store(Box::new(store));
 
-    let homeserver_url = Url::parse(&homeserver_url).expect("Couldn't parse the homeserver URL");
+    let homeserver_url = Url::parse(homeserver_url).expect("Couldn't parse the homeserver URL");
     let mut client = Client::new_with_config(homeserver_url, client_config).unwrap();
 
     client
-        .login(&username, &password, None, Some("matrix dice bot"))
+        .login(username, password, None, Some("matrix dice bot"))
         .await?;
 
     info!("Logged in as {}", username);
@@ -176,7 +215,7 @@ pub async fn run_bot(config: MatrixConfig) -> Result<(), Box<dyn std::error::Err
 
     //Attach event handler.
     client
-        .add_event_emitter(Box::new(DiceBot::new(client.clone())))
+        .add_event_emitter(Box::new(DiceBot::new(config, client.clone())))
         .await;
 
     let token = client
