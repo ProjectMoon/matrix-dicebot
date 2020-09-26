@@ -25,6 +25,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cfg = read_config(config_path)?;
 
-    run_bot(cfg.matrix).await?;
+    run_bot(cfg).await?;
     Ok(())
 }
