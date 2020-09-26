@@ -193,10 +193,10 @@ fn roll_exploding_die<R: DieRoller>(
 ///A die with the rote quality is re-rolled once if the roll fails. Otherwise, it obeys
 ///all normal rules (re-roll 10s). Re-rolled dice are appended to the result set, so we
 ///can keep track of the actual dice that were rolled.
-fn roll_rote_die<R: DieRoller>(roller: &mut R, sides: u32) -> Vec<u32> {
+fn roll_rote_die<R: DieRoller>(roller: &mut R, sides: u32, success_on: u32) -> Vec<u32> {
     let mut rolls = roll_exploding_die(roller, sides, 10);
 
-    if rolls.len() == 1 && rolls[0] < 8 {
+    if rolls.len() == 1 && rolls[0] < success_on {
         rolls.append(&mut roll_exploding_die(roller, sides, 10));
     }
 
@@ -208,13 +208,15 @@ fn roll_rote_die<R: DieRoller>(roller: &mut R, sides: u32) -> Vec<u32> {
 ///there are multiple 10s). Nine- and eight-again will explode similarly if the result is
 ///at least that number. Rote quality will re-roll a failure once, while also exploding
 ///on 10. The function returns a Vec of all rolled dice (usually 1).
-fn roll_die<R: DieRoller>(roller: &mut R, sides: u32, quality: DicePoolQuality) -> Vec<u32> {
+fn roll_die<R: DieRoller>(roller: &mut R, pool: &DicePool) -> Vec<u32> {
     let mut results = vec![];
-    match quality {
+    let sides = pool.sides;
+
+    match pool.quality {
         DicePoolQuality::TenAgain => results.append(&mut roll_exploding_die(roller, sides, 10)),
         DicePoolQuality::NineAgain => results.append(&mut roll_exploding_die(roller, sides, 9)),
         DicePoolQuality::EightAgain => results.append(&mut roll_exploding_die(roller, sides, 8)),
-        DicePoolQuality::Rote => results.append(&mut roll_rote_die(roller, sides)),
+        DicePoolQuality::Rote => results.append(&mut roll_rote_die(roller, sides, pool.success_on)),
         DicePoolQuality::ChanceDie | DicePoolQuality::NoExplode => {
             results.push(roller.roll_number(sides))
         }
@@ -227,7 +229,7 @@ fn roll_die<R: DieRoller>(roller: &mut R, sides: u32, quality: DicePoolQuality) 
 ///methods.
 fn roll_dice<R: DieRoller>(pool: &DicePool, roller: &mut R) -> DicePoolRoll {
     let rolls: Vec<u32> = (0..pool.count)
-        .flat_map(|_| roll_die(roller, pool.sides, pool.quality))
+        .flat_map(|_| roll_die(roller, pool))
         .collect();
 
     DicePoolRoll {
@@ -313,22 +315,35 @@ mod tests {
     #[test]
     pub fn rote_quality_fail_then_succeed_test() {
         let mut roller = SequentialDieRoller::new(vec![5, 8, 1]);
-        let rolls = roll_rote_die(&mut roller, 10);
+        let rolls = roll_rote_die(&mut roller, 10, 8);
         assert_eq!(vec![5, 8], rolls);
     }
 
     #[test]
     pub fn rote_quality_fail_twice_test() {
         let mut roller = SequentialDieRoller::new(vec![5, 6, 10]);
-        let rolls = roll_rote_die(&mut roller, 10);
+        let rolls = roll_rote_die(&mut roller, 10, 8);
         assert_eq!(vec![5, 6], rolls);
     }
 
     #[test]
     pub fn rote_quality_fail_then_explode_test() {
         let mut roller = SequentialDieRoller::new(vec![5, 10, 8, 1]);
-        let rolls = roll_rote_die(&mut roller, 10);
+        let rolls = roll_rote_die(&mut roller, 10, 8);
         assert_eq!(vec![5, 10, 8], rolls);
+    }
+
+    #[test]
+    pub fn rote_quality_obeys_success_on_test() {
+        //With success_on = 8, should only roll once.
+        let mut roller = SequentialDieRoller::new(vec![8, 7]);
+        let rolls = roll_rote_die(&mut roller, 10, 8);
+        assert_eq!(vec![8], rolls);
+
+        //With success_on = 9, we should re-roll if it's an 8.
+        roller = SequentialDieRoller::new(vec![8, 7]);
+        let rolls = roll_rote_die(&mut roller, 10, 9);
+        assert_eq!(vec![8, 7], rolls);
     }
 
     #[test]
