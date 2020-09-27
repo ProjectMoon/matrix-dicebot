@@ -216,7 +216,11 @@ impl EventEmitter for DiceBot {
 
             //Ignore messages that are older than configured duration.
             if !check_message_age(event, get_oldest_message_age(&self.config)) {
-                let mut state = self.state.lock().unwrap();
+                let mut state = match self.state.lock() {
+                    Ok(state) => state,
+                    Err(poisoned) => poisoned.into_inner(),
+                };
+
                 (*state).skipped_old_messages();
                 return;
             }
