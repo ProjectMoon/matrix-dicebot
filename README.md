@@ -18,24 +18,25 @@ System.
 
 ## Building and Installation
 
-### Running with Docker
+### Docker Image
 
-The dice bot can run in a minimal Docker image based on [Void
-Linux](https://voidlinux.org/). You can either pull it from [Docker
-Hub](https://hub.docker.com/r/projectmoon/chronicle-dicebot) or build
-it yourself. The easiest way is to use the prebuilt image. It is
-updated on Docker Hub via a CI/CD pipeline. The `latest` tag always
-points to the most recent successful master commit and is considered
-unstable, while individual tags are considered stable:
+The easiest way to run the dice bot is to use the official Docker
+image. It is distributed on GitHub Container Registry by a CI
+pipeline.
+
+The `latest` tag always points to the most recent successfully built
+master commit and is considered unstable, while individual tags are
+considered stable.
 
 * Unstable: `docker pull ghcr.io/projectmoon/chronicle-dicebot:latest`
 * Stable: `docker pull ghcr.io/projectmoon/chronicle-dicebot:X.Y.Z`
 
-To create the Docker image, run `docker build -t chronicle-dicebot .`
-in the root of the repository.
+This image is based on [Void Linux](https://voidlinux.org/). To build
+the image yourself, run `docker build -t chronicle-dicebot .` in the
+root of the repository.
 
 After pulling or building the image, see [instructions on how to use
-the Docker image](#docker-image).
+the Docker image](#running-the-bot).
 
 ### Build from Source
 
@@ -53,7 +54,7 @@ Building the project requires:
 * glibc.
 
 Note: The `olm-sys` crate must be built in dynamic linking mode until
-a [bug][1] in its build process is fixed.
+a [bug][gnome-bug] in its build process is fixed.
 
 #### Why doesn't it build on musl libc?
 
@@ -105,37 +106,15 @@ Examples:
 
 ## Running the Bot
 
-You can run the bot by creating a Matrix account for it, building the
-application, and creating a config file that looks like this:
-
-```ini
-[matrix]
-home_server = https://example.com'
-username = 'thisismyusername'
-password = 'thisismypassword'
-
-[bot]
-oldest_message_age = 300
-```
-
-By adding the `[bot]` section, one can send the `oldset_message_age`
-setting, which is the number of seconds to ceck in the test before
-attempting to repsond to a connection.
-
-Make sure to replace the information with your own. Then you can run
-the "dicebot" binary. It takes the path to the configuration file as
-its single argument.
-
-You can also run it on the command line with the `dicebot-cmd`
-command, which expects you to feed it one of the command expressions
-as shown above, and will give you the plaintext response.
-
-### Docker Image
+The easiest way to run the bot is to use the [official Docker
+image][docker-image], although you can also [run the binary
+directly](#running-binary-directly).
 
 A typical docker run command using the official Docker image should
 look something like this:
 
 ```
+# Run unstable version of the bot
 VERSION="latest"
 docker run --rm -d --name dicebot \
 -v /path/to/dicebot-config.toml:/config/dicebot-config.toml:ro \
@@ -144,9 +123,56 @@ ghcr.io/projectmoon/chronicle-dicebot:$VERSION
 ```
 
 The Docker image requires two volume mounts: the location of the
-config file, which should be mounted at `/config/dicebot-config.toml`,
+[config file][config-file], which should be mounted at `/config/dicebot-config.toml`,
 and a cache directory to store client state after initial sync. That
 should be mounted at `/cache/`in the container.
+
+### Configuration File
+
+The configuration file is a TOML file with two sections.
+
+```toml
+[matrix]
+home_server = 'https://example.com'
+username = 'thisismyusername'
+password = 'thisismypassword'
+
+[bot]
+oldest_message_age = 300
+```
+
+The `[matrix]` section contains the information for logging in to the
+bot's matrix account.
+
+ - `home_server`: The URL for the Matrix homeserver the bot should log
+   in to. This should be the proper hostname of the homeserver that
+   you would enter into the login box, which might be different than
+   the server name that is displayed to other users.
+ - `username`: Bot account username.
+ - `password`: Bot account password.
+
+The `[bot]` section has settings for controlling how the bot operates.
+This section is optional and the settings will fall back to their
+default values if the section or setting is not present.
+
+ - `oldest_message_age`: the oldest time (in seconds) in the past that
+   a message can be before being ignored. This prevents the bot from
+   processing out-of-context old commands received while offline. The
+   default value is 900 seconds (15 minutes).
+
+### Running Binary Directly
+
+If you have [built the application from source](#build-from-source),
+you can invoke the dice bot directly instead of using Docker by
+running `dicebot /path/to/config.toml`. By default, the user account
+cache is stored in a [platform-dependent location][dirs]. If you want
+to change the cache location on Linux, for example, you can run
+`export XDG_CACHE_HOME=/path/to/cache` before invoking the bot.
+
+Installing the application directly also installs `dicebot-cmd`, which
+allows you to run arbitrary bot commands on the command line. This
+does not connect to a running instance of the bot; it just processes
+commands locally.
 
 ## Future plans
 
@@ -154,9 +180,12 @@ The most basic plans are:
 
 * To add support for simple per-user variable management, e.g. setting
   a name to a value (`gnosis = 3`) and then using those in dice rolls.
+  This lays the foundation for character sheet integration.
 * Perhaps some sort of character sheet integration. But for that, we
   would need a sheet service.
-* Automation of Docker builds and precompiled binaries.
 * Use environment variables instead of config file in Docker image.
 
-[1]: https://gitlab.gnome.org/BrainBlasted/olm-sys/-/issues/6
+[gnome-bug]: https://gitlab.gnome.org/BrainBlasted/olm-sys/-/issues/6
+[config-file]: #Configuration-File
+[docker-image]: https://github.com/users/ProjectMoon/packages/container/package/chronicle-dicebot
+[dirs]: https://docs.rs/dirs/2.0.2/dirs/
