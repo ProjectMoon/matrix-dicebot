@@ -14,7 +14,7 @@ use matrix_sdk_common_macros::async_trait;
 use serde::{self, Deserialize, Serialize};
 use std::clone::Clone;
 use std::ops::Sub;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use thiserror::Error;
 use url::Url;
@@ -79,7 +79,7 @@ pub struct DiceBot {
 
     /// Current state of the dice bot. Held in an Arc because it
     /// accessed by the multi-threaded matrix SDK event handlers.
-    state: Arc<DiceBotState>,
+    state: Arc<Mutex<DiceBotState>>,
 }
 
 impl DiceBot {
@@ -89,7 +89,7 @@ impl DiceBot {
         DiceBot {
             config: config,
             client: client,
-            state: Arc::new(DiceBotState::new()),
+            state: Arc::new(Mutex::new(DiceBotState::new())),
         }
     }
 }
@@ -98,7 +98,7 @@ impl DiceBot {
 /// transitions. This is a simple mutable trait whose values represent
 /// the current state of the dicebot. It provides mutable methods to
 /// change state.
-#[derive(Clone, Copy)]
+//#[derive(Clone, Copy)]
 pub struct DiceBotState {
     logged_skipped_old_message: bool,
 }
@@ -113,9 +113,9 @@ impl DiceBotState {
 
     /// Log and record that we have skipped some old messages. This
     /// method will log once, and then no-op from that point on.
-    fn skipped_old_messages(mut self) {
+    fn skipped_old_messages(&mut self) {
         if !self.logged_skipped_old_message {
-            info!("Skipped some messages because they are too old.");
+            info!("Skipped some messages received while offline because they are too old.");
         }
 
         self.logged_skipped_old_message = true;
@@ -216,7 +216,8 @@ impl EventEmitter for DiceBot {
 
             //Ignore messages that are older than configured duration.
             if !check_message_age(event, get_oldest_message_age(&self.config)) {
-                self.state.skipped_old_messages();
+                let mut state = self.state.lock().unwrap();
+                (*state).skipped_old_messages();
                 return;
             }
 
