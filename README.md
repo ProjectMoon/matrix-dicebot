@@ -113,7 +113,14 @@ application, and creating a config file that looks like this:
 home_server = https://example.com'
 username = 'thisismyusername'
 password = 'thisismypassword'
+
+[bot]
+oldest_message_age = 300
 ```
+
+By adding the `[bot]` section, one can send the `oldset_message_age`
+setting, which is the number of seconds to ceck in the test before
+attempting to repsond to a connection.
 
 Make sure to replace the information with your own. Then you can run
 the "dicebot" binary. It takes the path to the configuration file as
