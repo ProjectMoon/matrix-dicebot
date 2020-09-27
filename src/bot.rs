@@ -12,7 +12,9 @@ use matrix_sdk::{
 };
 use matrix_sdk_common_macros::async_trait;
 use serde::{self, Deserialize, Serialize};
+use std::clone::Clone;
 use std::ops::Sub;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use thiserror::Error;
 use url::Url;
@@ -32,7 +34,7 @@ pub struct MatrixConfig {
     pub password: String,
 }
 
-const DEFAULT_OLDEST_MESSAGE: u64 = 15 * 60;
+const DEFAULT_OLDEST_MESSAGE_AGE: u64 = 15 * 60;
 
 /// The "bot" section of the config file, for bot settings.
 #[derive(Serialize, Deserialize, Debug)]
@@ -44,14 +46,17 @@ pub struct BotConfig {
 impl BotConfig {
     pub fn new() -> BotConfig {
         BotConfig {
-            oldest_message_age: Some(DEFAULT_OLDEST_MESSAGE),
+            oldest_message_age: Some(DEFAULT_OLDEST_MESSAGE_AGE),
         }
     }
 
+    /// Determine the oldest allowable message age, in seconds. If the
+    /// setting is defined, use that value. If it is not defined, fall
+    /// back to DEFAULT_OLDEST_MESSAGE_AGE (15 minutes).
     pub fn oldest_message_age(&self) -> u64 {
         match self.oldest_message_age {
             Some(seconds) => seconds,
-            None => DEFAULT_OLDEST_MESSAGE,
+            None => DEFAULT_OLDEST_MESSAGE_AGE,
         }
     }
 }
@@ -66,17 +71,62 @@ pub struct Config {
 /// The DiceBot struct itself is the core of the program, essentially the entrypoint
 /// to the bot.
 pub struct DiceBot {
+    /// A reference to the configuration read in on application start.
     config: Config,
+
+    /// The matrix SDK client.
     client: Client,
+
+    /// Current state of the dice bot. Held in an Arc because it
+    /// accessed by the multi-threaded matrix SDK event handlers.
+    state: Arc<DiceBotState>,
 }
 
 impl DiceBot {
-    /// Create a new dicebot with the given Matrix client.
+    /// Create a new dicebot with the given Matrix configuration and
+    /// client. The dice bot is iniitalized with a fresh state.
     pub fn new(config: Config, client: Client) -> Self {
-        DiceBot { config, client }
+        DiceBot {
+            config: config,
+            client: client,
+            state: Arc::new(DiceBotState::new()),
+        }
     }
 }
 
+/// Holds state of the dice bot, for anything requiring mutable
+/// transitions. This is a simple mutable trait whose values represent
+/// the current state of the dicebot. It provides mutable methods to
+/// change state.
+#[derive(Clone, Copy)]
+pub struct DiceBotState {
+    logged_skipped_old_message: bool,
+}
+
+impl DiceBotState {
+    /// Create initial dice bot state.
+    fn new() -> DiceBotState {
+        DiceBotState {
+            logged_skipped_old_message: false,
+        }
+    }
+
+    /// Log and record that we have skipped some old messages. This
+    /// method will log once, and then no-op from that point on.
+    fn skipped_old_messages(mut self) {
+        if !self.logged_skipped_old_message {
+            info!("Skipped some messages because they are too old.");
+        }
+
+        self.logged_skipped_old_message = true;
+    }
+}
+
+/// Figure out the allowed oldest message age, in seconds. This will
+/// be the defined oldest message age in the bot config, if the bot
+/// configuration and associated "oldest_message_age" setting are
+/// defined. If the bot config or the message setting are not defined,
+/// it will defualt to 15 minutes.
 fn get_oldest_message_age(config: &Config) -> u64 {
     let none_cfg;
     let bot_cfg = match &config.bot {
@@ -157,15 +207,16 @@ impl EventEmitter for DiceBot {
                 (String::new(), String::new())
             };
 
-            //Ignore messages that are older than configured duration.
-            if !check_message_age(event, get_oldest_message_age(&self.config)) {
-                return;
-            }
-
             //Command parser can handle non-commands, but faster to
             //not parse them.
             if !msg_body.starts_with("!") {
                 trace!("Ignoring non-command: {}", msg_body);
+                return;
+            }
+
+            //Ignore messages that are older than configured duration.
+            if !check_message_age(event, get_oldest_message_age(&self.config)) {
+                self.state.skipped_old_messages();
                 return;
             }
 
@@ -245,6 +296,12 @@ pub async fn run_bot(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     //Attach event handler.
+    info!("Listening for commands");
+    info!(
+        "Oldest allowable message time is {} seconds ago",
+        get_oldest_message_age(&config)
+    );
+
     client
         .add_event_emitter(Box::new(DiceBot::new(config, client.clone())))
         .await;
@@ -256,7 +313,6 @@ pub async fn run_bot(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     let settings = SyncSettings::default().token(token);
 
     //this keeps state from the server streaming in to the dice bot via the EventEmitter trait
-    info!("Listening for commands");
     client.sync_forever(settings, |_| async {}).await;
 
     Ok(())
