@@ -2,7 +2,6 @@
 FROM bougyman/voidlinux:glibc as builder
 RUN xbps-install -Sy base-devel rust cargo cmake wget gnupg
 RUN xbps-install -Sy libressl-devel olm-devel libstdc++-devel
-#RUN rustup-init -qy
 
 # Install tini for signal processing and zombie killing
 ENV TINI_VERSION v0.18.0
