@@ -1,4 +1,8 @@
 use crate::commands::parse_command;
+use crate::config::*;
+use crate::error::BotError;
+use crate::state::{DiceBotState, LogSkippedOldMessages};
+use actix::Addr;
 use dirs;
 use log::{debug, error, info, trace, warn};
 use matrix_sdk::{
@@ -11,133 +15,100 @@ use matrix_sdk::{
     Client, ClientConfig, EventEmitter, JsonStore, SyncRoom, SyncSettings,
 };
 use matrix_sdk_common_macros::async_trait;
-use serde::{self, Deserialize, Serialize};
 use std::clone::Clone;
 use std::ops::Sub;
-use std::sync::{Arc, Mutex};
+use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
-use thiserror::Error;
 use url::Url;
 
-//TODO move the config structs and read_config into their own file.
-
-/// The "matrix" section of the config, which gives home server, login information, and etc.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MatrixConfig {
-    /// Your homeserver of choice, as an FQDN without scheme or path
-    pub home_server: String,
-
-    /// Username to login as. Only the localpart.
-    pub username: String,
-
-    /// Bot account password.
-    pub password: String,
-}
-
-const DEFAULT_OLDEST_MESSAGE_AGE: u64 = 15 * 60;
-
-/// The "bot" section of the config file, for bot settings.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct BotConfig {
-    /// How far back from current time should we process a message?
-    oldest_message_age: Option<u64>,
-}
-
-impl BotConfig {
-    pub fn new() -> BotConfig {
-        BotConfig {
-            oldest_message_age: Some(DEFAULT_OLDEST_MESSAGE_AGE),
-        }
-    }
-
-    /// Determine the oldest allowable message age, in seconds. If the
-    /// setting is defined, use that value. If it is not defined, fall
-    /// back to DEFAULT_OLDEST_MESSAGE_AGE (15 minutes).
-    pub fn oldest_message_age(&self) -> u64 {
-        match self.oldest_message_age {
-            Some(seconds) => seconds,
-            None => DEFAULT_OLDEST_MESSAGE_AGE,
-        }
-    }
-}
-
-/// Represents the toml config file for the dicebot.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Config {
-    pub matrix: MatrixConfig,
-    pub bot: Option<BotConfig>,
-}
-
-/// The DiceBot struct itself is the core of the program, essentially the entrypoint
-/// to the bot.
+/// The DiceBot struct represents an active dice bot. The bot is not
+/// connected to Matrix until its run() function is called.
 pub struct DiceBot {
     /// A reference to the configuration read in on application start.
     config: Config,
 
-    /// The matrix SDK client.
+    /// The matrix client.
     client: Client,
 
-    /// Current state of the dice bot. Held in an Arc because it
-    /// accessed by the multi-threaded matrix SDK event handlers.
-    state: Arc<Mutex<DiceBotState>>,
+    /// Current state of the dice bot. Actor ref to the core state
+    /// actor.
+    state: Addr<DiceBotState>,
+}
+
+fn cache_dir() -> Result<PathBuf, BotError> {
+    let mut dir = dirs::cache_dir().ok_or(BotError::NoCacheDirectoryError)?;
+    dir.push("matrix-dicebot");
+    Ok(dir)
+}
+
+/// Creates the matrix client.
+fn create_client(config: &Config) -> Result<Client, BotError> {
+    let cache_dir = cache_dir()?;
+    let store = JsonStore::open(&cache_dir)?;
+    let client_config = ClientConfig::new().state_store(Box::new(store));
+    let homeserver_url = Url::parse(&config.matrix.home_server)?;
+
+    Ok(Client::new_with_config(homeserver_url, client_config)?)
 }
 
 impl DiceBot {
-    /// Create a new dicebot with the given Matrix configuration and
-    /// client. The dice bot is iniitalized with a fresh state.
-    pub fn new(config: Config, client: Client) -> Self {
-        DiceBot {
-            config: config,
-            client: client,
-            state: Arc::new(Mutex::new(DiceBotState::new())),
-        }
-    }
-}
-
-/// Holds state of the dice bot, for anything requiring mutable
-/// transitions. This is a simple mutable trait whose values represent
-/// the current state of the dicebot. It provides mutable methods to
-/// change state.
-//#[derive(Clone, Copy)]
-pub struct DiceBotState {
-    logged_skipped_old_message: bool,
-}
-
-impl DiceBotState {
-    /// Create initial dice bot state.
-    fn new() -> DiceBotState {
-        DiceBotState {
-            logged_skipped_old_message: false,
-        }
+    /// Create a new dicebot with the given configuration and state
+    /// actor. This function returns a Result because it is possible
+    /// for client creation to fail for some reason (e.g. invalid
+    /// homeserver URL).
+    pub fn new(config: &Config, state_actor: Addr<DiceBotState>) -> Result<Self, BotError> {
+        Ok(DiceBot {
+            client: create_client(&config)?,
+            config: config.clone(),
+            state: state_actor,
+        })
     }
 
-    /// Log and record that we have skipped some old messages. This
-    /// method will log once, and then no-op from that point on.
-    fn skipped_old_messages(&mut self) {
-        if !self.logged_skipped_old_message {
-            info!("Skipped some messages received while offline because they are too old.");
+    /// Logs the bot into Matrix and listens for events until program
+    /// terminated, or a panic occurs. Originally adapted from the
+    /// matrix-rust-sdk command bot example.
+    pub async fn run(self) -> Result<(), BotError> {
+        let username = &self.config.matrix.username;
+        let password = &self.config.matrix.password;
+
+        //TODO provide a device id from config.
+        let mut client = self.client.clone();
+        client
+            .login(username, password, None, Some("matrix dice bot"))
+            .await?;
+
+        info!("Logged in as {}", username);
+
+        //If the local json store has not been created yet, we need to do a single initial sync.
+        //It stores data under username's localpart.
+        let should_sync = {
+            let username = &self.config.matrix.username;
+            let mut cache = cache_dir()?;
+            cache.push(username);
+            !cache.exists()
+        };
+
+        if should_sync {
+            info!("Performing initial sync");
+            self.client.sync(SyncSettings::default()).await?;
         }
 
-        self.logged_skipped_old_message = true;
+        //Attach event handler.
+        client.add_event_emitter(Box::new(self)).await;
+        info!("Listening for commands");
+
+        let token = client
+            .sync_token()
+            .await
+            .ok_or(BotError::SyncTokenRequired)?;
+
+        let settings = SyncSettings::default().token(token);
+
+        //this keeps state from the server streaming in to the dice bot via the EventEmitter trait
+        //TODO somehow figure out how to "sync_until" instead of sync_forever... copy code and modify?
+        client.sync_forever(settings, |_| async {}).await;
+        Ok(())
     }
-}
-
-/// Figure out the allowed oldest message age, in seconds. This will
-/// be the defined oldest message age in the bot config, if the bot
-/// configuration and associated "oldest_message_age" setting are
-/// defined. If the bot config or the message setting are not defined,
-/// it will defualt to 15 minutes.
-fn get_oldest_message_age(config: &Config) -> u64 {
-    let none_cfg;
-    let bot_cfg = match &config.bot {
-        Some(cfg) => cfg,
-        None => {
-            none_cfg = BotConfig::new();
-            &none_cfg
-        }
-    };
-
-    bot_cfg.oldest_message_age()
 }
 
 /// Check if a message is recent enough to actually process. If the
@@ -215,14 +186,16 @@ impl EventEmitter for DiceBot {
             }
 
             //Ignore messages that are older than configured duration.
-            if !check_message_age(event, get_oldest_message_age(&self.config)) {
-                let mut state = match self.state.lock() {
-                    Ok(state) => state,
-                    Err(poisoned) => poisoned.into_inner(),
-                };
+            if !check_message_age(event, self.config.get_oldest_message_age()) {
+                let res = self.state.send(LogSkippedOldMessages).await;
 
-                (*state).skipped_old_messages();
-                return;
+                match res {
+                    Ok(_) => return,
+                    Err(e) => {
+                        error!("Actix error: {:?}", e);
+                        return;
+                    }
+                }
             }
 
             let (plain, html) = match parse_command(&msg_body) {
@@ -255,105 +228,5 @@ impl EventEmitter for DiceBot {
                 Ok(_) => (),
             }
         }
-    }
-}
-
-#[derive(Error, Debug)]
-pub enum BotError {
-    /// Sync token couldn't be found.
-    #[error("the sync token could not be retrieved")]
-    SyncTokenRequired,
-}
-
-/// Run the matrix dice bot until program terminated, or a panic occurs.
-/// Originally adapted from the matrix-rust-sdk command bot example.
-pub async fn run_bot(config: Config) -> Result<(), Box<dyn std::error::Error>> {
-    let homeserver_url = &config.matrix.home_server;
-    let username = &config.matrix.username;
-    let password = &config.matrix.password;
-
-    let mut cache_dir = dirs::cache_dir().expect("no cache directory found");
-    cache_dir.push("matrix-dicebot");
-
-    //If the local json store has not been created yet, we need to do a single initial sync.
-    //It stores data under username's localpart.
-    let should_sync = {
-        let mut cache = cache_dir.clone();
-        cache.push(username.clone());
-        !cache.exists()
-    };
-
-    let store = JsonStore::open(&cache_dir)?;
-    let client_config = ClientConfig::new().state_store(Box::new(store));
-
-    let homeserver_url = Url::parse(homeserver_url).expect("Couldn't parse the homeserver URL");
-    let mut client = Client::new_with_config(homeserver_url, client_config).unwrap();
-
-    client
-        .login(username, password, None, Some("matrix dice bot"))
-        .await?;
-
-    info!("Logged in as {}", username);
-
-    if should_sync {
-        info!("Performing initial sync");
-        client.sync(SyncSettings::default()).await?;
-    }
-
-    //Attach event handler.
-    info!("Listening for commands");
-    info!(
-        "Oldest allowable message time is {} seconds ago",
-        get_oldest_message_age(&config)
-    );
-
-    client
-        .add_event_emitter(Box::new(DiceBot::new(config, client.clone())))
-        .await;
-
-    let token = client
-        .sync_token()
-        .await
-        .ok_or(BotError::SyncTokenRequired)?;
-    let settings = SyncSettings::default().token(token);
-
-    //this keeps state from the server streaming in to the dice bot via the EventEmitter trait
-    client.sync_forever(settings, |_| async {}).await;
-
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn oldest_message_default_no_setting_test() {
-        let cfg = Config {
-            matrix: MatrixConfig {
-                home_server: "".to_owned(),
-                username: "".to_owned(),
-                password: "".to_owned(),
-            },
-            bot: Some(BotConfig {
-                oldest_message_age: None,
-            }),
-        };
-
-        assert_eq!(15 * 60, get_oldest_message_age(&cfg));
-    }
-
-    #[test]
-    fn oldest_message_default_no_bot_config_test() {
-        let cfg = Config {
-            matrix: MatrixConfig {
-                home_server: "".to_owned(),
-                username: "".to_owned(),
-                password: "".to_owned(),
-            },
-            bot: None,
-        };
-
-        assert_eq!(15 * 60, get_oldest_message_age(&cfg));
     }
 }
