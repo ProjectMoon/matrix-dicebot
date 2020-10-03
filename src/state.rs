@@ -1,6 +1,7 @@
 use crate::config::*;
 use actix::prelude::*;
 use log::info;
+use std::sync::Arc;
 
 #[derive(Message)]
 #[rtype(result = "bool")]
@@ -12,7 +13,7 @@ pub struct LogSkippedOldMessages;
 /// change state.
 pub struct DiceBotState {
     logged_skipped_old_messages: bool,
-    config: Config,
+    config: Arc<Config>,
 }
 
 impl Actor for DiceBotState {
@@ -21,14 +22,14 @@ impl Actor for DiceBotState {
     fn started(&mut self, _ctx: &mut Self::Context) {
         info!(
             "Oldest allowable message time is {} seconds ago",
-            &self.config.get_oldest_message_age()
+            &self.config.oldest_message_age()
         );
     }
 }
 
 impl DiceBotState {
     /// Create initial dice bot state.
-    pub fn new(config: &Config) -> DiceBotState {
+    pub fn new(config: &Arc<Config>) -> DiceBotState {
         DiceBotState {
             logged_skipped_old_messages: false,
             config: config.clone(),

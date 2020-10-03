@@ -6,6 +6,9 @@ pub enum BotError {
     #[error("the sync token could not be retrieved")]
     SyncTokenRequired,
 
+    #[error("the message should not be processed because it failed validation")]
+    ShouldNotProcessError,
+
     #[error("no cache directory found")]
     NoCacheDirectoryError,
 

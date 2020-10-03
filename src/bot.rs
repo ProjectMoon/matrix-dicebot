@@ -18,6 +18,7 @@ use matrix_sdk_common_macros::async_trait;
 use std::clone::Clone;
 use std::ops::Sub;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use url::Url;
 
@@ -25,7 +26,7 @@ use url::Url;
 /// connected to Matrix until its run() function is called.
 pub struct DiceBot {
     /// A reference to the configuration read in on application start.
-    config: Config,
+    config: Arc<Config>,
 
     /// The matrix client.
     client: Client,
@@ -46,7 +47,7 @@ fn create_client(config: &Config) -> Result<Client, BotError> {
     let cache_dir = cache_dir()?;
     let store = JsonStore::open(&cache_dir)?;
     let client_config = ClientConfig::new().state_store(Box::new(store));
-    let homeserver_url = Url::parse(&config.matrix.home_server)?;
+    let homeserver_url = Url::parse(&config.matrix_homeserver())?;
 
     Ok(Client::new_with_config(homeserver_url, client_config)?)
 }
@@ -56,7 +57,7 @@ impl DiceBot {
     /// actor. This function returns a Result because it is possible
     /// for client creation to fail for some reason (e.g. invalid
     /// homeserver URL).
-    pub fn new(config: &Config, state_actor: Addr<DiceBotState>) -> Result<Self, BotError> {
+    pub fn new(config: &Arc<Config>, state_actor: Addr<DiceBotState>) -> Result<Self, BotError> {
         Ok(DiceBot {
             client: create_client(&config)?,
             config: config.clone(),
@@ -68,8 +69,8 @@ impl DiceBot {
     /// terminated, or a panic occurs. Originally adapted from the
     /// matrix-rust-sdk command bot example.
     pub async fn run(self) -> Result<(), BotError> {
-        let username = &self.config.matrix.username;
-        let password = &self.config.matrix.password;
+        let username = &self.config.matrix_username();
+        let password = &self.config.matrix_password();
 
         //TODO provide a device id from config.
         let mut client = self.client.clone();
@@ -82,7 +83,6 @@ impl DiceBot {
         //If the local json store has not been created yet, we need to do a single initial sync.
         //It stores data under username's localpart.
         let should_sync = {
-            let username = &self.config.matrix.username;
             let mut cache = cache_dir()?;
             cache.push(username);
             !cache.exists()
@@ -135,6 +135,45 @@ fn check_message_age(
     }
 }
 
+async fn should_process(
+    bot: &DiceBot,
+    event: &SyncMessageEvent<MessageEventContent>,
+) -> Result<(String, String), BotError> {
+    //Ignore messages that are older than configured duration.
+    if !check_message_age(event, bot.config.oldest_message_age()) {
+        let res = bot.state.send(LogSkippedOldMessages).await;
+
+        if let Err(e) = res {
+            error!("Actix error: {:?}", e);
+        };
+
+        return Err(BotError::ShouldNotProcessError);
+    }
+
+    let (msg_body, sender_username) = if let SyncMessageEvent {
+        content: MessageEventContent::Text(TextMessageEventContent { body, .. }),
+        sender,
+        ..
+    } = event
+    {
+        (
+            body.clone(),
+            format!("@{}:{}", sender.localpart(), sender.server_name()),
+        )
+    } else {
+        (String::new(), String::new())
+    };
+
+    //Command parser can handle non-commands, but faster to
+    //not parse them.
+    if !msg_body.starts_with("!") {
+        trace!("Ignoring non-command: {}", msg_body);
+        return Err(BotError::ShouldNotProcessError);
+    }
+
+    Ok((msg_body, sender_username))
+}
+
 /// This event emitter listens for messages with dice rolling commands.
 /// Originally adapted from the matrix-rust-sdk examples.
 #[async_trait]
@@ -155,48 +194,20 @@ impl EventEmitter for DiceBot {
             let room = room.read().await;
             info!("Autojoining room {}", room.display_name());
 
-            match self.client.join_room_by_id(&room.room_id).await {
-                Err(e) => warn!("Could not join room: {}", e.to_string()),
-                _ => (),
+            if let Err(e) = self.client.join_room_by_id(&room.room_id).await {
+                warn!("Could not join room: {}", e.to_string())
             }
         }
     }
 
     async fn on_room_message(&self, room: SyncRoom, event: &SyncMessageEvent<MessageEventContent>) {
         if let SyncRoom::Joined(room) = room {
-            let (msg_body, sender_username) = if let SyncMessageEvent {
-                content: MessageEventContent::Text(TextMessageEventContent { body, .. }),
-                sender,
-                ..
-            } = event
-            {
-                (
-                    body.clone(),
-                    format!("@{}:{}", sender.localpart(), sender.server_name()),
-                )
-            } else {
-                (String::new(), String::new())
-            };
-
-            //Command parser can handle non-commands, but faster to
-            //not parse them.
-            if !msg_body.starts_with("!") {
-                trace!("Ignoring non-command: {}", msg_body);
-                return;
-            }
-
-            //Ignore messages that are older than configured duration.
-            if !check_message_age(event, self.config.get_oldest_message_age()) {
-                let res = self.state.send(LogSkippedOldMessages).await;
-
-                match res {
-                    Ok(_) => return,
-                    Err(e) => {
-                        error!("Actix error: {:?}", e);
-                        return;
-                    }
-                }
-            }
+            let (msg_body, sender_username) =
+                if let Ok((msg_body, sender_username)) = should_process(self, &event).await {
+                    (msg_body, sender_username)
+                } else {
+                    return;
+                };
 
             let (plain, html) = match parse_command(&msg_body) {
                 Ok(Some(command)) => {
@@ -217,16 +228,18 @@ impl EventEmitter for DiceBot {
                 NoticeMessageEventContent::html(plain, html),
             ));
 
-            info!("{} executed: {}", sender_username, msg_body);
-
             //we clone here to hold the lock for as little time as possible.
-            let room_id = room.read().await.room_id.clone();
-            let result = self.client.room_send(&room_id, content, None).await;
+            let (room_name, room_id) = {
+                let real_room = room.read().await;
+                (real_room.display_name().clone(), real_room.room_id.clone())
+            };
 
-            match result {
-                Err(e) => error!("Error sending message: {}", e.to_string()),
-                Ok(_) => (),
-            }
+            let result = self.client.room_send(&room_id, content, None).await;
+            if let Err(e) = result {
+                error!("Error sending message: {}", e.to_string());
+            };
+
+            info!("[{}] {} executed: {}", room_name, sender_username, msg_body);
         }
     }
 }
