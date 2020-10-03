@@ -26,11 +26,11 @@ impl BotConfig {
     /// Determine the oldest allowable message age, in seconds. If the
     /// setting is defined, use that value. If it is not defined, fall
     /// back to DEFAULT_OLDEST_MESSAGE_AGE (15 minutes).
+    #[inline]
+    #[must_use]
     fn oldest_message_age(&self) -> u64 {
-        match self.oldest_message_age {
-            Some(seconds) => seconds,
-            None => DEFAULT_OLDEST_MESSAGE_AGE,
-        }
+        self.oldest_message_age
+            .unwrap_or(DEFAULT_OLDEST_MESSAGE_AGE)
     }
 }
 
