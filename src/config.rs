@@ -45,16 +45,22 @@ pub struct Config {
 
 impl Config {
     /// The matrix homeserver URL.
+    #[inline]
+    #[must_use]
     pub fn matrix_homeserver(&self) -> &str {
         &self.matrix.home_server
     }
 
     /// The username used to connect to the matrix server.
+    #[inline]
+    #[must_use]
     pub fn matrix_username(&self) -> &str {
         &self.matrix.username
     }
 
     /// The password used to connect to the matrix server.
+    #[inline]
+    #[must_use]
     pub fn matrix_password(&self) -> &str {
         &self.matrix.password
     }
@@ -63,7 +69,9 @@ impl Config {
     /// be the defined oldest message age in the bot config, if the bot
     /// configuration and associated "oldest_message_age" setting are
     /// defined. If the bot config or the message setting are not defined,
-    /// it will defualt to 15 minutes.
+    /// it will default to 15 minutes.
+    #[inline]
+    #[must_use]
     pub fn oldest_message_age(&self) -> u64 {
         self.bot
             .as_ref()
