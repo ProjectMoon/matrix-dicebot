@@ -9,6 +9,7 @@ use env_logger::Env;
 use log::error;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 fn read_config<P: Into<PathBuf>>(config_path: P) -> Result<Config, BotError> {
     let config_path = config_path.into();
@@ -41,7 +42,7 @@ async fn run() -> Result<(), BotError> {
         .next()
         .expect("Need a config as an argument");
 
-    let cfg = read_config(config_path)?;
+    let cfg = Arc::new(read_config(config_path)?);
     let bot_state = DiceBotState::new(&cfg).start();
 
     match DiceBot::new(&cfg, bot_state) {
