@@ -1,6 +1,7 @@
 target/
 dicebot-config
 todo
+todo.org
 cache
 *.tar
 *.tar.gz

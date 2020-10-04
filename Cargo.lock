@@ -277,6 +277,7 @@ dependencies = [
  "actix",
  "actix-rt",
  "async-trait",
+ "combine",
  "dirs",
  "env_logger",
  "indoc",
@@ -287,6 +288,7 @@ dependencies = [
  "matrix-sdk-common 0.1.0 (git+https://github.com/matrix-org/matrix-rust-sdk?rev=0.1.0)",
  "matrix-sdk-common-macros",
  "nom",
+ "once_cell",
  "rand",
  "serde",
  "thiserror",
@@ -323,6 +325,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e56268c17a6248366d66d4a47a3381369d068cce8409bb1716ed77ea32163bb"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "combine"
+version = "4.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2809f67365382d65fd2b6d9c22577231b954ed27400efeafbe687bda75abcc0b"
+dependencies = [
+ "bytes",
+ "memchr",
+ "pin-project-lite",
 ]
 
 [[package]]
