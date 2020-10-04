@@ -1,68 +1,84 @@
 use crate::cofd::parser::{create_chance_die, parse_dice_pool};
 use crate::commands::{Command, HelpCommand, PoolRollCommand, RollCommand};
 use crate::dice::parser::parse_element_expression;
+use crate::error::BotError;
 use crate::help::parse_help_topic;
-use nom::bytes::streaming::tag;
-use nom::error::ErrorKind as NomErrorKind;
+use combine::parser::char::{char, letter, space};
+use combine::{any, many1, optional, Parser};
 use nom::Err as NomErr;
-use nom::{character::complete::alpha1, IResult};
 
 // Parse a roll expression.
-fn parse_roll(input: &str) -> IResult<&str, Box<dyn Command>> {
-    let (input, expression) = parse_element_expression(input)?;
-    Ok((input, Box::new(RollCommand(expression))))
+fn parse_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
+    let result = parse_element_expression(input);
+    match result {
+        Ok((rest, expression)) if rest.len() == 0 => Ok(Box::new(RollCommand(expression))),
+        //Legacy code boundary translates nom errors into BotErrors.
+        Ok(_) => Err(BotError::NomParserIncomplete),
+        Err(NomErr::Error(e)) => Err(BotError::NomParserError(e.1)),
+        Err(NomErr::Failure(e)) => Err(BotError::NomParserError(e.1)),
+        Err(NomErr::Incomplete(_)) => Err(BotError::NomParserIncomplete),
+    }
 }
 
-fn parse_pool_roll(input: &str) -> IResult<&str, Box<dyn Command>> {
-    let (input, pool) = parse_dice_pool(input)?;
-    Ok((input, Box::new(PoolRollCommand(pool))))
+fn parse_pool_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
+    let pool = parse_dice_pool(input)?;
+    Ok(Box::new(PoolRollCommand(pool)))
 }
 
-fn chance_die() -> IResult<&'static str, Box<dyn Command>> {
-    let (input, pool) = create_chance_die()?;
-    Ok((input, Box::new(PoolRollCommand(pool))))
+fn chance_die() -> Result<Box<dyn Command>, BotError> {
+    let pool = create_chance_die()?;
+    Ok(Box::new(PoolRollCommand(pool)))
 }
 
-fn help(topic: &str) -> IResult<&str, Box<dyn Command>> {
+fn help(topic: &str) -> Result<Box<dyn Command>, BotError> {
     let topic = parse_help_topic(topic);
-    Ok(("", Box::new(HelpCommand(topic))))
+    Ok(Box::new(HelpCommand(topic)))
 }
 
 /// Split an input string into its constituent command and "everything
 /// else" parts. Extracts the command separately from its input (i.e.
 /// rest of the line) and returns a tuple of (command_input, command).
 /// Whitespace at the start and end of the command input is removed.
-fn split_command(input: &str) -> IResult<&str, &str> {
-    let input = input.trim_start();
-    let (input, _) = tag("!")(input)?;
+fn split_command(input: &str) -> Result<(String, String), BotError> {
+    let input = input.trim();
 
-    let (mut command_input, command) = alpha1(input)?;
-    command_input = command_input.trim();
-    Ok((command_input, command))
+    let exclamation = char('!');
+    let word = many1(letter()).map(|value: String| value);
+    let at_least_one_space = many1(space().silent()).map(|value: String| value);
+    let cmd_input = optional(at_least_one_space.and(many1(any()).map(|value: String| value)));
+
+    let mut parser = exclamation.and(word).and(cmd_input);
+
+    //TODO make less wacky, possibly by mapping it into a struct and
+    // making use of skip. This super-wacky tuple is:
+    //  (parsed_input, rest)
+    //Where parsed_input is:
+    //  (!command, option<arguments>)
+    //Where !command is:
+    //  ('!', command)
+    //Were option<arguments> is:
+    // Option tuple of (whitespace, arguments)
+    let (command, command_input) = match parser.parse(input)? {
+        (((_, command), Some((_, command_input))), _) => (command, command_input),
+        (((_, command), None), _) => (command, "".to_string()),
+    };
+
+    Ok((command, command_input))
 }
 
 /// Potentially parse a command expression. If we recognize the
 /// command, an error should be raised if the command is misparsed. If
 /// we don't recognize the command, ignore it and return None.
-pub fn parse_command(input: &str) -> IResult<&str, Option<Box<dyn Command>>> {
+pub fn parse_command(input: &str) -> Result<Option<Box<dyn Command>>, BotError> {
     match split_command(input) {
-        Ok((cmd_input, cmd)) => match cmd {
-            "r" | "roll" => parse_roll(cmd_input).map(|(input, command)| (input, Some(command))),
-            "rp" | "pool" => {
-                parse_pool_roll(cmd_input).map(|(input, command)| (input, Some(command)))
-            }
-            "chance" => chance_die().map(|(input, command)| (input, Some(command))),
-            "help" => help(cmd_input).map(|(input, command)| (input, Some(command))),
+        Ok((cmd, cmd_input)) => match cmd.as_ref() {
+            "r" | "roll" => parse_roll(&cmd_input).map(|command| Some(command)),
+            "rp" | "pool" => parse_pool_roll(&cmd_input).map(|command| Some(command)),
+            "chance" => chance_die().map(|command| Some(command)),
+            "help" => help(&cmd_input).map(|command| Some(command)),
             // No recognized command, ignore this.
-            _ => Ok((input, None)),
+            _ => Ok(None),
         },
-
-        //TODO better way to do this?
-        //If the input is not a command, or the message is incomplete
-        //(empty), we declare this to be a non-command, and don't do
-        //anything else with it.
-        Err(NomErr::Error((_, NomErrorKind::Tag))) | Err(NomErr::Incomplete(_)) => Ok(("", None)),
-
         //All other errors passed up.
         Err(e) => Err(e),
     }
@@ -72,18 +88,19 @@ pub fn parse_command(input: &str) -> IResult<&str, Option<Box<dyn Command>>> {
 mod tests {
     use super::*;
 
+    //TODO these errors don't seem to implement the right traits to do
+    //eq checks or even unwrap_err!
+
     #[test]
     fn non_command_test() {
         let result = parse_command("not a command");
-        assert!(result.is_ok());
-        assert!(result.unwrap().1.is_none());
+        assert!(result.is_err());
     }
 
     #[test]
     fn empty_message_test() {
         let result = parse_command("");
-        assert!(result.is_ok());
-        assert!(result.unwrap().1.is_none());
+        assert!(result.is_err());
     }
 
     #[test]
@@ -95,22 +112,19 @@ mod tests {
     #[test]
     fn word_with_exclamation_mark_test() {
         let result1 = parse_command("hello !notacommand");
-        assert!(result1.is_ok());
-        assert!(result1.unwrap().1.is_none());
+        assert!(result1.is_err());
 
         let result2 = parse_command("hello!");
-        assert!(result2.is_ok());
-        assert!(result2.unwrap().1.is_none());
+        assert!(result2.is_err());
 
         let result3 = parse_command("hello!notacommand");
-        assert!(result3.is_ok());
-        assert!(result3.unwrap().1.is_none());
+        assert!(result3.is_err());
     }
 
     #[test]
     fn basic_command_test() {
         assert_eq!(
-            ("1d4", "roll"),
+            ("roll".to_string(), "1d4".to_string()),
             split_command("!roll 1d4").expect("got parsing error")
         );
     }
@@ -118,7 +132,7 @@ mod tests {
     #[test]
     fn whitespace_at_start_test() {
         assert_eq!(
-            ("1d4", "roll"),
+            ("roll".to_string(), "1d4".to_string()),
             split_command("   !roll 1d4").expect("got parsing error")
         );
     }
@@ -126,7 +140,7 @@ mod tests {
     #[test]
     fn whitespace_at_end_test() {
         assert_eq!(
-            ("1d4", "roll"),
+            ("roll".to_string(), "1d4".to_string()),
             split_command("!roll 1d4   ").expect("got parsing error")
         );
     }
@@ -134,7 +148,7 @@ mod tests {
     #[test]
     fn whitespace_on_both_ends_test() {
         assert_eq!(
-            ("1d4", "roll"),
+            ("roll".to_string(), "1d4".to_string()),
             split_command("   !roll 1d4   ").expect("got parsing error")
         );
     }
@@ -142,12 +156,12 @@ mod tests {
     #[test]
     fn single_command_test() {
         assert_eq!(
-            ("", "roll"),
+            ("roll".to_string(), "".to_string()),
             split_command("!roll").expect("got parsing error")
         );
 
         assert_eq!(
-            ("", "thisdoesnotexist"),
+            ("thisdoesnotexist".to_string(), "".to_string()),
             split_command("!thisdoesnotexist").expect("got parsing error")
         );
     }

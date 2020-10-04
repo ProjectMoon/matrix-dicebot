@@ -33,4 +33,19 @@ pub enum BotError {
 
     #[error("i/o error")]
     IoError(#[from] std::io::Error),
+
+    #[error("parsing error")]
+    ParserError(#[from] combine::error::StringStreamError),
+
+    #[error("dice parsing error")]
+    DiceParsingError(#[from] crate::cofd::parser::DiceParsingError),
+
+    #[error("legacy parsing error")]
+    NomParserError(nom::error::ErrorKind),
+
+    #[error("legacy parsing error: not enough data")]
+    NomParserIncomplete,
+
+    #[error("variables not yet supported")]
+    VariablesNotSupported,
 }

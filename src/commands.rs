@@ -1,5 +1,6 @@
 use crate::cofd::dice::DicePool;
 use crate::dice::ElementExpression;
+use crate::error::BotError;
 use crate::help::HelpTopic;
 use crate::roll::Roll;
 
@@ -51,12 +52,24 @@ impl Command for PoolRollCommand {
     }
 
     fn execute(&self) -> Execution {
-        let roll = self.0.roll();
-        let plain = format!("Pool: {}\nResult: {}", self.0, roll);
-        let html = format!(
-            "<p><strong>Pool:</strong> {}</p><p><strong>Result</strong>: {}</p>",
-            self.0, roll
-        );
+        let roll_result = self.0.roll();
+
+        let (plain, html) = match roll_result {
+            Ok(rolled_pool) => {
+                let plain = format!("Pool: {}\nResult: {}", rolled_pool, rolled_pool.roll);
+                let html = format!(
+                    "<p><strong>Pool:</strong> {}</p><p><strong>Result</strong>: {}</p>",
+                    rolled_pool, rolled_pool.roll
+                );
+                (plain, html)
+            }
+            Err(e) => {
+                let plain = format!("Error: {}", e);
+                let html = format!("<p><strong>Error:</strong> {}</p>", e);
+                (plain, html)
+            }
+        };
+
         Execution { plain, html }
     }
 }
@@ -83,20 +96,21 @@ impl Command for HelpCommand {
 /// Parse a command string into a dynamic command execution trait
 /// object. Returns an error if a command was recognized but not
 /// parsed correctly. Returns Ok(None) if no command was recognized.
-pub fn parse_command(s: &str) -> Result<Option<Box<dyn Command>>, String> {
-    match parser::parse_command(s) {
-        Ok((input, command)) => match (input, &command) {
-            //Any command, or text transformed into non-command is
-            //sent upwards.
-            ("", Some(_)) | (_, None) => Ok(command),
+pub fn parse_command(s: &str) -> Result<Option<Box<dyn Command>>, BotError> {
+    // match parser::parse_command(s) {
+    //     Ok(Some(command)) => match &command {
+    //         //Any command, or text transformed into non-command is
+    //         //sent upwards.
+    //         ("", Some(_)) | (_, None) => Ok(command),
 
-            //TODO replcae with nom all_consuming?
-            //Any unconsumed input (whitespace should already be
-            // stripped) is considered a parsing error.
-            _ => Err(format!("{}: malformed expression", s)),
-        },
-        Err(err) => Err(err.to_string()),
-    }
+    //         //TODO replcae with nom all_consuming?
+    //         //Any unconsumed input (whitespace should already be
+    //         // stripped) is considered a parsing error.
+    //         _ => Err(format!("{}: malformed expression", s)),
+    //     },
+    //     Err(err) => Err(err),
+    // }
+    parser::parse_command(s)
 }
 
 #[cfg(test)]
@@ -122,13 +136,13 @@ mod tests {
 
     #[test]
     fn pool_whitespace_test() {
-        assert!(parse_command("!pool 8ns3   ")
+        assert!(parse_command("!pool ns3:8   ")
             .map(|p| p.is_some())
             .expect("was error"));
-        assert!(parse_command("   !pool 8ns3")
+        assert!(parse_command("   !pool ns3:8")
             .map(|p| p.is_some())
             .expect("was error"));
-        assert!(parse_command("   !pool 8ns3   ")
+        assert!(parse_command("   !pool ns3:8   ")
             .map(|p| p.is_some())
             .expect("was error"));
     }
