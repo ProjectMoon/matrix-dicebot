@@ -25,7 +25,6 @@ indoc = "1.0"
 actix = "0.10"
 actix-rt = "1.1"
 combine = "4.3"
-once_cell = "1.4"
 
 # The versioning of the matrix SDK follows its Cargo.toml. The SDK and
 # macros are on master, but it imports the common and base from 0.1.0.

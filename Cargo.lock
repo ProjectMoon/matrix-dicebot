@@ -288,7 +288,6 @@ dependencies = [
  "matrix-sdk-common 0.1.0 (git+https://github.com/matrix-org/matrix-rust-sdk?rev=0.1.0)",
  "matrix-sdk-common-macros",
  "nom",
- "once_cell",
  "rand",
  "serde",
  "thiserror",
