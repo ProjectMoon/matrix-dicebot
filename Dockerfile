@@ -1,5 +1,6 @@
 # Builder image with development dependencies.
 FROM bougyman/voidlinux:glibc as builder
+RUN xbps-install -Syu
 RUN xbps-install -Sy base-devel rust cargo cmake wget gnupg
 RUN xbps-install -Sy libressl-devel olm-devel libstdc++-devel
 
@@ -36,4 +37,5 @@ COPY --from=builder \
     /usr/local/bin/
 
 ENV XDG_CACHE_HOME "/cache"
+ENV DATABASE_PATH "/cache/bot-db"
 ENTRYPOINT [ "/usr/local/bin/tini", "-v", "--", "/usr/local/bin/dicebot", "/config/dicebot-config.toml" ]

@@ -1,12 +1,17 @@
-use chronicle_dicebot::commands::parse_command;
+use chronicle_dicebot::commands::Command;
+use chronicle_dicebot::context::Context;
+use chronicle_dicebot::db::Database;
+use chronicle_dicebot::error::BotError;
 
-fn main() -> Result<(), String> {
-    let command = std::env::args().skip(1).collect::<Vec<String>>().join(" ");
-    let command = match parse_command(&command) {
-        Ok(Some(command)) => command,
-        Ok(None) => return Err("Command not recognized".into()),
-        Err(e) => return Err(format!("Error parsing command: {}", e)),
+fn main() -> Result<(), BotError> {
+    let db = Database::new(&sled::open("test-db")?);
+    let input = std::env::args().skip(1).collect::<Vec<String>>().join(" ");
+    let command = match Command::parse(&input) {
+        Ok(command) => command,
+        Err(e) => return Err(e),
     };
-    println!("{}", command.execute().plain());
+
+    let context = Context::new(&db, "roomid", "localuser", &input);
+    println!("{}", command.execute(&context).plain());
     Ok(())
 }

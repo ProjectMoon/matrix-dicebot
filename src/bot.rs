@@ -1,8 +1,10 @@
-use crate::commands::parse_command;
+use crate::actors::state::LogSkippedOldMessages;
+use crate::actors::Actors;
+use crate::commands::execute_command;
 use crate::config::*;
+use crate::context::Context;
+use crate::db::Database;
 use crate::error::BotError;
-use crate::state::{DiceBotState, LogSkippedOldMessages};
-use actix::Addr;
 use dirs;
 use log::{debug, error, info, trace, warn};
 use matrix_sdk::{
@@ -31,9 +33,11 @@ pub struct DiceBot {
     /// The matrix client.
     client: Client,
 
-    /// Current state of the dice bot. Actor ref to the core state
-    /// actor.
-    state: Addr<DiceBotState>,
+    /// Actors used by the dice bot to manage internal state.
+    actors: Actors,
+
+    /// Active database layer
+    db: Database,
 }
 
 fn cache_dir() -> Result<PathBuf, BotError> {
@@ -57,11 +61,12 @@ impl DiceBot {
     /// actor. This function returns a Result because it is possible
     /// for client creation to fail for some reason (e.g. invalid
     /// homeserver URL).
-    pub fn new(config: &Arc<Config>, state_actor: Addr<DiceBotState>) -> Result<Self, BotError> {
+    pub fn new(config: &Arc<Config>, actors: Actors, db: &Database) -> Result<Self, BotError> {
         Ok(DiceBot {
             client: create_client(&config)?,
             config: config.clone(),
-            state: state_actor,
+            actors: actors,
+            db: db.clone(),
         })
     }
 
@@ -135,13 +140,13 @@ fn check_message_age(
     }
 }
 
-async fn should_process(
+async fn should_process<'a>(
     bot: &DiceBot,
     event: &SyncMessageEvent<MessageEventContent>,
 ) -> Result<(String, String), BotError> {
     //Ignore messages that are older than configured duration.
     if !check_message_age(event, bot.config.oldest_message_age()) {
-        let res = bot.state.send(LogSkippedOldMessages).await;
+        let res = bot.actors.global_state().send(LogSkippedOldMessages).await;
 
         if let Err(e) = res {
             error!("Actix error: {:?}", e);
@@ -209,37 +214,29 @@ impl EventEmitter for DiceBot {
                     return;
                 };
 
-            let (plain, html) = match parse_command(&msg_body) {
-                Ok(Some(command)) => {
-                    let command = command.execute();
-                    (command.plain().into(), command.html().into())
-                }
-                Ok(None) => return, //Ignore non-commands.
-                Err(e) => {
-                    let message = format!("Error parsing command: {}", e);
-                    let html_message = format!("<p><strong>{}</strong></p>", message);
-                    (message, html_message)
-                }
-            };
-
-            let plain = format!("{}\n{}", sender_username, plain);
-            let html = format!("<p>{}</p>\n{}", sender_username, html);
-            let content = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
-                NoticeMessageEventContent::html(plain, html),
-            ));
-
             //we clone here to hold the lock for as little time as possible.
             let (room_name, room_id) = {
                 let real_room = room.read().await;
                 (real_room.display_name().clone(), real_room.room_id.clone())
             };
 
-            let result = self.client.room_send(&room_id, content, None).await;
-            if let Err(e) = result {
-                error!("Error sending message: {}", e.to_string());
-            };
+            let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &msg_body);
 
-            info!("[{}] {} executed: {}", room_name, sender_username, msg_body);
+            if let Some(cmd_result) = execute_command(&ctx) {
+                let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
+                    NoticeMessageEventContent::html(cmd_result.plain, cmd_result.html),
+                ));
+
+                let result = self.client.room_send(&room_id, response, None).await;
+                if let Err(e) = result {
+                    error!("Error sending message: {}", e.to_string());
+                };
+
+                info!(
+                    "[{}] {} executed: {}",
+                    room_name, ctx.username, ctx.message_body
+                );
+            }
         }
     }
 }

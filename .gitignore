@@ -5,3 +5,4 @@ todo.org
 cache
 *.tar
 *.tar.gz
+test-db/

@@ -1,8 +1,12 @@
 use crate::cofd::parser::{create_chance_die, parse_dice_pool};
-use crate::commands::{Command, HelpCommand, PoolRollCommand, RollCommand};
+use crate::commands::{
+    Command, DeleteVariableCommand, GetVariableCommand, HelpCommand, PoolRollCommand, RollCommand,
+    SetVariableCommand,
+};
 use crate::dice::parser::parse_element_expression;
 use crate::error::BotError;
 use crate::help::parse_help_topic;
+use crate::variables::parse_set_variable;
 use combine::parser::char::{char, letter, space};
 use combine::{any, many1, optional, Parser};
 use nom::Err as NomErr;
@@ -18,6 +22,19 @@ fn parse_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
         Err(NomErr::Failure(e)) => Err(BotError::NomParserError(e.1)),
         Err(NomErr::Incomplete(_)) => Err(BotError::NomParserIncomplete),
     }
+}
+
+fn parse_get_variable_command(input: &str) -> Result<Box<dyn Command>, BotError> {
+    Ok(Box::new(GetVariableCommand(input.to_owned())))
+}
+
+fn parse_set_variable_command(input: &str) -> Result<Box<dyn Command>, BotError> {
+    let (variable_name, value) = parse_set_variable(input)?;
+    Ok(Box::new(SetVariableCommand(variable_name, value)))
+}
+
+fn parse_delete_variable_command(input: &str) -> Result<Box<dyn Command>, BotError> {
+    Ok(Box::new(DeleteVariableCommand(input.to_owned())))
 }
 
 fn parse_pool_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
@@ -72,6 +89,9 @@ fn split_command(input: &str) -> Result<(String, String), BotError> {
 pub fn parse_command(input: &str) -> Result<Option<Box<dyn Command>>, BotError> {
     match split_command(input) {
         Ok((cmd, cmd_input)) => match cmd.as_ref() {
+            "get" => parse_get_variable_command(&cmd_input).map(|command| Some(command)),
+            "set" => parse_set_variable_command(&cmd_input).map(|command| Some(command)),
+            "del" => parse_delete_variable_command(&cmd_input).map(|command| Some(command)),
             "r" | "roll" => parse_roll(&cmd_input).map(|command| Some(command)),
             "rp" | "pool" => parse_pool_roll(&cmd_input).map(|command| Some(command)),
             "chance" => chance_die().map(|command| Some(command)),
