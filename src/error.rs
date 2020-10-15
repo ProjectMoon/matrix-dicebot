@@ -1,10 +1,38 @@
+use crate::db::DataError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+pub enum ConfigError {
+    #[error("i/o error: {0}")]
+    IoError(#[from] std::io::Error),
+
+    #[error("toml parsing error: {0}")]
+    TomlParsingError(#[from] toml::de::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum CommandError {
+    #[error("invalid command: {0}")]
+    InvalidCommand(String),
+
+    #[error("ignored command")]
+    IgnoredCommand,
+}
+
+#[derive(Error, Debug)]
 pub enum BotError {
+    #[error("configuration error: {0}")]
+    ConfigurationError(#[from] ConfigError),
+
     /// Sync token couldn't be found.
     #[error("the sync token could not be retrieved")]
     SyncTokenRequired,
+
+    #[error("command error: {0}")]
+    CommandError(#[from] CommandError),
+
+    #[error("database error: {0}")]
+    DataError(#[from] DataError),
 
     #[error("the message should not be processed because it failed validation")]
     ShouldNotProcessError,
@@ -31,14 +59,20 @@ pub enum BotError {
     #[error("toml parsing error")]
     TomlParsingError(#[from] toml::de::Error),
 
-    #[error("i/o error")]
+    #[error("i/o error: {0}")]
     IoError(#[from] std::io::Error),
+
+    #[error("actor mailbox error: {0}")]
+    ActixMailboxError(#[from] actix::MailboxError),
 
     #[error("parsing error")]
     ParserError(#[from] combine::error::StringStreamError),
 
-    #[error("dice parsing error")]
+    #[error("dice parsing error: {0}")]
     DiceParsingError(#[from] crate::cofd::parser::DiceParsingError),
+
+    #[error("variable parsing error: {0}")]
+    VariableParsingError(#[from] crate::variables::VariableParsingError),
 
     #[error("legacy parsing error")]
     NomParserError(nom::error::ErrorKind),
@@ -48,4 +82,7 @@ pub enum BotError {
 
     #[error("variables not yet supported")]
     VariablesNotSupported,
+
+    #[error("database error")]
+    DatabaseErrror(#[from] sled::Error),
 }

@@ -75,6 +75,7 @@ either the Storytelling System or more traditional RPG dice rolls.
 The bot supports a `!help` command for basic help information about
 its capabilities.
 
+### Basic Dice Rolling
 The commands `!roll` and `!r` can handle arbitrary dice roll
 expressions.
 
@@ -84,25 +85,48 @@ expressions.
 !r 3d12 - 5d2 + 3 - 7d3 + 20d20
 ```
 
+This system does not yet have the capability to handle things like D&D
+5e advantage or disadvantage.
+
+### Storytelling System
+
 The commands `!pool` (or `!rp`) and `!chance` are for the Storytelling
 System, and they use a specific syntax to support the dice system. The
 simplest version of the command is `!pool <num>` to roll a pool of the
 given size using the most common type of roll.
 
-The type of roll can be controlled by adding `n`, `e`, or `r` after
+The type of roll can be controlled by adding `n`, `e`, or `r` before
 the number, for 9-again, 8-again, and rote quality rolls. The number
 of successes required for an exceptional success can be controlled by
 `s<num>`, e.g. `s3` to only need 3 successes for an exceptional
-success.
+success. All modifiers should come before the number, with a `:`
+colon.
 
 Examples:
 
 ```
 !pool 8     //regular pool of 8 dice
-!pool 8n    //roll 8 dice, 9-again
-!pool 8ns3  //roll 8 dice, 9-again with only 3 successes for exceptional
-!pool 5rs2  //5 dice, rote quality, 2 successes for exceptional
+!pool n:8    //roll 8 dice, 9-again
+!pool ns3:8  //roll 8 dice, 9-again with only 3 successes for exceptional
+!pool rs2:5  //5 dice, rote quality, 2 successes for exceptional
 ```
+
+### User Variables
+
+Users can store variables for use with the Storytelling dice pool
+system. Variables are stored on a per-room, per-user basis in the
+database (currently located in the cache directory if using the Docker
+image).
+
+Examples:
+
+```
+!set myvar 5 //stores 5 for this room under the name "myvar"
+!get myvar //will print 5
+```
+
+Variables can be referenced in dice pool rolling expressions, for
+example `!pool myvar` or `!pool myvar+3`.
 
 ## Running the Bot
 
@@ -123,19 +147,23 @@ ghcr.io/projectmoon/chronicle-dicebot:$VERSION
 ```
 
 The Docker image requires two volume mounts: the location of the
-[config file][config-file], which should be mounted at `/config/dicebot-config.toml`,
-and a cache directory to store client state after initial sync. That
-should be mounted at `/cache/`in the container.
+[config file][config-file], which should be mounted at
+`/config/dicebot-config.toml`, and a cache directory to store the
+database and client state after initial sync. That should be mounted
+at `/cache/`in the container.
 
 ### Configuration File
 
-The configuration file is a TOML file with two sections.
+The configuration file is a TOML file with three sections.
 
 ```toml
 [matrix]
 home_server = 'https://example.com'
 username = 'thisismyusername'
 password = 'thisismypassword'
+
+[datbase]
+path = '/path/to/database/directory/'
 
 [bot]
 oldest_message_age = 300
@@ -150,6 +178,12 @@ bot's matrix account.
    the server name that is displayed to other users.
  - `username`: Bot account username.
  - `password`: Bot account password.
+
+The `[database]` section contains information for connecting to the
+embedded database. Note: **you do not need this** if you are using the
+Docker image.
+ - `path`: Path on the filesystem to use as the database storage
+   directory.
 
 The `[bot]` section has settings for controlling how the bot operates.
 This section is optional and the settings will fall back to their
