@@ -1,11 +1,22 @@
 use crate::cofd::dice::DicePool;
 use crate::context::Context;
+use crate::db::DataError;
 use crate::dice::ElementExpression;
-use crate::error::{BotError, CommandError};
+use crate::error::BotError;
 use crate::help::HelpTopic;
 use crate::roll::Roll;
+use thiserror::Error;
 
 pub mod parser;
+
+#[derive(Error, Debug)]
+pub enum CommandError {
+    #[error("invalid command: {0}")]
+    InvalidCommand(String),
+
+    #[error("ignored command")]
+    IgnoredCommand,
+}
 
 pub struct Execution {
     plain: String,
@@ -104,8 +115,8 @@ impl Command for GetVariableCommand {
     fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
         let value = match ctx.db.get_user_variable(ctx.room_id, ctx.username, name) {
-            Ok(Some(num)) => format!("{} = {}", name, num),
-            Ok(None) => format!("{} is not set", name),
+            Ok(num) => format!("{} = {}", name, num),
+            Err(DataError::KeyDoesNotExist(_)) => format!("{} is not set", name),
             Err(e) => format!("error getting {}: {}", name, e),
         };
 
@@ -125,16 +136,17 @@ impl Command for SetVariableCommand {
     fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
         let value = self.1;
-        let value = match ctx
+        let result = ctx
             .db
-            .set_user_variable(ctx.room_id, ctx.username, name, value)
-        {
+            .set_user_variable(ctx.room_id, ctx.username, name, value);
+
+        let content = match result {
             Ok(_) => format!("{} = {}", name, value),
             Err(e) => format!("error setting {}: {}", name, e),
         };
 
-        let plain = format!("Set Variable: {}", value);
-        let html = format!("<p><strong>Set Variable:</strong> {}", value);
+        let plain = format!("Set Variable: {}", content);
+        let html = format!("<p><strong>Set Variable:</strong> {}", content);
         Execution { plain, html }
     }
 }
@@ -150,6 +162,7 @@ impl Command for DeleteVariableCommand {
         let name = &self.0;
         let value = match ctx.db.delete_user_variable(ctx.room_id, ctx.username, name) {
             Ok(()) => format!("{} now unset", name),
+            Err(DataError::KeyDoesNotExist(_)) => format!("{} is not currently set", name),
             Err(e) => format!("error deleting {}: {}", name, e),
         };
 
