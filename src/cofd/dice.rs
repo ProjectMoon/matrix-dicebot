@@ -1,3 +1,4 @@
+use crate::context::Context;
 use crate::error::BotError;
 use crate::roll::{Roll, Rolled};
 use itertools::Itertools;
@@ -107,12 +108,14 @@ pub struct DicePool {
     pub(crate) modifiers: DicePoolModifiers,
 }
 
-fn calculate_dice_amount(amounts: &Vec<Amount>) -> Result<i32, BotError> {
-    let dice_amount: Result<i32, BotError> = amounts
+fn calculate_dice_amount(pool: &DicePoolWithContext) -> Result<i32, BotError> {
+    let dice_amount: Result<i32, BotError> = pool
+        .0
+        .amounts
         .iter()
         .map(|amount| match &amount.element {
             Element::Number(num_dice) => Ok(*num_dice * amount.operator.mult()),
-            Element::Variable(variable) => handle_variable(&variable),
+            Element::Variable(variable) => handle_variable(&pool.1, &variable),
         })
         .collect::<Result<Vec<i32>, _>>()
         .map(|numbers| numbers.iter().sum());
@@ -240,7 +243,10 @@ impl DicePoolRoll {
     }
 }
 
-impl Roll for DicePool {
+/// Attach a Context to a dice pool. Needed for database access.
+pub struct DicePoolWithContext<'a>(pub &'a DicePool, pub &'a Context<'a>);
+
+impl Roll for DicePoolWithContext<'_> {
     type Output = Result<RolledDicePool, BotError>;
 
     fn roll(&self) -> Result<RolledDicePool, BotError> {
@@ -341,21 +347,30 @@ fn roll_die<R: DieRoller>(roller: &mut R, pool: &DicePool) -> Vec<i32> {
     results
 }
 
-fn handle_variable(_variable: &str) -> Result<i32, BotError> {
-    Err(BotError::VariablesNotSupported)
+fn handle_variable(ctx: &Context, variable: &str) -> Result<i32, BotError> {
+    ctx.db
+        .get_user_variable(&ctx.room_id, &ctx.username, variable)
+        .map_err(|e| e.into())
 }
 
 ///Roll the dice in a dice pool, according to behavior documented in the various rolling
 ///methods.
-fn roll_dice<R: DieRoller>(pool: &DicePool, roller: &mut R) -> Result<RolledDicePool, BotError> {
-    let num_dice = calculate_dice_amount(&pool.amounts)?;
-    let rolls: Vec<i32> = (0..num_dice).flat_map(|_| roll_die(roller, pool)).collect();
-    Ok(RolledDicePool::from(pool, num_dice, rolls))
+fn roll_dice<R: DieRoller>(
+    pool: &DicePoolWithContext,
+    roller: &mut R,
+) -> Result<RolledDicePool, BotError> {
+    let num_dice = calculate_dice_amount(&pool)?;
+    let rolls: Vec<i32> = (0..num_dice)
+        .flat_map(|_| roll_die(roller, &pool.0))
+        .collect();
+    Ok(RolledDicePool::from(&pool.0, num_dice, rolls))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db::Database;
+    use tempfile::tempdir;
 
     ///Instead of being random, generate a series of numbers we have complete
     ///control over.
@@ -477,9 +492,13 @@ mod tests {
 
     #[test]
     pub fn no_explode_roll_test() {
+        let db = Database::new(&sled::open(tempdir().unwrap()).unwrap());
+        let ctx = Context::new(&db, "roomid", "username", "message");
         let pool = DicePool::easy_pool(1, DicePoolQuality::NoExplode);
+        let pool_with_ctx = DicePoolWithContext(&pool, &ctx);
+
         let mut roller = SequentialDieRoller::new(vec![10, 8]);
-        let result = roll_dice(&pool, &mut roller);
+        let result = roll_dice(&pool_with_ctx, &mut roller);
         assert!(result.is_ok());
 
         let roll = result.unwrap().roll;
@@ -488,13 +507,36 @@ mod tests {
 
     #[test]
     pub fn number_of_dice_equality_test() {
+        let db = Database::new(&sled::open(tempdir().unwrap()).unwrap());
+        let ctx = Context::new(&db, "roomid", "username", "message");
         let pool = DicePool::easy_pool(5, DicePoolQuality::NoExplode);
+        let pool_with_ctx = DicePoolWithContext(&pool, &ctx);
+
         let mut roller = SequentialDieRoller::new(vec![1, 2, 3, 4, 5]);
-        let result = roll_dice(&pool, &mut roller);
+        let result = roll_dice(&pool_with_ctx, &mut roller);
         assert!(result.is_ok());
 
         let roll = result.unwrap();
         assert_eq!(5, roll.num_dice);
+    }
+
+    #[test]
+    fn can_resolve_variables_test() {
+        let db = Database::new(&sled::open(tempdir().unwrap()).unwrap());
+        let ctx = Context::new(&db, "roomid", "username", "message");
+
+        db.set_user_variable(&ctx.room_id, &ctx.username, "myvariable", 10)
+            .expect("could not set myvariable to 10");
+
+        let amounts = vec![Amount {
+            operator: Operator::Plus,
+            element: Element::Variable("myvariable".to_owned()),
+        }];
+
+        let pool = DicePool::new(amounts, DicePoolModifiers::default());
+        let pool_with_ctx = DicePoolWithContext(&pool, &ctx);
+
+        assert_eq!(calculate_dice_amount(&pool_with_ctx).unwrap(), 10);
     }
 
     //DicePool tests
