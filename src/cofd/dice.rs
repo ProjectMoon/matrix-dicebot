@@ -11,6 +11,9 @@ use thiserror::Error;
 pub enum DiceRollingError {
     #[error("variable not found: {0}")]
     VariableNotFound(String),
+
+    #[error("dice pool expression too large")]
+    ExpressionTooLarge,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -370,6 +373,10 @@ fn roll_dice<R: DieRoller>(
     pool: &DicePoolWithContext,
     roller: &mut R,
 ) -> Result<RolledDicePool, BotError> {
+    if pool.0.amounts.len() > 100 {
+        return Err(DiceRollingError::ExpressionTooLarge.into());
+    }
+
     let num_dice = calculate_dice_amount(&pool)?;
     let rolls: Vec<i32> = (0..num_dice)
         .flat_map(|_| roll_die(roller, &pool.0))
@@ -529,6 +536,33 @@ mod tests {
 
         let roll = result.unwrap();
         assert_eq!(5, roll.num_dice);
+    }
+
+    #[test]
+    fn rejects_large_expression_test() {
+        let db = Database::new(&sled::open(tempdir().unwrap()).unwrap());
+        let ctx = Context::new(&db, "roomid", "username", "message");
+
+        let mut amounts = vec![];
+
+        for _ in 0..500 {
+            amounts.push(Amount {
+                operator: Operator::Plus,
+                element: Element::Number(1),
+            });
+        }
+
+        let pool = DicePool::new(amounts, DicePoolModifiers::default());
+        let pool_with_ctx = DicePoolWithContext(&pool, &ctx);
+
+        let mut roller = SequentialDieRoller::new(vec![1, 2, 3, 4, 5]);
+        let result = roll_dice(&pool_with_ctx, &mut roller);
+        assert!(matches!(
+            result,
+            Err(BotError::DiceRollingError(
+                DiceRollingError::ExpressionTooLarge
+            ))
+        ));
     }
 
     #[test]
