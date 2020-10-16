@@ -51,7 +51,9 @@ Rolling dice pools
 
 Command: !pool, !rp
 
-Syntax: !pool <num><modifiers>
+Syntax: !pool <modifiers>:<num>
+
+Short syntax: !pool <num>
 
 Modifiers:
  n = nine-again
@@ -62,8 +64,8 @@ Modifiers:
 
 Examples:
  !pool 8 (roll a regular pool of 8 dice)
- !pool 5n (roll dice pool of 5, nine-again)
- !pool 6rs3 (roll dice pool of 6, rote quality, 3 successes for exceptional)
+ !pool n:5 (roll dice pool of 5, nine-again)
+ !pool rs3:6 (roll dice pool of 6, rote quality, 3 successes for exceptional)
 "};
 
 const GENERAL_HELP: &'static str = indoc! {"
