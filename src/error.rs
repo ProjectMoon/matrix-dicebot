@@ -1,3 +1,4 @@
+use crate::cofd::dice::DiceRollingError;
 use crate::commands::CommandError;
 use crate::config::ConfigError;
 use crate::db::DataError;
@@ -54,6 +55,9 @@ pub enum BotError {
 
     #[error("dice parsing error: {0}")]
     DiceParsingError(#[from] crate::cofd::parser::DiceParsingError),
+
+    #[error("dice pool roll error: {0}")]
+    DicePoolError(#[from] DiceRollingError),
 
     #[error("variable parsing error: {0}")]
     VariableParsingError(#[from] crate::variables::VariableParsingError),

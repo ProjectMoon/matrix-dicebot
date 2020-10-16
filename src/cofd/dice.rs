@@ -1,9 +1,17 @@
 use crate::context::Context;
+use crate::db::DataError::KeyDoesNotExist;
 use crate::error::BotError;
 use crate::roll::{Roll, Rolled};
 use itertools::Itertools;
 use std::convert::TryFrom;
 use std::fmt;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum DiceRollingError {
+    #[error("variable not found: {0}")]
+    VariableNotFound(String),
+}
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Operator {
@@ -350,7 +358,10 @@ fn roll_die<R: DieRoller>(roller: &mut R, pool: &DicePool) -> Vec<i32> {
 fn handle_variable(ctx: &Context, variable: &str) -> Result<i32, BotError> {
     ctx.db
         .get_user_variable(&ctx.room_id, &ctx.username, variable)
-        .map_err(|e| e.into())
+        .map_err(|e| match e {
+            KeyDoesNotExist(_) => DiceRollingError::VariableNotFound(variable.to_owned()).into(),
+            _ => e.into(),
+        })
 }
 
 ///Roll the dice in a dice pool, according to behavior documented in the various rolling
