@@ -36,17 +36,17 @@ impl Database {
         room_id: &str,
         username: &str,
         variable_name: &str,
-    ) -> Result<Option<i32>, DataError> {
+    ) -> Result<i32, DataError> {
         let key = to_key(room_id, username, variable_name);
 
-        if let Some(raw_value) = self.db.get(key)? {
+        if let Some(raw_value) = self.db.get(&key)? {
             let layout: LayoutVerified<&[u8], I32<LittleEndian>> =
                 LayoutVerified::new_unaligned(&*raw_value).expect("bytes do not fit schema");
 
             let value: I32<LittleEndian> = *layout;
-            Ok(Some(value.get()))
+            Ok(value.get())
         } else {
-            Ok(None)
+            Err(DataError::KeyDoesNotExist(String::from_utf8(key).unwrap()))
         }
     }
 
@@ -59,7 +59,7 @@ impl Database {
     ) -> Result<(), DataError> {
         let key = to_key(room_id, username, variable_name);
         let db_value: I32<LittleEndian> = I32::new(value);
-        self.db.insert(key, IVec::from(db_value.as_bytes()))?;
+        self.db.insert(&key, IVec::from(db_value.as_bytes()))?;
         Ok(())
     }
 
@@ -70,13 +70,10 @@ impl Database {
         variable_name: &str,
     ) -> Result<(), DataError> {
         let key = to_key(room_id, username, variable_name);
-        if let Some(_) = self.db.remove(key)? {
+        if let Some(_) = self.db.remove(&key)? {
             Ok(())
         } else {
-            let mut key = room_id.to_owned();
-            key.push_str(username);
-            key.push_str(variable_name);
-            Err(DataError::KeyDoesNotExist(key))
+            Err(DataError::KeyDoesNotExist(String::from_utf8(key).unwrap()))
         }
     }
 }

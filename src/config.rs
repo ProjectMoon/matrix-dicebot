@@ -1,8 +1,17 @@
-use crate::error::ConfigError;
 use serde::{self, Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum ConfigError {
+    #[error("i/o error: {0}")]
+    IoError(#[from] std::io::Error),
+
+    #[error("toml parsing error: {0}")]
+    TomlParsingError(#[from] toml::de::Error),
+}
 
 pub fn read_config<P: Into<PathBuf>>(config_path: P) -> Result<Config, ConfigError> {
     let config_path = config_path.into();

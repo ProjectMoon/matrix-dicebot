@@ -1,23 +1,7 @@
+use crate::commands::CommandError;
+use crate::config::ConfigError;
 use crate::db::DataError;
 use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum ConfigError {
-    #[error("i/o error: {0}")]
-    IoError(#[from] std::io::Error),
-
-    #[error("toml parsing error: {0}")]
-    TomlParsingError(#[from] toml::de::Error),
-}
-
-#[derive(Error, Debug)]
-pub enum CommandError {
-    #[error("invalid command: {0}")]
-    InvalidCommand(String),
-
-    #[error("ignored command")]
-    IgnoredCommand,
-}
 
 #[derive(Error, Debug)]
 pub enum BotError {
