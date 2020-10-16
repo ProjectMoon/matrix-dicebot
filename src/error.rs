@@ -57,7 +57,7 @@ pub enum BotError {
     DiceParsingError(#[from] crate::cofd::parser::DiceParsingError),
 
     #[error("dice pool roll error: {0}")]
-    DicePoolError(#[from] DiceRollingError),
+    DiceRollingError(#[from] DiceRollingError),
 
     #[error("variable parsing error: {0}")]
     VariableParsingError(#[from] crate::variables::VariableParsingError),
