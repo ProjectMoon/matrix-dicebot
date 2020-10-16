@@ -4,6 +4,11 @@ use thiserror::Error;
 use zerocopy::byteorder::I32;
 use zerocopy::{AsBytes, LayoutVerified};
 
+/// User variables are stored as little-endian 32-bit integers in the
+/// database. This type alias makes the database code more pleasant to
+/// read.
+type LittleEndianI32Layout<'a> = LayoutVerified<&'a [u8], I32<LittleEndian>>;
+
 #[derive(Clone)]
 pub struct Database {
     db: Db,
@@ -13,6 +18,9 @@ pub struct Database {
 pub enum DataError {
     #[error("value does not exist for key: {0}")]
     KeyDoesNotExist(String),
+
+    #[error("key violates expected schema: {0}")]
+    SchemaViolation(String),
 
     #[error("internal database error: {0}")]
     InternalError(#[from] sled::Error),
@@ -40,11 +48,14 @@ impl Database {
         let key = to_key(room_id, username, variable_name);
 
         if let Some(raw_value) = self.db.get(&key)? {
-            let layout: LayoutVerified<&[u8], I32<LittleEndian>> =
-                LayoutVerified::new_unaligned(&*raw_value).expect("bytes do not fit schema");
+            let layout = LittleEndianI32Layout::new_unaligned(raw_value.as_ref());
 
-            let value: I32<LittleEndian> = *layout;
-            Ok(value.get())
+            if let Some(layout) = layout {
+                let value: I32<LittleEndian> = *layout;
+                Ok(value.get())
+            } else {
+                Err(DataError::SchemaViolation(String::from_utf8(key).unwrap()))
+            }
         } else {
             Err(DataError::KeyDoesNotExist(String::from_utf8(key).unwrap()))
         }
