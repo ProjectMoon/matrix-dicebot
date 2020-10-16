@@ -46,3 +46,6 @@ features = ['derive']
 [dependencies.tokio]
 version = "0.2"
 features = ["rt-core", "rt-util", "macros", "time", "signal"]
+
+[dev-dependencies]
+tempfile = "3.1"

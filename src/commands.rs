@@ -1,4 +1,4 @@
-use crate::cofd::dice::DicePool;
+use crate::cofd::dice::{DicePool, DicePoolWithContext};
 use crate::context::Context;
 use crate::db::DataError;
 use crate::dice::ElementExpression;
@@ -63,8 +63,9 @@ impl Command for PoolRollCommand {
         "roll dice pool"
     }
 
-    fn execute(&self, _ctx: &Context) -> Execution {
-        let roll_result = self.0.roll();
+    fn execute(&self, ctx: &Context) -> Execution {
+        let pool_with_ctx = DicePoolWithContext(&self.0, ctx);
+        let roll_result = pool_with_ctx.roll();
 
         let (plain, html) = match roll_result {
             Ok(rolled_pool) => {
