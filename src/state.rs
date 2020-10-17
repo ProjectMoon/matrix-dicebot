@@ -1,11 +1,6 @@
 use crate::config::*;
-use actix::prelude::*;
 use log::info;
 use std::sync::Arc;
-
-#[derive(Message)]
-#[rtype(result = "bool")]
-pub struct LogSkippedOldMessages;
 
 /// Holds state of the dice bot, for anything requiring mutable
 /// transitions. This is a simple mutable trait whose values represent
@@ -13,18 +8,7 @@ pub struct LogSkippedOldMessages;
 /// change state.
 pub struct DiceBotState {
     logged_skipped_old_messages: bool,
-    config: Arc<Config>,
-}
-
-impl Actor for DiceBotState {
-    type Context = Context<Self>;
-
-    fn started(&mut self, _ctx: &mut Self::Context) {
-        info!(
-            "Oldest allowable message time is {} seconds ago",
-            &self.config.oldest_message_age()
-        );
-    }
+    _config: Arc<Config>,
 }
 
 impl DiceBotState {
@@ -32,8 +16,12 @@ impl DiceBotState {
     pub fn new(config: &Arc<Config>) -> DiceBotState {
         DiceBotState {
             logged_skipped_old_messages: false,
-            config: config.clone(),
+            _config: config.clone(),
         }
+    }
+
+    pub fn logged_skipped_old_messages(&self) -> bool {
+        self.logged_skipped_old_messages
     }
 
     /// Log and record that we have skipped some old messages. This
@@ -44,14 +32,5 @@ impl DiceBotState {
         }
 
         self.logged_skipped_old_messages = true;
-    }
-}
-
-impl Handler<LogSkippedOldMessages> for DiceBotState {
-    type Result = bool;
-
-    fn handle(&mut self, _msg: LogSkippedOldMessages, _ctx: &mut Context<Self>) -> Self::Result {
-        self.skipped_old_messages();
-        self.logged_skipped_old_messages
     }
 }

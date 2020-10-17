@@ -37,18 +37,12 @@ pub enum BotError {
     #[error("future canceled")]
     FutureCanceledError,
 
-    #[error("tokio task join error")]
-    TokioTaskJoinError(#[from] tokio::task::JoinError),
-
     //de = deserialization
     #[error("toml parsing error")]
     TomlParsingError(#[from] toml::de::Error),
 
     #[error("i/o error: {0}")]
     IoError(#[from] std::io::Error),
-
-    #[error("actor mailbox error: {0}")]
-    ActixMailboxError(#[from] actix::MailboxError),
 
     #[error("parsing error")]
     ParserError(#[from] combine::error::StringStreamError),

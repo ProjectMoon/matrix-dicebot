@@ -1,4 +1,3 @@
-pub mod actors;
 pub mod bot;
 pub mod cofd;
 pub mod commands;
@@ -10,4 +9,5 @@ pub mod error;
 mod help;
 mod parser;
 pub mod roll;
+pub mod state;
 pub mod variables;

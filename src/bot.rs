@@ -1,10 +1,10 @@
-use crate::actors::state::LogSkippedOldMessages;
-use crate::actors::Actors;
 use crate::commands::execute_command;
 use crate::config::*;
 use crate::context::Context;
 use crate::db::Database;
 use crate::error::BotError;
+use crate::state::DiceBotState;
+use async_trait::async_trait;
 use dirs;
 use log::{debug, error, info, trace, warn};
 use matrix_sdk::{
@@ -16,11 +16,11 @@ use matrix_sdk::{
     },
     Client, ClientConfig, EventEmitter, JsonStore, SyncRoom, SyncSettings,
 };
-use matrix_sdk_common_macros::async_trait;
+//use matrix_sdk_common_macros::async_trait;
 use std::clone::Clone;
 use std::ops::Sub;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, SystemTime};
 use url::Url;
 
@@ -33,8 +33,8 @@ pub struct DiceBot {
     /// The matrix client.
     client: Client,
 
-    /// Actors used by the dice bot to manage internal state.
-    actors: Actors,
+    /// State of the dicebot
+    state: Arc<RwLock<DiceBotState>>,
 
     /// Active database layer
     db: Database,
@@ -61,11 +61,15 @@ impl DiceBot {
     /// actor. This function returns a Result because it is possible
     /// for client creation to fail for some reason (e.g. invalid
     /// homeserver URL).
-    pub fn new(config: &Arc<Config>, actors: Actors, db: &Database) -> Result<Self, BotError> {
+    pub fn new(
+        config: &Arc<Config>,
+        state: &Arc<RwLock<DiceBotState>>,
+        db: &Database,
+    ) -> Result<Self, BotError> {
         Ok(DiceBot {
             client: create_client(&config)?,
             config: config.clone(),
-            actors: actors,
+            state: state.clone(),
             db: db.clone(),
         })
     }
@@ -146,11 +150,12 @@ async fn should_process<'a>(
 ) -> Result<(String, String), BotError> {
     //Ignore messages that are older than configured duration.
     if !check_message_age(event, bot.config.oldest_message_age()) {
-        let res = bot.actors.global_state().send(LogSkippedOldMessages).await;
-
-        if let Err(e) = res {
-            error!("Actix error: {:?}", e);
-        };
+        let state_check = bot.state.read().unwrap();
+        if !((*state_check).logged_skipped_old_messages()) {
+            drop(state_check);
+            let mut state = bot.state.write().unwrap();
+            (*state).skipped_old_messages();
+        }
 
         return Err(BotError::ShouldNotProcessError);
     }

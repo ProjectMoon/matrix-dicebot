@@ -22,22 +22,12 @@ async-trait = "0.1"
 url = "2.1"
 dirs = "3.0"
 indoc = "1.0"
-actix = "0.10"
-actix-rt = "1.1"
 combine = "4.3"
 sled = "0.34"
 zerocopy = "0.3"
 byteorder = "1.3"
 futures = "0.3"
-
-
-# The versioning of the matrix SDK follows its Cargo.toml. The SDK and
-# macros are on master, but it imports the common and base from 0.1.0.
-# https://github.com/matrix-org/matrix-rust-sdk/blob/master/matrix_sdk/Cargo.toml
 matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "master" }
-matrix-sdk-common-macros = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "master" }
-matrix-sdk-common = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "0.1.0" }
-matrix-sdk-base = { git = "https://github.com/matrix-org/matrix-rust-sdk", rev = "0.1.0", default_features = false }
 
 [dependencies.serde]
 version = "1"
@@ -45,7 +35,7 @@ features = ['derive']
 
 [dependencies.tokio]
 version = "0.2"
-features = ["rt-core", "rt-util", "macros", "time", "signal"]
+features = [ "full" ]
 
 [dev-dependencies]
 tempfile = "3.1"
