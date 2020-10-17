@@ -3,25 +3,20 @@ use crate::db::Database;
 /// A context carried through the system providing access to things
 /// like the database.
 #[derive(Clone)]
-pub struct Context<'a> {
-    pub db: &'a Database,
-    pub room_id: &'a str,
-    pub username: &'a str,
-    pub message_body: &'a str,
+pub struct Context {
+    pub db: Database,
+    pub room_id: String,
+    pub username: String,
+    pub message_body: String,
 }
 
-impl<'a> Context<'a> {
-    pub fn new(
-        db: &'a Database,
-        room_id: &'a str,
-        username: &'a str,
-        message_body: &'a str,
-    ) -> Context<'a> {
+impl Context {
+    pub fn new(db: &Database, room_id: &str, username: &str, message_body: &str) -> Context {
         Context {
-            db: db,
-            room_id: room_id,
-            username: username,
-            message_body: message_body,
+            db: db.clone(),
+            room_id: room_id.to_owned(),
+            username: username.to_owned(),
+            message_body: message_body.to_owned(),
         }
     }
 }

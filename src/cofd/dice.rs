@@ -255,7 +255,7 @@ impl DicePoolRoll {
 }
 
 /// Attach a Context to a dice pool. Needed for database access.
-pub struct DicePoolWithContext<'a>(pub &'a DicePool, pub &'a Context<'a>);
+pub struct DicePoolWithContext<'a>(pub &'a DicePool, pub &'a Context);
 
 impl Roll for DicePoolWithContext<'_> {
     type Output = Result<RolledDicePool, BotError>;
