@@ -1,16 +1,16 @@
 //Needed for nested Result handling from tokio. Probably can go away after 1.47.0.
 #![type_length_limit = "7605144"]
-use actix::prelude::*;
-use chronicle_dicebot::actors::Actors;
 use chronicle_dicebot::bot::DiceBot;
 use chronicle_dicebot::config::*;
 use chronicle_dicebot::db::Database;
 use chronicle_dicebot::error::BotError;
+use chronicle_dicebot::state::DiceBotState;
 use env_logger::Env;
 use log::error;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use tokio::prelude::*;
 
-#[actix_rt::main]
+#[tokio::main]
 async fn main() {
     env_logger::from_env(Env::default().default_filter_or("chronicle_dicebot=info,dicebot=info"))
         .init();
@@ -28,13 +28,12 @@ async fn run() -> Result<(), BotError> {
 
     let cfg = Arc::new(read_config(config_path)?);
     let db = Database::new(&sled::open(cfg.database_path())?);
-    let actors = Actors::new(&cfg, &db);
+    let state = Arc::new(RwLock::new(DiceBotState::new(&cfg)));
 
-    match DiceBot::new(&cfg, actors, &db) {
+    match DiceBot::new(&cfg, &state, &db) {
         Ok(bot) => bot.run().await?,
         Err(e) => println!("Error connecting: {:?}", e),
     };
 
-    System::current().stop();
     Ok(())
 }
