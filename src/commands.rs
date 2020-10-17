@@ -115,7 +115,7 @@ impl Command for GetVariableCommand {
 
     fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
-        let value = match ctx.db.get_user_variable(ctx.room_id, ctx.username, name) {
+        let value = match ctx.db.get_user_variable(&ctx.room_id, &ctx.username, name) {
             Ok(num) => format!("{} = {}", name, num),
             Err(DataError::KeyDoesNotExist(_)) => format!("{} is not set", name),
             Err(e) => format!("error getting {}: {}", name, e),
@@ -139,7 +139,7 @@ impl Command for SetVariableCommand {
         let value = self.1;
         let result = ctx
             .db
-            .set_user_variable(ctx.room_id, ctx.username, name, value);
+            .set_user_variable(&ctx.room_id, &ctx.username, name, value);
 
         let content = match result {
             Ok(_) => format!("{} = {}", name, value),
@@ -161,7 +161,10 @@ impl Command for DeleteVariableCommand {
 
     fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
-        let value = match ctx.db.delete_user_variable(ctx.room_id, ctx.username, name) {
+        let value = match ctx
+            .db
+            .delete_user_variable(&ctx.room_id, &ctx.username, name)
+        {
             Ok(()) => format!("{} now unset", name),
             Err(DataError::KeyDoesNotExist(_)) => format!("{} is not currently set", name),
             Err(e) => format!("error deleting {}: {}", name, e),
@@ -195,8 +198,8 @@ pub struct CommandResult {
 /// go back to Matrix, if the command was executed (successfully or
 /// not). If a command is determined to be ignored, this function will
 /// return None, signifying that we should not send a response.
-pub fn execute_command<'a>(ctx: &'a Context) -> Option<CommandResult> {
-    let res = Command::parse(ctx.message_body).map(|cmd| {
+pub fn execute_command(ctx: &Context) -> Option<CommandResult> {
+    let res = Command::parse(&ctx.message_body).map(|cmd| {
         let execution = cmd.execute(ctx);
         (execution.plain().into(), execution.html().into())
     });
