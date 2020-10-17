@@ -39,7 +39,7 @@ impl Database {
         Database { db: db.clone() }
     }
 
-    pub fn get_user_variable(
+    pub async fn get_user_variable(
         &self,
         room_id: &str,
         username: &str,
@@ -61,7 +61,7 @@ impl Database {
         }
     }
 
-    pub fn set_user_variable(
+    pub async fn set_user_variable(
         &self,
         room_id: &str,
         username: &str,
@@ -74,7 +74,7 @@ impl Database {
         Ok(())
     }
 
-    pub fn delete_user_variable(
+    pub async fn delete_user_variable(
         &self,
         room_id: &str,
         username: &str,
