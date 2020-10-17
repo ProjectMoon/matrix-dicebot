@@ -1,4 +1,4 @@
-use crate::cofd::dice::{DicePool, DicePoolWithContext};
+use crate::cofd::dice::{roll_pool, DicePool, DicePoolWithContext};
 use crate::context::Context;
 use crate::db::DataError;
 use crate::dice::ElementExpression;
@@ -69,7 +69,7 @@ impl Command for PoolRollCommand {
 
     async fn execute(&self, ctx: &Context) -> Execution {
         let pool_with_ctx = DicePoolWithContext(&self.0, ctx);
-        let roll_result = pool_with_ctx.roll();
+        let roll_result = roll_pool(&pool_with_ctx).await;
 
         let (plain, html) = match roll_result {
             Ok(rolled_pool) => {
@@ -121,7 +121,11 @@ impl Command for GetVariableCommand {
 
     async fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
-        let value = match ctx.db.get_user_variable(&ctx.room_id, &ctx.username, name) {
+        let value = match ctx
+            .db
+            .get_user_variable(&ctx.room_id, &ctx.username, name)
+            .await
+        {
             Ok(num) => format!("{} = {}", name, num),
             Err(DataError::KeyDoesNotExist(_)) => format!("{} is not set", name),
             Err(e) => format!("error getting {}: {}", name, e),
@@ -146,7 +150,8 @@ impl Command for SetVariableCommand {
         let value = self.1;
         let result = ctx
             .db
-            .set_user_variable(&ctx.room_id, &ctx.username, name, value);
+            .set_user_variable(&ctx.room_id, &ctx.username, name, value)
+            .await;
 
         let content = match result {
             Ok(_) => format!("{} = {}", name, value),
@@ -172,6 +177,7 @@ impl Command for DeleteVariableCommand {
         let value = match ctx
             .db
             .delete_user_variable(&ctx.room_id, &ctx.username, name)
+            .await
         {
             Ok(()) => format!("{} now unset", name),
             Err(DataError::KeyDoesNotExist(_)) => format!("{} is not currently set", name),
@@ -235,39 +241,39 @@ mod tests {
 
     #[test]
     fn chance_die_is_not_malformed() {
-        assert!(Command::parse("!chance").is_ok());
+        assert!(parse("!chance").is_ok());
     }
 
     #[test]
     fn roll_malformed_expression_test() {
-        assert!(Command::parse("!roll 1d20asdlfkj").is_err());
-        assert!(Command::parse("!roll 1d20asdlfkj   ").is_err());
+        assert!(parse("!roll 1d20asdlfkj").is_err());
+        assert!(parse("!roll 1d20asdlfkj   ").is_err());
     }
 
     #[test]
     fn roll_dice_pool_malformed_expression_test() {
-        assert!(Command::parse("!pool 8abc").is_err());
-        assert!(Command::parse("!pool 8abc    ").is_err());
+        assert!(parse("!pool 8abc").is_err());
+        assert!(parse("!pool 8abc    ").is_err());
     }
 
     #[test]
     fn pool_whitespace_test() {
-        Command::parse("!pool ns3:8   ").expect("was error");
-        Command::parse("   !pool ns3:8").expect("was error");
-        Command::parse("   !pool ns3:8   ").expect("was error");
+        parse("!pool ns3:8   ").expect("was error");
+        parse("   !pool ns3:8").expect("was error");
+        parse("   !pool ns3:8   ").expect("was error");
     }
 
     #[test]
     fn help_whitespace_test() {
-        Command::parse("!help stuff   ").expect("was error");
-        Command::parse("   !help stuff").expect("was error");
-        Command::parse("   !help stuff   ").expect("was error");
+        parse("!help stuff   ").expect("was error");
+        parse("   !help stuff").expect("was error");
+        parse("   !help stuff   ").expect("was error");
     }
 
     #[test]
     fn roll_whitespace_test() {
-        Command::parse("!roll 1d4 + 5d6 -3   ").expect("was error");
-        Command::parse("!roll 1d4 + 5d6 -3   ").expect("was error");
-        Command::parse("   !roll 1d4 + 5d6 -3   ").expect("was error");
+        parse("!roll 1d4 + 5d6 -3   ").expect("was error");
+        parse("!roll 1d4 + 5d6 -3   ").expect("was error");
+        parse("   !roll 1d4 + 5d6 -3   ").expect("was error");
     }
 }
