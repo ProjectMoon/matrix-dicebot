@@ -227,7 +227,7 @@ impl EventEmitter for DiceBot {
 
             let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &msg_body);
 
-            if let Some(cmd_result) = execute_command(&ctx) {
+            if let Some(cmd_result) = execute_command(&ctx).await {
                 let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
                     NoticeMessageEventContent::html(cmd_result.plain, cmd_result.html),
                 ));
