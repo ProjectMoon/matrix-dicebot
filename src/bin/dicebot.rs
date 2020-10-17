@@ -8,7 +8,6 @@ use chronicle_dicebot::state::DiceBotState;
 use env_logger::Env;
 use log::error;
 use std::sync::{Arc, RwLock};
-use tokio::prelude::*;
 
 #[tokio::main]
 async fn main() {

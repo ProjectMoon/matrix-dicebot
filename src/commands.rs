@@ -5,6 +5,7 @@ use crate::dice::ElementExpression;
 use crate::error::BotError;
 use crate::help::HelpTopic;
 use crate::roll::Roll;
+use async_trait::async_trait;
 use thiserror::Error;
 
 pub mod parser;
@@ -33,19 +34,21 @@ impl Execution {
     }
 }
 
-pub trait Command {
-    fn execute(&self, ctx: &Context) -> Execution;
+#[async_trait]
+pub trait Command: Send + Sync {
+    async fn execute(&self, ctx: &Context) -> Execution;
     fn name(&self) -> &'static str;
 }
 
 pub struct RollCommand(ElementExpression);
 
+#[async_trait]
 impl Command for RollCommand {
     fn name(&self) -> &'static str {
         "roll regular dice"
     }
 
-    fn execute(&self, _ctx: &Context) -> Execution {
+    async fn execute(&self, _ctx: &Context) -> Execution {
         let roll = self.0.roll();
         let plain = format!("Dice: {}\nResult: {}", self.0, roll);
         let html = format!(
@@ -58,12 +61,13 @@ impl Command for RollCommand {
 
 pub struct PoolRollCommand(DicePool);
 
+#[async_trait]
 impl Command for PoolRollCommand {
     fn name(&self) -> &'static str {
         "roll dice pool"
     }
 
-    fn execute(&self, ctx: &Context) -> Execution {
+    async fn execute(&self, ctx: &Context) -> Execution {
         let pool_with_ctx = DicePoolWithContext(&self.0, ctx);
         let roll_result = pool_with_ctx.roll();
 
@@ -89,12 +93,13 @@ impl Command for PoolRollCommand {
 
 pub struct HelpCommand(Option<HelpTopic>);
 
+#[async_trait]
 impl Command for HelpCommand {
     fn name(&self) -> &'static str {
         "help information"
     }
 
-    fn execute(&self, _ctx: &Context) -> Execution {
+    async fn execute(&self, _ctx: &Context) -> Execution {
         let help = match &self.0 {
             Some(topic) => topic.message(),
             _ => "There is no help for this topic",
@@ -108,12 +113,13 @@ impl Command for HelpCommand {
 
 pub struct GetVariableCommand(String);
 
+#[async_trait]
 impl Command for GetVariableCommand {
     fn name(&self) -> &'static str {
         "retrieve variable value"
     }
 
-    fn execute(&self, ctx: &Context) -> Execution {
+    async fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
         let value = match ctx.db.get_user_variable(&ctx.room_id, &ctx.username, name) {
             Ok(num) => format!("{} = {}", name, num),
@@ -129,12 +135,13 @@ impl Command for GetVariableCommand {
 
 pub struct SetVariableCommand(String, i32);
 
+#[async_trait]
 impl Command for SetVariableCommand {
     fn name(&self) -> &'static str {
         "set variable value"
     }
 
-    fn execute(&self, ctx: &Context) -> Execution {
+    async fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
         let value = self.1;
         let result = ctx
@@ -154,12 +161,13 @@ impl Command for SetVariableCommand {
 
 pub struct DeleteVariableCommand(String);
 
+#[async_trait]
 impl Command for DeleteVariableCommand {
     fn name(&self) -> &'static str {
         "delete variable"
     }
 
-    fn execute(&self, ctx: &Context) -> Execution {
+    async fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
         let value = match ctx
             .db
@@ -176,16 +184,14 @@ impl Command for DeleteVariableCommand {
     }
 }
 
-impl dyn Command {
-    /// Parse a command string into a dynamic command execution trait
-    /// object. Returns an error if a command was recognized but not
-    /// parsed correctly. Returns Ok(None) if no command was recognized.
-    pub fn parse(s: &str) -> Result<Box<dyn Command>, BotError> {
-        match parser::parse_command(s) {
-            Ok(Some(command)) => Ok(command),
-            Ok(None) => Err(BotError::CommandError(CommandError::IgnoredCommand)),
-            Err(e) => Err(e),
-        }
+/// Parse a command string into a dynamic command execution trait
+/// object. Returns an error if a command was recognized but not
+/// parsed correctly. Returns Ok(None) if no command was recognized.
+pub fn parse(s: &str) -> Result<Box<dyn Command>, BotError> {
+    match parser::parse_command(s) {
+        Ok(Some(command)) => Ok(command),
+        Ok(None) => Err(BotError::CommandError(CommandError::IgnoredCommand)),
+        Err(e) => Err(e),
     }
 }
 
@@ -198,14 +204,14 @@ pub struct CommandResult {
 /// go back to Matrix, if the command was executed (successfully or
 /// not). If a command is determined to be ignored, this function will
 /// return None, signifying that we should not send a response.
-pub fn execute_command(ctx: &Context) -> Option<CommandResult> {
-    let res = Command::parse(&ctx.message_body).map(|cmd| {
-        let execution = cmd.execute(ctx);
-        (execution.plain().into(), execution.html().into())
-    });
+pub async fn execute_command(ctx: &Context) -> Option<CommandResult> {
+    let res = parse(&ctx.message_body);
 
     let (plain, html) = match res {
-        Ok(plain_and_html) => plain_and_html,
+        Ok(cmd) => {
+            let execution = cmd.execute(ctx).await;
+            (execution.plain().into(), execution.html().into())
+        }
         Err(BotError::CommandError(CommandError::IgnoredCommand)) => return None,
         Err(e) => {
             let message = format!("Error parsing command: {}", e);
