@@ -82,7 +82,7 @@ impl Database {
         let prefix_len: usize = prefix.len();
 
         let variables: Result<Vec<_>, DataError> = self
-            .db
+            .variables
             .scan_prefix(prefix)
             .map(|entry| match entry {
                 Ok((key, raw_value)) => {
@@ -108,7 +108,7 @@ impl Database {
     ) -> Result<i32, DataError> {
         let key = to_key(room_id, username, variable_name);
 
-        if let Some(raw_value) = self.db.get(&key)? {
+        if let Some(raw_value) = self.variables.get(&key)? {
             convert(&raw_value)
         } else {
             Err(DataError::KeyDoesNotExist(String::from_utf8(key).unwrap()))
@@ -124,7 +124,8 @@ impl Database {
     ) -> Result<(), DataError> {
         let key = to_key(room_id, username, variable_name);
         let db_value: I32<LittleEndian> = I32::new(value);
-        self.db.insert(&key, IVec::from(db_value.as_bytes()))?;
+        self.variables
+            .insert(&key, IVec::from(db_value.as_bytes()))?;
         Ok(())
     }
 
@@ -135,7 +136,7 @@ impl Database {
         variable_name: &str,
     ) -> Result<(), DataError> {
         let key = to_key(room_id, username, variable_name);
-        if let Some(_) = self.db.remove(&key)? {
+        if let Some(_) = self.variables.remove(&key)? {
             Ok(())
         } else {
             Err(DataError::KeyDoesNotExist(String::from_utf8(key).unwrap()))
