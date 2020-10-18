@@ -1,5 +1,5 @@
 use byteorder::LittleEndian;
-use sled::{Db, IVec};
+use sled::{Db, IVec, Tree};
 use std::collections::HashMap;
 use thiserror::Error;
 use zerocopy::byteorder::I32;
@@ -13,6 +13,8 @@ type LittleEndianI32Layout<'a> = LayoutVerified<&'a [u8], I32<LittleEndian>>;
 #[derive(Clone)]
 pub struct Database {
     db: Db,
+    variables: Tree,
+    rooms: Tree,
 }
 
 //TODO better combining of key and value in certain errors (namely
@@ -59,8 +61,16 @@ fn convert(raw_value: &[u8]) -> Result<i32, DataError> {
 }
 
 impl Database {
-    pub fn new(db: &Db) -> Database {
-        Database { db: db.clone() }
+    pub fn new<P: AsRef<std::path::Path>>(path: P) -> Result<Database, DataError> {
+        let db = sled::open(path)?;
+        let variables = db.open_tree("variables")?;
+        let rooms = db.open_tree("rooms")?;
+
+        Ok(Database {
+            db: db.clone(),
+            variables: variables,
+            rooms: rooms,
+        })
     }
 
     pub async fn get_user_variables(

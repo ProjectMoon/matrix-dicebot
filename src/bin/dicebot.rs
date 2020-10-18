@@ -26,7 +26,7 @@ async fn run() -> Result<(), BotError> {
         .expect("Need a config as an argument");
 
     let cfg = Arc::new(read_config(config_path)?);
-    let db = Database::new(&sled::open(cfg.database_path())?);
+    let db = Database::new(&cfg.database_path())?;
     let state = Arc::new(RwLock::new(DiceBotState::new(&cfg)));
 
     match DiceBot::new(&cfg, &state, &db) {
