@@ -5,7 +5,7 @@ use chronicle_dicebot::error::BotError;
 
 #[tokio::main]
 async fn main() -> Result<(), BotError> {
-    let db = Database::new(&sled::open("test-db")?);
+    let db = Database::new("test-db")?;
     let input = std::env::args().skip(1).collect::<Vec<String>>().join(" ");
     let command = match commands::parse(&input) {
         Ok(command) => command,
