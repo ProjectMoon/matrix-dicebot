@@ -1,5 +1,6 @@
 use byteorder::LittleEndian;
 use sled::{Db, IVec};
+use std::collections::HashMap;
 use thiserror::Error;
 use zerocopy::byteorder::I32;
 use zerocopy::{AsBytes, LayoutVerified};
@@ -14,13 +15,18 @@ pub struct Database {
     db: Db,
 }
 
+//TODO better combining of key and value in certain errors (namely
+//I32SchemaViolation).
 #[derive(Error, Debug)]
 pub enum DataError {
     #[error("value does not exist for key: {0}")]
     KeyDoesNotExist(String),
 
-    #[error("key violates expected schema: {0}")]
-    SchemaViolation(String),
+    #[error("expected i32, but i32 schema was violated")]
+    I32SchemaViolation,
+
+    #[error("expected string, but utf8 schema was violated: {0}")]
+    Utf8chemaViolation(#[from] std::str::Utf8Error),
 
     #[error("internal database error: {0}")]
     InternalError(#[from] sled::Error),
@@ -34,9 +40,54 @@ fn to_key(room_id: &str, username: &str, variable_name: &str) -> Vec<u8> {
     key
 }
 
+fn to_prefix(room_id: &str, username: &str) -> Vec<u8> {
+    let mut prefix = vec![];
+    prefix.extend_from_slice(room_id.as_bytes());
+    prefix.extend_from_slice(username.as_bytes());
+    prefix
+}
+
+fn convert(raw_value: &[u8]) -> Result<i32, DataError> {
+    let layout = LittleEndianI32Layout::new_unaligned(raw_value.as_ref());
+
+    if let Some(layout) = layout {
+        let value: I32<LittleEndian> = *layout;
+        Ok(value.get())
+    } else {
+        Err(DataError::I32SchemaViolation)
+    }
+}
+
 impl Database {
     pub fn new(db: &Db) -> Database {
         Database { db: db.clone() }
+    }
+
+    pub async fn get_user_variables(
+        &self,
+        room_id: &str,
+        username: &str,
+    ) -> Result<HashMap<String, i32>, DataError> {
+        let prefix = to_prefix(&room_id, &username);
+        let prefix_len: usize = prefix.len();
+
+        let variables: Result<Vec<_>, DataError> = self
+            .db
+            .scan_prefix(prefix)
+            .map(|entry| match entry {
+                Ok((key, raw_value)) => {
+                    //Strips room and username from key, leaving
+                    //behind name.
+                    let variable_name = std::str::from_utf8(&key[prefix_len..])?;
+                    Ok((variable_name.to_owned(), convert(&raw_value)?))
+                }
+                Err(e) => Err(e.into()),
+            })
+            .collect();
+
+        //Convert to hash map. Can we do this in the first mapping
+        //step instead?
+        variables.map(|entries| entries.into_iter().collect())
     }
 
     pub async fn get_user_variable(
@@ -48,14 +99,7 @@ impl Database {
         let key = to_key(room_id, username, variable_name);
 
         if let Some(raw_value) = self.db.get(&key)? {
-            let layout = LittleEndianI32Layout::new_unaligned(raw_value.as_ref());
-
-            if let Some(layout) = layout {
-                let value: I32<LittleEndian> = *layout;
-                Ok(value.get())
-            } else {
-                Err(DataError::SchemaViolation(String::from_utf8(key).unwrap()))
-            }
+            convert(&raw_value)
         } else {
             Err(DataError::KeyDoesNotExist(String::from_utf8(key).unwrap()))
         }
