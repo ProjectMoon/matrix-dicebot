@@ -1,5 +1,4 @@
 use crate::context::Context;
-use crate::db::DataError::KeyDoesNotExist;
 use crate::error::BotError;
 use crate::roll::Rolled;
 use futures::stream::{self, StreamExt, TryStreamExt};
@@ -526,7 +525,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_large_expression_test() {
-        let db = Database::new(&sled::open(tempdir().unwrap()).unwrap());
+        let db = Database::new(&tempdir().unwrap()).unwrap();
         let ctx = Context::new(&db, "roomid", "username", "message");
 
         let mut amounts = vec![];
@@ -551,7 +550,7 @@ mod tests {
 
     #[tokio::test]
     async fn can_resolve_variables_test() {
-        let db = Database::new(&sled::open(tempdir().unwrap()).unwrap());
+        let db = Database::new(&tempdir().unwrap()).unwrap();
         let ctx = Context::new(&db, "roomid", "username", "message");
 
         db.set_user_variable(&ctx.room_id, &ctx.username, "myvariable", 10)
