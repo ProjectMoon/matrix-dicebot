@@ -122,12 +122,24 @@ pub struct DicePool {
 
 async fn calculate_dice_amount<'a>(pool: &'a DicePoolWithContext<'a>) -> Result<i32, BotError> {
     let stream = stream::iter(&pool.0.amounts);
+    let variables = pool
+        .1
+        .db
+        .get_user_variables(&pool.1.room_id, &pool.1.username)
+        .await?;
 
+    let variables = &variables;
+
+    use DiceRollingError::VariableNotFound;
     let dice_amount: Result<i32, BotError> = stream
         .then(|amount| async move {
             match &amount.element {
                 Element::Number(num_dice) => Ok(*num_dice * amount.operator.mult()),
-                Element::Variable(variable) => handle_variable(&pool.1, &variable).await,
+                Element::Variable(variable) => variables
+                    .get(variable)
+                    .ok_or(VariableNotFound(variable.clone().to_string()))
+                    .map(|i| *i)
+                    .map_err(|e| e.into()),
             }
         })
         .try_fold(0, |total, num_dice| async move { Ok(total + num_dice) })
@@ -350,16 +362,6 @@ fn roll_die<R: DieRoller>(roller: &mut R, pool: &DicePool) -> Vec<i32> {
     }
 
     results
-}
-
-async fn handle_variable(ctx: &Context, variable: &str) -> Result<i32, BotError> {
-    ctx.db
-        .get_user_variable(&ctx.room_id, &ctx.username, variable)
-        .await
-        .map_err(|e| match e {
-            KeyDoesNotExist(_) => DiceRollingError::VariableNotFound(variable.to_owned()).into(),
-            _ => e.into(),
-        })
 }
 
 fn roll_dice<'a, R: DieRoller>(pool: &DicePool, num_dice: i32, roller: &mut R) -> Vec<i32> {
