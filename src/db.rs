@@ -44,6 +44,12 @@ pub enum DataError {
     UnabortableTransactionError(#[from] UnabortableTransactionError),
 }
 
+/// This From implementation is necessary to deal with the recursive
+/// error type in the error enum. We defined a transaction error, but
+/// the only place we use it is when converting from
+/// sled::transaction::TransactionError<DataError>. This converter
+/// extracts the inner data error from transaction aborted errors, and
+/// forwards anything else onward as-is, but wrapped in DataError.
 impl From<TransactionError<DataError>> for DataError {
     fn from(error: TransactionError<DataError>) -> Self {
         match error {
