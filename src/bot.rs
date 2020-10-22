@@ -14,7 +14,7 @@ use matrix_sdk::{
         room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
         AnyMessageEventContent, StrippedStateEvent, SyncMessageEvent,
     },
-    Client, ClientConfig, EventEmitter, JsonStore, SyncRoom, SyncSettings,
+    Client, ClientConfig, EventEmitter, JsonStore, Room, SyncRoom, SyncSettings,
 };
 //use matrix_sdk_common_macros::async_trait;
 use std::clone::Clone;
@@ -118,6 +118,45 @@ impl DiceBot {
         client.sync_forever(settings, |_| async {}).await;
         Ok(())
     }
+
+    async fn execute_commands(&self, room: &Room, sender_username: &str, msg_body: &str) {
+        let room_name = room.display_name().clone();
+        let room_id = room.room_id.clone();
+
+        let mut results = Vec::with_capacity(msg_body.lines().count());
+
+        for command in msg_body.lines() {
+            let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &command);
+
+            if let Some(cmd_result) = execute_command(&ctx).await {
+                results.push(cmd_result);
+            }
+        }
+
+        if results.len() == 1 {
+            let cmd_result = &results[0];
+            let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
+                NoticeMessageEventContent::html(cmd_result.plain.clone(), cmd_result.html.clone()),
+            ));
+
+            let result = self.client.room_send(&room_id, response, None).await;
+            if let Err(e) = result {
+                error!("Error sending message: {}", e.to_string());
+            };
+        } else {
+            let message = format!("Executed {} commands", results.len());
+            let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
+                NoticeMessageEventContent::html(&message, &message),
+            ));
+
+            let result = self.client.room_send(&room_id, response, None).await;
+            if let Err(e) = result {
+                error!("Error sending message: {}", e.to_string());
+            };
+        }
+
+        info!("[{}] {} executed: {}", room_name, sender_username, msg_body);
+    }
 }
 
 /// Check if a message is recent enough to actually process. If the
@@ -220,28 +259,10 @@ impl EventEmitter for DiceBot {
                 };
 
             //we clone here to hold the lock for as little time as possible.
-            let (room_name, room_id) = {
-                let real_room = room.read().await;
-                (real_room.display_name().clone(), real_room.room_id.clone())
-            };
+            let real_room = room.read().await.clone();
 
-            let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &msg_body);
-
-            if let Some(cmd_result) = execute_command(&ctx).await {
-                let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
-                    NoticeMessageEventContent::html(cmd_result.plain, cmd_result.html),
-                ));
-
-                let result = self.client.room_send(&room_id, response, None).await;
-                if let Err(e) = result {
-                    error!("Error sending message: {}", e.to_string());
-                };
-
-                info!(
-                    "[{}] {} executed: {}",
-                    room_name, ctx.username, ctx.message_body
-                );
-            }
+            self.execute_commands(&real_room, &sender_username, &msg_body)
+                .await;
         }
     }
 }
