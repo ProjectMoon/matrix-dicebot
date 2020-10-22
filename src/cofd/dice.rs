@@ -378,8 +378,16 @@ pub async fn roll_pool(pool: &DicePoolWithContext<'_>) -> Result<RolledDicePool,
 
     let num_dice = calculate_dice_amount(&pool).await?;
     let mut roller = RngDieRoller(rand::thread_rng());
-    let rolls = roll_dice(&pool.0, num_dice, &mut roller);
-    Ok(RolledDicePool::from(&pool.0, num_dice, rolls))
+
+    if num_dice > 0 {
+        let rolls = roll_dice(&pool.0, num_dice, &mut roller);
+        Ok(RolledDicePool::from(&pool.0, num_dice, rolls))
+    } else {
+        let chance_die = DicePool::chance_die();
+        let pool = DicePoolWithContext(&chance_die, &pool.1);
+        let rolls = roll_dice(&pool.0, num_dice, &mut roller);
+        Ok(RolledDicePool::from(&pool.0, num_dice, rolls))
+    }
 }
 
 #[cfg(test)]
@@ -546,6 +554,29 @@ mod tests {
                 DiceRollingError::ExpressionTooLarge
             ))
         ));
+    }
+
+    #[tokio::test]
+    async fn converts_to_chance_die_test() {
+        let db = Database::new(&tempdir().unwrap()).unwrap();
+        let ctx = Context::new(&db, "roomid", "username", "message");
+
+        let mut amounts = vec![];
+
+        amounts.push(Amount {
+            operator: Operator::Plus,
+            element: Element::Number(-1),
+        });
+
+        let pool = DicePool::new(amounts, DicePoolModifiers::default());
+        let pool_with_ctx = DicePoolWithContext(&pool, &ctx);
+        let result = roll_pool(&pool_with_ctx).await;
+        assert!(result.is_ok());
+
+        assert_eq!(
+            DicePoolQuality::ChanceDie,
+            result.unwrap().modifiers.quality
+        );
     }
 
     #[tokio::test]
