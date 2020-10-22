@@ -385,8 +385,8 @@ pub async fn roll_pool(pool: &DicePoolWithContext<'_>) -> Result<RolledDicePool,
     } else {
         let chance_die = DicePool::chance_die();
         let pool = DicePoolWithContext(&chance_die, &pool.1);
-        let rolls = roll_dice(&pool.0, num_dice, &mut roller);
-        Ok(RolledDicePool::from(&pool.0, num_dice, rolls))
+        let rolls = roll_dice(&pool.0, 1, &mut roller);
+        Ok(RolledDicePool::from(&pool.0, 1, rolls))
     }
 }
 
@@ -573,10 +573,9 @@ mod tests {
         let result = roll_pool(&pool_with_ctx).await;
         assert!(result.is_ok());
 
-        assert_eq!(
-            DicePoolQuality::ChanceDie,
-            result.unwrap().modifiers.quality
-        );
+        let roll = result.unwrap();
+        assert_eq!(DicePoolQuality::ChanceDie, roll.modifiers.quality);
+        assert_eq!(1, roll.num_dice);
     }
 
     #[tokio::test]
