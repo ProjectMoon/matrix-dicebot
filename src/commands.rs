@@ -111,6 +111,33 @@ impl Command for HelpCommand {
     }
 }
 
+pub struct GetAllVariablesCommand;
+
+#[async_trait]
+impl Command for GetAllVariablesCommand {
+    fn name(&self) -> &'static str {
+        "get all variables"
+    }
+
+    async fn execute(&self, ctx: &Context) -> Execution {
+        let value = match ctx.db.get_user_variables(&ctx.room_id, &ctx.username).await {
+            Ok(variables) => variables
+                .into_iter()
+                .map(|(name, value)| format!(" - {} = {}", name, value))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            Err(e) => format!("error getting variables: {}", e),
+        };
+
+        let plain = format!("Variables:\n{}", value);
+        let html = format!(
+            "<p><strong>Variables:</strong><br/>{}",
+            value.replace("\n", "<br/>")
+        );
+        Execution { plain, html }
+    }
+}
+
 pub struct GetVariableCommand(String);
 
 #[async_trait]

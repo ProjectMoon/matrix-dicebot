@@ -1,7 +1,7 @@
 use crate::cofd::parser::{create_chance_die, parse_dice_pool};
 use crate::commands::{
-    Command, DeleteVariableCommand, GetVariableCommand, HelpCommand, PoolRollCommand, RollCommand,
-    SetVariableCommand,
+    Command, DeleteVariableCommand, GetAllVariablesCommand, GetVariableCommand, HelpCommand,
+    PoolRollCommand, RollCommand, SetVariableCommand,
 };
 use crate::dice::parser::parse_element_expression;
 use crate::error::BotError;
@@ -47,6 +47,10 @@ fn chance_die() -> Result<Box<dyn Command>, BotError> {
     Ok(Box::new(PoolRollCommand(pool)))
 }
 
+fn get_all_variables() -> Result<Box<dyn Command>, BotError> {
+    Ok(Box::new(GetAllVariablesCommand))
+}
+
 fn help(topic: &str) -> Result<Box<dyn Command>, BotError> {
     let topic = parse_help_topic(topic);
     Ok(Box::new(HelpCommand(topic)))
@@ -89,6 +93,7 @@ fn split_command(input: &str) -> Result<(String, String), BotError> {
 pub fn parse_command(input: &str) -> Result<Option<Box<dyn Command>>, BotError> {
     match split_command(input) {
         Ok((cmd, cmd_input)) => match cmd.as_ref() {
+            "variables" => get_all_variables().map(|command| Some(command)),
             "get" => parse_get_variable_command(&cmd_input).map(|command| Some(command)),
             "set" => parse_set_variable_command(&cmd_input).map(|command| Some(command)),
             "del" => parse_delete_variable_command(&cmd_input).map(|command| Some(command)),

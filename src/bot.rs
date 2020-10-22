@@ -144,7 +144,7 @@ impl DiceBot {
                 error!("Error sending message: {}", e.to_string());
             };
         } else {
-            let message = format!("Executed {} commands", results.len());
+            let message = format!("{}: Executed {} commands", sender_username, results.len());
             let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
                 NoticeMessageEventContent::html(&message, &message),
             ));
