@@ -121,11 +121,15 @@ impl Command for GetAllVariablesCommand {
 
     async fn execute(&self, ctx: &Context) -> Execution {
         let value = match ctx.db.get_user_variables(&ctx.room_id, &ctx.username).await {
-            Ok(variables) => variables
-                .into_iter()
-                .map(|(name, value)| format!(" - {} = {}", name, value))
-                .collect::<Vec<_>>()
-                .join("\n"),
+            Ok(variables) => {
+                let mut variable_list = variables
+                    .into_iter()
+                    .map(|(name, value)| format!(" - {} = {}", name, value))
+                    .collect::<Vec<_>>();
+
+                variable_list.sort();
+                variable_list.join("\n")
+            }
             Err(e) => format!("error getting variables: {}", e),
         };
 
