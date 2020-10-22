@@ -1,6 +1,6 @@
 use crate::error::BotError;
-use combine::parser::char::{digit, letter, spaces};
-use combine::{many1, Parser};
+use combine::parser::char::{char, digit, letter, spaces};
+use combine::{many1, optional, Parser};
 use thiserror::Error;
 
 enum ParsedValue {
@@ -20,10 +20,20 @@ pub enum VariableParsingError {
 pub fn parse_set_variable(input: &str) -> Result<(String, i32), BotError> {
     let name = many1(letter()).map(|value: String| value);
 
-    let value = many1(digit()).map(|value: String| match value.parse::<i32>() {
-        Ok(num) => ParsedValue::Valid(num),
-        _ => ParsedValue::Invalid,
+    let maybe_minus = optional(char('-')).map(|value: Option<char>| match value {
+        Some(minus_sign) => String::from(minus_sign),
+        _ => "".to_owned(),
     });
+
+    let value = maybe_minus
+        .and(many1(digit()))
+        .map(|value: (String, String)| {
+            let number = format!("{}{}", value.0, value.1);
+            match number.parse::<i32>() {
+                Ok(num) => ParsedValue::Valid(num),
+                _ => ParsedValue::Invalid,
+            }
+        });
 
     let mut parser = name.skip(spaces().silent()).and(value);
     let (result, rest) = parser.parse(input)?;
@@ -39,5 +49,24 @@ pub fn parse_set_variable(input: &str) -> Result<(String, i32), BotError> {
         Err(BotError::VariableParsingError(
             VariableParsingError::UnconsumedInput,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_postive_number() {
+        let result = parse_set_variable("myvar 5");
+        assert!(result.is_ok());
+        assert_eq!(("myvar".to_string(), 5), result.unwrap());
+    }
+
+    #[test]
+    fn parse_negative_number() {
+        let result = parse_set_variable("myvar -5");
+        assert!(result.is_ok());
+        assert_eq!(("myvar".to_string(), -5), result.unwrap());
     }
 }
