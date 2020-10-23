@@ -12,6 +12,7 @@ use zerocopy::{AsBytes, LayoutVerified};
 /// read.
 type LittleEndianI32Layout<'a> = LayoutVerified<&'a [u8], I32<LittleEndian>>;
 
+const METADATA_KEY: &'static str = "metadata";
 const VARIABLE_COUNT_KEY: &'static str = "variable_count";
 
 #[derive(Clone)]
@@ -69,8 +70,17 @@ fn to_key(room_id: &str, username: &str, variable_name: &str) -> Vec<u8> {
     key
 }
 
+fn metadata_key(room_id: &str, username: &str, metadata_key: &str) -> Vec<u8> {
+    let mut key = vec![];
+    key.extend_from_slice(room_id.as_bytes());
+    key.extend_from_slice(METADATA_KEY.as_bytes());
+    key.extend_from_slice(username.as_bytes());
+    key.extend_from_slice(metadata_key.as_bytes());
+    key
+}
+
 fn room_variable_count_key(room_id: &str, username: &str) -> Vec<u8> {
-    to_key(room_id, username, VARIABLE_COUNT_KEY)
+    metadata_key(room_id, username, VARIABLE_COUNT_KEY)
 }
 
 fn to_prefix(room_id: &str, username: &str) -> Vec<u8> {
