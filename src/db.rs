@@ -3,6 +3,8 @@ use sled::transaction::abort;
 use sled::transaction::{TransactionError, TransactionalTree, UnabortableTransactionError};
 use sled::{Db, Tree};
 use std::collections::HashMap;
+use std::path::Path;
+use std::str;
 use thiserror::Error;
 use zerocopy::byteorder::I32;
 use zerocopy::{AsBytes, LayoutVerified};
@@ -103,8 +105,8 @@ fn convert_i32(raw_value: &[u8]) -> Result<i32, DataError> {
     }
 }
 
-/// Atomically alter the count of variables in the database, by the
-/// given amount. Count cannot go below 0.
+/// Use a transaction to atomically alter the count of variables in
+/// the database by the given amount. Count cannot go below 0.
 fn alter_room_variable_count(
     variables: &TransactionalTree,
     room_id: &str,
@@ -127,7 +129,7 @@ fn alter_room_variable_count(
 }
 
 impl Database {
-    pub fn new<P: AsRef<std::path::Path>>(path: P) -> Result<Database, DataError> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Database, DataError> {
         let db = sled::open(path)?;
         let variables = db.open_tree("variables")?;
         let rooms = db.open_tree("rooms")?;
@@ -152,16 +154,15 @@ impl Database {
             .scan_prefix(prefix)
             .map(|entry| match entry {
                 Ok((key, raw_value)) => {
-                    //Strips room and username from key, leaving
-                    //behind name.
-                    let variable_name = std::str::from_utf8(&key[prefix_len..])?;
+                    //Strips room and username from key, leaving behind name.
+                    let variable_name = str::from_utf8(&key[prefix_len..])?;
                     Ok((variable_name.to_owned(), convert_i32(&raw_value)?))
                 }
                 Err(e) => Err(e.into()),
             })
             .collect();
 
-        //Convert_I32 to hash map. Can we do this in the first mapping
+        //Convert I32 to hash map. Can we do this in the first mapping
         //step instead? For some reason this is faster.
         variables.map(|entries| entries.into_iter().collect())
     }
