@@ -29,6 +29,8 @@ async fn run() -> Result<(), BotError> {
     let db = Database::new(&cfg.database_path())?;
     let state = Arc::new(RwLock::new(DiceBotState::new(&cfg)));
 
+    db.migrate(cfg.migration_version())?;
+
     match DiceBot::new(&cfg, &state, &db) {
         Ok(bot) => bot.run().await?,
         Err(e) => println!("Error connecting: {:?}", e),

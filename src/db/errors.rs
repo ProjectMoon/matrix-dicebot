@@ -1,6 +1,18 @@
 use sled::transaction::{TransactionError, UnabortableTransactionError};
 use thiserror::Error;
 
+#[derive(Error, Debug)]
+pub enum MigrationError {
+    #[error("cannot downgrade to an older database version")]
+    CannotDowngrade,
+
+    #[error("migration for version {0} not defined")]
+    MigrationNotFound(u32),
+
+    #[error("migration failed: {0}")]
+    MigrationFailed(String),
+}
+
 //TODO better combining of key and value in certain errors (namely
 //I32SchemaViolation).
 #[derive(Error, Debug)]
@@ -22,6 +34,9 @@ pub enum DataError {
 
     #[error("unabortable transaction error: {0}")]
     UnabortableTransactionError(#[from] UnabortableTransactionError),
+
+    #[error("data migration error: {0}")]
+    MigrationError(#[from] MigrationError),
 }
 
 /// This From implementation is necessary to deal with the recursive
@@ -40,3 +55,14 @@ impl From<TransactionError<DataError>> for DataError {
         }
     }
 }
+
+// impl From<ConflictableTransactionError<DataError>> for DataError {
+//     fn from(error: ConflictableTransactionError<DataError>) -> Self {
+//         match error {
+//             ConflictableTransactionError::Abort(data_err) => data_err,
+//             ConflictableTransactionError::Storage(storage_err) => {
+//                 DataError::TransactionError(TransactionError::Storage(storage_err))
+//             }
+//         }
+//     }
+// }
