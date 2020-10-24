@@ -67,7 +67,7 @@ fn alter_room_variable_count(
 }
 
 impl Variables {
-    pub async fn get_user_variables(
+    pub fn get_user_variables(
         &self,
         room_id: &str,
         username: &str,
@@ -93,11 +93,7 @@ impl Variables {
         variables.map(|entries| entries.into_iter().collect())
     }
 
-    pub async fn get_variable_count(
-        &self,
-        room_id: &str,
-        username: &str,
-    ) -> Result<i32, DataError> {
+    pub fn get_variable_count(&self, room_id: &str, username: &str) -> Result<i32, DataError> {
         let key = room_variable_count_key(room_id, username);
         if let Some(raw_value) = self.0.get(&key)? {
             convert_i32(&raw_value)
@@ -106,7 +102,7 @@ impl Variables {
         }
     }
 
-    pub async fn get_user_variable(
+    pub fn get_user_variable(
         &self,
         room_id: &str,
         username: &str,
@@ -121,7 +117,7 @@ impl Variables {
         }
     }
 
-    pub async fn set_user_variable(
+    pub fn set_user_variable(
         &self,
         room_id: &str,
         username: &str,
@@ -147,7 +143,7 @@ impl Variables {
             .map_err(|e| e.into())
     }
 
-    pub async fn delete_user_variable(
+    pub fn delete_user_variable(
         &self,
         room_id: &str,
         username: &str,
@@ -185,8 +181,8 @@ mod tests {
 
     //Room Variable count tests
 
-    #[tokio::test]
-    async fn alter_room_variable_count_test() {
+    #[test]
+    fn alter_room_variable_count_test() {
         let variables = create_test_instance();
 
         let alter_count = |amount: i32| {
@@ -201,24 +197,23 @@ mod tests {
                 .expect("got transaction failure");
         };
 
-        async fn get_count(variables: &Variables) -> i32 {
+        fn get_count(variables: &Variables) -> i32 {
             variables
                 .get_variable_count("room", "username")
-                .await
                 .expect("could not get variable count")
         }
 
         //addition
         alter_count(5);
-        assert_eq!(5, get_count(&variables).await);
+        assert_eq!(5, get_count(&variables));
 
         //subtraction
         alter_count(-3);
-        assert_eq!(2, get_count(&variables).await);
+        assert_eq!(2, get_count(&variables));
     }
 
-    #[tokio::test]
-    async fn alter_room_variable_count_cannot_go_below_0_test() {
+    #[test]
+    fn alter_room_variable_count_cannot_go_below_0_test() {
         let variables = create_test_instance();
 
         variables
@@ -233,58 +228,51 @@ mod tests {
 
         let count = variables
             .get_variable_count("room", "username")
-            .await
             .expect("could not get variable count");
 
         assert_eq!(0, count);
     }
 
-    #[tokio::test]
-    async fn empty_db_reports_0_room_variable_count_test() {
+    #[test]
+    fn empty_db_reports_0_room_variable_count_test() {
         let variables = create_test_instance();
 
         let count = variables
             .get_variable_count("room", "username")
-            .await
             .expect("could not get variable count");
 
         assert_eq!(0, count);
     }
 
-    #[tokio::test]
-    async fn set_user_variable_increments_count() {
+    #[test]
+    fn set_user_variable_increments_count() {
         let variables = create_test_instance();
 
         variables
             .set_user_variable("room", "username", "myvariable", 5)
-            .await
             .expect("could not insert variable");
 
         let count = variables
             .get_variable_count("room", "username")
-            .await
             .expect("could not get variable count");
 
         assert_eq!(1, count);
     }
 
-    #[tokio::test]
-    async fn update_user_variable_does_not_increment_count() {
+    #[test]
+    fn update_user_variable_does_not_increment_count() {
         let variables = create_test_instance();
 
         variables
             .set_user_variable("room", "username", "myvariable", 5)
-            .await
             .expect("could not insert variable");
 
         variables
             .set_user_variable("room", "username", "myvariable", 10)
-            .await
             .expect("could not update variable");
 
         let count = variables
             .get_variable_count("room", "username")
-            .await
             .expect("could not get variable count");
 
         assert_eq!(1, count);
@@ -292,61 +280,51 @@ mod tests {
 
     // Set/get/delete variable tests
 
-    #[tokio::test]
-    async fn set_and_get_variable_test() {
+    #[test]
+    fn set_and_get_variable_test() {
         let variables = create_test_instance();
         variables
             .set_user_variable("room", "username", "myvariable", 5)
-            .await
             .expect("could not insert variable");
 
         let value = variables
             .get_user_variable("room", "username", "myvariable")
-            .await
             .expect("could not get value");
 
         assert_eq!(5, value);
     }
 
-    #[tokio::test]
-    async fn delete_variable_test() {
+    #[test]
+    fn delete_variable_test() {
         let variables = create_test_instance();
 
         variables
             .set_user_variable("room", "username", "myvariable", 5)
-            .await
             .expect("could not insert variable");
 
         variables
             .delete_user_variable("room", "username", "myvariable")
-            .await
             .expect("could not delete value");
 
-        let result = variables
-            .get_user_variable("room", "username", "myvariable")
-            .await;
+        let result = variables.get_user_variable("room", "username", "myvariable");
 
         assert!(result.is_err());
         assert!(matches!(result, Err(DataError::KeyDoesNotExist(_))));
     }
 
-    #[tokio::test]
-    async fn get_missing_variable_returns_key_does_not_exist() {
+    #[test]
+    fn get_missing_variable_returns_key_does_not_exist() {
         let variables = create_test_instance();
-        let result = variables
-            .get_user_variable("room", "username", "myvariable")
-            .await;
+        let result = variables.get_user_variable("room", "username", "myvariable");
 
         assert!(result.is_err());
         assert!(matches!(result, Err(DataError::KeyDoesNotExist(_))));
     }
 
-    #[tokio::test]
-    async fn remove_missing_variable_returns_key_does_not_exist() {
+    #[test]
+    fn remove_missing_variable_returns_key_does_not_exist() {
         let variables = create_test_instance();
-        let result = variables
-            .delete_user_variable("room", "username", "myvariable")
-            .await;
+        let result = variables.delete_user_variable("room", "username", "myvariable");
 
         assert!(result.is_err());
         assert!(matches!(result, Err(DataError::KeyDoesNotExist(_))));

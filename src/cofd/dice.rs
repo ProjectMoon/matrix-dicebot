@@ -125,8 +125,7 @@ async fn calculate_dice_amount<'a>(pool: &'a DicePoolWithContext<'a>) -> Result<
         .1
         .db
         .variables
-        .get_user_variables(&pool.1.room_id, &pool.1.username)
-        .await?;
+        .get_user_variables(&pool.1.room_id, &pool.1.username)?;
 
     let variables = &variables;
 
@@ -586,7 +585,6 @@ mod tests {
 
         db.variables
             .set_user_variable(&ctx.room_id, &ctx.username, "myvariable", 10)
-            .await
             .expect("could not set myvariable to 10");
 
         let amounts = vec![Amount {
