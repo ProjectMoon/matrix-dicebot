@@ -1,6 +1,6 @@
 use crate::cofd::dice::{roll_pool, DicePool, DicePoolWithContext};
 use crate::context::Context;
-use crate::db::DataError;
+use crate::db::errors::DataError;
 use crate::dice::ElementExpression;
 use crate::error::BotError;
 use crate::help::HelpTopic;
@@ -120,7 +120,12 @@ impl Command for GetAllVariablesCommand {
     }
 
     async fn execute(&self, ctx: &Context) -> Execution {
-        let value = match ctx.db.get_user_variables(&ctx.room_id, &ctx.username).await {
+        let value = match ctx
+            .db
+            .variables
+            .get_user_variables(&ctx.room_id, &ctx.username)
+            .await
+        {
             Ok(variables) => {
                 let mut variable_list = variables
                     .into_iter()
@@ -154,6 +159,7 @@ impl Command for GetVariableCommand {
         let name = &self.0;
         let value = match ctx
             .db
+            .variables
             .get_user_variable(&ctx.room_id, &ctx.username, name)
             .await
         {
@@ -181,6 +187,7 @@ impl Command for SetVariableCommand {
         let value = self.1;
         let result = ctx
             .db
+            .variables
             .set_user_variable(&ctx.room_id, &ctx.username, name, value)
             .await;
 
@@ -207,6 +214,7 @@ impl Command for DeleteVariableCommand {
         let name = &self.0;
         let value = match ctx
             .db
+            .variables
             .delete_user_variable(&ctx.room_id, &ctx.username, name)
             .await
         {

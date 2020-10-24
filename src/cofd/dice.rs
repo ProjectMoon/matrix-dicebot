@@ -124,6 +124,7 @@ async fn calculate_dice_amount<'a>(pool: &'a DicePoolWithContext<'a>) -> Result<
     let variables = pool
         .1
         .db
+        .variables
         .get_user_variables(&pool.1.room_id, &pool.1.username)
         .await?;
 
@@ -583,7 +584,8 @@ mod tests {
         let db = Database::new(&tempdir().unwrap()).unwrap();
         let ctx = Context::new(&db, "roomid", "username", "message");
 
-        db.set_user_variable(&ctx.room_id, &ctx.username, "myvariable", 10)
+        db.variables
+            .set_user_variable(&ctx.room_id, &ctx.username, "myvariable", 10)
             .await
             .expect("could not set myvariable to 10");
 
