@@ -1,46 +1,71 @@
 use crate::db::errors::DataError;
 use crate::db::schema::convert_i32;
 use byteorder::LittleEndian;
-use sled::transaction::abort;
-use sled::transaction::TransactionalTree;
+use sled::transaction::{abort, TransactionalTree};
 use sled::Tree;
 use std::collections::HashMap;
+use std::convert::From;
 use std::str;
 use zerocopy::byteorder::I32;
 use zerocopy::AsBytes;
 
-const METADATA_KEY: &'static str = "metadata";
+pub(super) mod migrations;
+
+const METADATA_SPACE: &'static [u8] = b"metadata";
+const VARIABLE_SPACE: &'static [u8] = b"variables";
+
 const VARIABLE_COUNT_KEY: &'static str = "variable_count";
 
 #[derive(Clone)]
-pub struct Variables(pub(crate) Tree);
+pub struct Variables(pub(super) Tree);
 
-fn to_key(room_id: &str, username: &str, variable_name: &str) -> Vec<u8> {
-    let mut key = vec![];
-    key.extend_from_slice(room_id.as_bytes());
-    key.extend_from_slice(username.as_bytes());
-    key.extend_from_slice(variable_name.as_bytes());
-    key
+//TODO at least some of these will probalby move elsewhere.
+
+fn space_prefix<D: Into<Vec<u8>>>(space: &[u8], delineator: D) -> Vec<u8> {
+    let mut metadata_prefix = vec![];
+    metadata_prefix.extend_from_slice(space);
+    metadata_prefix.push(0xff);
+    let delineator = delineator.into();
+
+    if delineator.len() > 0 {
+        metadata_prefix.extend_from_slice(delineator.as_bytes());
+        metadata_prefix.push(0xff);
+    }
+
+    metadata_prefix
 }
 
-fn metadata_key(room_id: &str, username: &str, metadata_key: &str) -> Vec<u8> {
-    let mut key = vec![];
-    key.extend_from_slice(room_id.as_bytes());
-    key.extend_from_slice(METADATA_KEY.as_bytes());
-    key.extend_from_slice(username.as_bytes());
-    key.extend_from_slice(metadata_key.as_bytes());
-    key
+fn metadata_space_prefix<D: Into<Vec<u8>>>(delineator: D) -> Vec<u8> {
+    space_prefix(METADATA_SPACE, delineator)
 }
 
-fn room_variable_count_key(room_id: &str, username: &str) -> Vec<u8> {
-    metadata_key(room_id, username, VARIABLE_COUNT_KEY)
+fn metadata_space_key<D: Into<Vec<u8>>>(delineator: D, key_name: &str) -> Vec<u8> {
+    let mut metadata_key = metadata_space_prefix(delineator);
+    metadata_key.extend_from_slice(key_name.as_bytes());
+    metadata_key
 }
 
-fn to_prefix(room_id: &str, username: &str) -> Vec<u8> {
-    let mut prefix = vec![];
-    prefix.extend_from_slice(room_id.as_bytes());
-    prefix.extend_from_slice(username.as_bytes());
-    prefix
+fn variables_space_prefix<D: Into<Vec<u8>>>(delineator: D) -> Vec<u8> {
+    space_prefix(VARIABLE_SPACE, delineator)
+}
+
+fn variables_space_key<D: Into<Vec<u8>>>(delineator: D, key_name: &str) -> Vec<u8> {
+    let mut metadata_key = variables_space_prefix(delineator);
+    metadata_key.extend_from_slice(key_name.as_bytes());
+    metadata_key
+}
+
+/// Delineator for keeping track of a key by room ID and username.
+struct RoomAndUser<'a>(&'a str, &'a str);
+
+impl<'a> From<RoomAndUser<'a>> for Vec<u8> {
+    fn from(value: RoomAndUser<'a>) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.extend_from_slice(value.0.as_bytes());
+        bytes.push(0xff);
+        bytes.extend_from_slice(value.1.as_bytes());
+        bytes
+    }
 }
 
 /// Use a transaction to atomically alter the count of variables in
@@ -51,7 +76,8 @@ fn alter_room_variable_count(
     username: &str,
     amount: i32,
 ) -> Result<i32, DataError> {
-    let key = room_variable_count_key(room_id, username);
+    let key = metadata_space_key(RoomAndUser(room_id, username), VARIABLE_COUNT_KEY);
+
     let mut new_count = match variables.get(&key)? {
         Some(bytes) => convert_i32(&bytes)? + amount,
         None => amount,
@@ -72,7 +98,7 @@ impl Variables {
         room_id: &str,
         username: &str,
     ) -> Result<HashMap<String, i32>, DataError> {
-        let prefix = to_prefix(&room_id, &username);
+        let prefix = variables_space_prefix(RoomAndUser(room_id, username));
         let prefix_len: usize = prefix.len();
 
         let variables: Result<Vec<_>, DataError> = self
@@ -94,7 +120,9 @@ impl Variables {
     }
 
     pub fn get_variable_count(&self, room_id: &str, username: &str) -> Result<i32, DataError> {
-        let key = room_variable_count_key(room_id, username);
+        let delineator = RoomAndUser(room_id, username);
+        let key = metadata_space_key(delineator, VARIABLE_COUNT_KEY);
+
         if let Some(raw_value) = self.0.get(&key)? {
             convert_i32(&raw_value)
         } else {
@@ -108,12 +136,12 @@ impl Variables {
         username: &str,
         variable_name: &str,
     ) -> Result<i32, DataError> {
-        let key = to_key(room_id, username, variable_name);
+        let key = variables_space_key(RoomAndUser(room_id, username), variable_name);
 
         if let Some(raw_value) = self.0.get(&key)? {
             convert_i32(&raw_value)
         } else {
-            Err(DataError::KeyDoesNotExist(String::from_utf8(key).unwrap()))
+            Err(DataError::KeyDoesNotExist(variable_name.to_owned()))
         }
     }
 
@@ -126,7 +154,7 @@ impl Variables {
     ) -> Result<(), DataError> {
         self.0
             .transaction(|tx| {
-                let key = to_key(room_id, username, variable_name);
+                let key = variables_space_key(RoomAndUser(room_id, username), variable_name);
                 let db_value: I32<LittleEndian> = I32::new(value);
                 let old_value = tx.insert(key, db_value.as_bytes())?;
 
@@ -151,14 +179,16 @@ impl Variables {
     ) -> Result<(), DataError> {
         self.0
             .transaction(|tx| {
-                let key = to_key(room_id, username, variable_name);
+                let key = variables_space_key(RoomAndUser(room_id, username), variable_name);
+
+                //TODO why does tx.remove require moving the key?
                 if let Some(_) = tx.remove(key.clone())? {
                     match alter_room_variable_count(&tx, room_id, username, -1) {
                         Err(e) => abort(e),
                         _ => Ok(()),
                     }
                 } else {
-                    abort(DataError::KeyDoesNotExist(String::from_utf8(key).unwrap()))
+                    abort(DataError::KeyDoesNotExist(variable_name.to_owned()))
                 }
             })
             .map_err(|e| e.into())

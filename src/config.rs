@@ -4,6 +4,10 @@ use std::fs;
 use std::path::PathBuf;
 use thiserror::Error;
 
+/// Shortcut to defining db migration versions. Will probably
+/// eventually be moved to a config file.
+const MIGRATION_VERSION: u32 = 1;
+
 #[derive(Error, Debug)]
 pub enum ConfigError {
     #[error("i/o error: {0}")]
@@ -122,6 +126,15 @@ impl Config {
             .as_ref()
             .map(|db| db.path())
             .unwrap_or_else(|| db_path_from_env())
+    }
+
+    /// The current migration version we expect of the database. If
+    /// this number is higher than the one in the database, we will
+    /// execute migrations to update the data.
+    #[inline]
+    #[must_use]
+    pub fn migration_version(&self) -> u32 {
+        MIGRATION_VERSION
     }
 
     /// Figure out the allowed oldest message age, in seconds. This will
