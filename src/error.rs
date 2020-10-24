@@ -1,7 +1,7 @@
 use crate::cofd::dice::DiceRollingError;
 use crate::commands::CommandError;
 use crate::config::ConfigError;
-use crate::db::DataError;
+use crate::db::errors::DataError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
