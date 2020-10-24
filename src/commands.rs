@@ -120,12 +120,12 @@ impl Command for GetAllVariablesCommand {
     }
 
     async fn execute(&self, ctx: &Context) -> Execution {
-        let value = match ctx
+        let result = ctx
             .db
             .variables
-            .get_user_variables(&ctx.room_id, &ctx.username)
-            .await
-        {
+            .get_user_variables(&ctx.room_id, &ctx.username);
+
+        let value = match result {
             Ok(variables) => {
                 let mut variable_list = variables
                     .into_iter()
@@ -157,12 +157,12 @@ impl Command for GetVariableCommand {
 
     async fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
-        let value = match ctx
+        let result = ctx
             .db
             .variables
-            .get_user_variable(&ctx.room_id, &ctx.username, name)
-            .await
-        {
+            .get_user_variable(&ctx.room_id, &ctx.username, name);
+
+        let value = match result {
             Ok(num) => format!("{} = {}", name, num),
             Err(DataError::KeyDoesNotExist(_)) => format!("{} is not set", name),
             Err(e) => format!("error getting {}: {}", name, e),
@@ -188,8 +188,7 @@ impl Command for SetVariableCommand {
         let result = ctx
             .db
             .variables
-            .set_user_variable(&ctx.room_id, &ctx.username, name, value)
-            .await;
+            .set_user_variable(&ctx.room_id, &ctx.username, name, value);
 
         let content = match result {
             Ok(_) => format!("{} = {}", name, value),
@@ -212,12 +211,12 @@ impl Command for DeleteVariableCommand {
 
     async fn execute(&self, ctx: &Context) -> Execution {
         let name = &self.0;
-        let value = match ctx
+        let result = ctx
             .db
             .variables
-            .delete_user_variable(&ctx.room_id, &ctx.username, name)
-            .await
-        {
+            .delete_user_variable(&ctx.room_id, &ctx.username, name);
+
+        let value = match result {
             Ok(()) => format!("{} now unset", name),
             Err(DataError::KeyDoesNotExist(_)) => format!("{} is not currently set", name),
             Err(e) => format!("error deleting {}: {}", name, e),
