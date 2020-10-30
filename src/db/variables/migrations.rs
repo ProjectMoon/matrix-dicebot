@@ -3,41 +3,63 @@ use crate::db::errors::{DataError, MigrationError};
 use crate::db::Database;
 use byteorder::LittleEndian;
 use sled::transaction::TransactionError;
-use sled::Batch;
+use sled::{Batch, IVec};
 use zerocopy::byteorder::U32;
 use zerocopy::AsBytes;
 
-//TODO we will make this set variable count properly.
-pub(in crate::db) fn migration1(db: &Database) -> Result<(), DataError> {
+//Not to be confused with the super::RoomAndUser delineator.
+#[derive(PartialEq, Eq, std::hash::Hash)]
+struct RoomAndUser {
+    room_id: String,
+    username: String,
+}
+
+/// Create a version 0 user variable key.
+fn v0_variable_key(info: &RoomAndUser, variable_name: &str) -> Vec<u8> {
+    let mut key = vec![];
+    key.extend_from_slice(info.room_id.as_bytes());
+    key.extend_from_slice(info.username.as_bytes());
+    key.extend_from_slice(variable_name.as_bytes());
+    key
+}
+
+fn map_value_to_room_and_user(
+    entry: sled::Result<(IVec, IVec)>,
+) -> Result<RoomAndUser, MigrationError> {
+    if let Ok((key, _)) = entry {
+        let keys: Vec<Result<&str, _>> = key
+            .split(|&b| b == 0xff)
+            .map(|b| str::from_utf8(b))
+            .collect();
+
+        if let &[_, Ok(room_id), Ok(username), Ok(_variable)] = keys.as_slice() {
+            Ok(RoomAndUser {
+                room_id: room_id.to_owned(),
+                username: username.to_owned(),
+            })
+        } else {
+            Err(MigrationError::MigrationFailed(
+                "a key violates utf8 schema".to_string(),
+            ))
+        }
+    } else {
+        Err(MigrationError::MigrationFailed(
+            "encountered unexpected key".to_string(),
+        ))
+    }
+}
+
+pub(in crate::db) fn add_room_user_variable_count(db: &Database) -> Result<(), DataError> {
     let tree = &db.variables.0;
     let prefix = variables_space_prefix("");
 
     //Extract a vec of tuples, consisting of room id + username.
-    let results: Vec<(String, String)> = tree
+    let results: Vec<RoomAndUser> = tree
         .scan_prefix(prefix)
-        .map(|entry| {
-            if let Ok((key, _)) = entry {
-                let keys: Vec<Result<&str, _>> = key
-                    .split(|&b| b == 0xff)
-                    .map(|b| str::from_utf8(b))
-                    .collect();
-
-                if let &[_, Ok(room_id), Ok(username), Ok(_variable)] = keys.as_slice() {
-                    Ok((room_id.to_owned(), username.to_owned()))
-                } else {
-                    Err(MigrationError::MigrationFailed(
-                        "a key violates utf8 schema".to_string(),
-                    ))
-                }
-            } else {
-                Err(MigrationError::MigrationFailed(
-                    "encountered unexpected key".to_string(),
-                ))
-            }
-        })
+        .map(map_value_to_room_and_user)
         .collect::<Result<Vec<_>, MigrationError>>()?;
 
-    let counts: HashMap<(String, String), u32> =
+    let counts: HashMap<RoomAndUser, u32> =
         results
             .into_iter()
             .fold(HashMap::new(), |mut count_map, room_and_user| {
@@ -47,15 +69,19 @@ pub(in crate::db) fn migration1(db: &Database) -> Result<(), DataError> {
             });
 
     //Start a transaction on the variables tree.
-    //Delete the old variable_count variable if exists.
-    //Add variable count according to new schema.
     let tx_result: Result<_, TransactionError<DataError>> = db.variables.0.transaction(|tx_vars| {
         let batch = counts.iter().fold(Batch::default(), |mut batch, entry| {
-            let key =
-                variables_space_key(RoomAndUser(&(entry.0).0, &(entry.0).1), VARIABLE_COUNT_KEY);
+            let (info, count) = entry;
 
-            let db_value: U32<LittleEndian> = U32::new(*entry.1);
+            //Add variable count according to new schema.
+            let delineator = super::RoomAndUser(&info.room_id, &info.username);
+            let key = variables_space_key(delineator, VARIABLE_COUNT_KEY);
+            let db_value: U32<LittleEndian> = U32::new(*count);
             batch.insert(key, db_value.as_bytes());
+
+            //Delete the old variable_count variable if exists.
+            let old_key = v0_variable_key(&info, "variable_count");
+            batch.remove(old_key);
             batch
         });
 
