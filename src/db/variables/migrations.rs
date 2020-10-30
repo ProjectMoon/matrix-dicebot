@@ -2,6 +2,7 @@ use super::*;
 use crate::db::errors::{DataError, MigrationError};
 use crate::db::Database;
 use byteorder::LittleEndian;
+use memmem::{Searcher, TwoWaySearcher};
 use sled::transaction::TransactionError;
 use sled::{Batch, IVec};
 use zerocopy::byteorder::U32;
@@ -101,6 +102,29 @@ pub(in crate::db) fn delete_v0_schema(db: &Database) -> Result<(), DataError> {
         let key = key.to_vec();
 
         if !key.contains(&0xff) {
+            batch.remove(key);
+        }
+    }
+
+    db.variables.0.apply_batch(batch)?;
+    Ok(())
+}
+
+pub(in crate::db) fn delete_variable_count(db: &Database) -> Result<(), DataError> {
+    let prefix = variables_space_prefix("");
+    let mut vars = db.variables.0.scan_prefix(prefix);
+    let mut batch = Batch::default();
+
+    while let Some(Ok((key, _))) = vars.next() {
+        let search = TwoWaySearcher::new(b"variable_count");
+        let ends_with = {
+            match search.search_in(&key) {
+                Some(index) => key.len() - index == b"variable_count".len(),
+                None => false,
+            }
+        };
+
+        if ends_with {
             batch.remove(key);
         }
     }
