@@ -46,11 +46,12 @@ impl Database {
             let migrations = data_migrations::get_migrations(&versions_to_run)?;
 
             //execute each closure.
-            for (version, migration_func) in versions_to_run.iter().zip(migrations) {
+            for (version, migration) in versions_to_run.iter().zip(migrations) {
+                let (migration_func, name) = migration;
                 //This needs to be transactional on migrations
                 //keyspace. abort on migration func error.
 
-                info!("Applying migration: {}", version);
+                info!("Applying migration {} :: {}", version, name);
                 match migration_func(&self) {
                     Ok(_) => Ok(()),
                     Err(e) => Err(e),
