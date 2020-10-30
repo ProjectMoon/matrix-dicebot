@@ -92,3 +92,19 @@ pub(in crate::db) fn add_room_user_variable_count(db: &Database) -> Result<(), D
     tx_result?; //For some reason, it cannot infer the type
     Ok(())
 }
+
+pub(in crate::db) fn delete_v0_schema(db: &Database) -> Result<(), DataError> {
+    let mut vars = db.variables.0.scan_prefix("");
+    let mut batch = Batch::default();
+
+    while let Some(Ok((key, _))) = vars.next() {
+        let key = key.to_vec();
+
+        if !key.contains(&0xff) {
+            batch.remove(key);
+        }
+    }
+
+    db.variables.0.apply_batch(batch)?;
+    Ok(())
+}
