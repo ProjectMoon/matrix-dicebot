@@ -6,7 +6,7 @@ use thiserror::Error;
 
 /// Shortcut to defining db migration versions. Will probably
 /// eventually be moved to a config file.
-const MIGRATION_VERSION: u32 = 1;
+const MIGRATION_VERSION: u32 = 2;
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
