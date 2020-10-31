@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// A planned dice roll.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DiceRoll {
     pub target: u32,
     pub modifier: DiceRollModifier,
@@ -9,14 +9,14 @@ pub struct DiceRoll {
 
 impl fmt::Display for DiceRoll {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let message = format!("target: {}, modifiers: {}", self.target, self.modifier);
+        let message = format!("target: {}, with {}", self.target, self.modifier);
         write!(f, "{}", message)?;
         Ok(())
     }
 }
 
 /// Potential modifier on the die roll to be made.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DiceRollModifier {
     /// No bonuses or penalties.
     Normal,
@@ -37,11 +37,11 @@ pub enum DiceRollModifier {
 impl fmt::Display for DiceRollModifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
-            Self::Normal => "none",
-            Self::OneBonus => "one bonus",
-            Self::TwoBonus => "two bonus",
-            Self::OnePenalty => "one penalty",
-            Self::TwoPenalty => "two penalty",
+            Self::Normal => "no modifiers",
+            Self::OneBonus => "one bonus die",
+            Self::TwoBonus => "two bonus dice",
+            Self::OnePenalty => "one penalty die",
+            Self::TwoPenalty => "two penalty dice",
         };
 
         write!(f, "{}", message)?;
@@ -100,6 +100,7 @@ pub struct RolledDice {
     target: u32,
 
     /// Stored for informational purposes in display.
+    #[allow(dead_code)]
     modifier: DiceRollModifier,
 }
 
@@ -141,15 +142,25 @@ impl fmt::Display for RolledDice {
 
 /// A planned advancement roll, where the target number is the
 /// existing skill amount.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AdvancementRoll {
     /// The amount (0 to 100) of the existing skill. We must beat this
     /// target number to advance the skill, or roll above a 95.
     pub existing_skill: u32,
 }
 
+impl fmt::Display for AdvancementRoll {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = format!("advancement for skill of {}", self.existing_skill);
+        write!(f, "{}", message)?;
+        Ok(())
+    }
+}
+
 /// A completed advancement roll.
 pub struct RolledAdvancement {
     existing_skill: u32,
+    num_rolled: u32,
     advancement: u32,
     successful: bool,
 }
@@ -170,6 +181,27 @@ impl RolledAdvancement {
     /// Whether or not the advancement roll was successful.
     pub fn successful(&self) -> bool {
         self.successful
+    }
+}
+
+impl fmt::Display for RolledAdvancement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = if self.successful {
+            format!(
+                "success! new skill is {} (advanced by {}).",
+                self.new_skill_amount(),
+                self.advancement
+            )
+        } else {
+            format!("failure! skill remains at {}", self.existing_skill)
+        };
+
+        write!(
+            f,
+            "rolled {} against {}: {}",
+            self.num_rolled, self.existing_skill, message
+        )?;
+        Ok(())
     }
 }
 
@@ -248,12 +280,14 @@ impl AdvancementRoll {
 
         if percentile_roll < self.existing_skill || percentile_roll > 95 {
             RolledAdvancement {
+                num_rolled: percentile_roll,
                 existing_skill: self.existing_skill,
                 advancement: roller.roll() + 1,
                 successful: true,
             }
         } else {
             RolledAdvancement {
+                num_rolled: percentile_roll,
                 existing_skill: self.existing_skill,
                 advancement: 0,
                 successful: false,

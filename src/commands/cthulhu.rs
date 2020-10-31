@@ -11,7 +11,7 @@ impl Command for CthRoll {
         "roll percentile pool"
     }
 
-    async fn execute(&self, ctx: &Context) -> Execution {
+    async fn execute(&self, _ctx: &Context) -> Execution {
         //TODO this will be converted to a result when supporting variables.
         let roll = self.0.roll();
         let plain = format!("Roll: {}\nResult: {}", self.0, roll);
@@ -25,3 +25,22 @@ impl Command for CthRoll {
 }
 
 pub struct CthAdvanceRoll(pub AdvancementRoll);
+
+#[async_trait]
+impl Command for CthAdvanceRoll {
+    fn name(&self) -> &'static str {
+        "roll percentile pool"
+    }
+
+    async fn execute(&self, _ctx: &Context) -> Execution {
+        //TODO this will be converted to a result when supporting variables.
+        let roll = self.0.roll();
+        let plain = format!("Roll: {}\nResult: {}", self.0, roll);
+        let html = format!(
+            "<p><strong>Roll:</strong> {}</p><p><strong>Result</strong>: {}</p>",
+            self.0, roll
+        );
+
+        Execution { plain, html }
+    }
+}

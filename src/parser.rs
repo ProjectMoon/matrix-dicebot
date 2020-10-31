@@ -8,7 +8,7 @@ use thiserror::Error;
 //******************************
 #[derive(Debug, Clone, Copy, PartialEq, Error)]
 pub enum DiceParsingError {
-    #[error("invalid amount of dice")]
+    #[error("invalid amount")]
     InvalidAmount,
 
     #[error("modifiers not specified properly")]
