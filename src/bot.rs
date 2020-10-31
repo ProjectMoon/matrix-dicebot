@@ -7,6 +7,7 @@ use crate::state::DiceBotState;
 use async_trait::async_trait;
 use dirs;
 use log::{debug, error, info, trace, warn};
+use matrix_sdk::Error as MatrixError;
 use matrix_sdk::{
     self,
     events::{
@@ -54,6 +55,15 @@ fn create_client(config: &Config) -> Result<Client, BotError> {
     let homeserver_url = Url::parse(&config.matrix_homeserver())?;
 
     Ok(Client::new_with_config(homeserver_url, client_config)?)
+}
+
+/// Extracts more detailed error messages out of a matrix SDK error.
+fn extract_error_message(error: MatrixError) -> String {
+    use matrix_sdk::Error::RumaResponse;
+    match error {
+        RumaResponse(ruma_error) => ruma_error.to_string(),
+        _ => error.to_string(),
+    }
 }
 
 impl DiceBot {
@@ -141,7 +151,8 @@ impl DiceBot {
 
             let result = self.client.room_send(&room_id, response, None).await;
             if let Err(e) = result {
-                error!("Error sending message: {}", e.to_string());
+                let message = extract_error_message(e);
+                error!("Error sending message: {}", message);
             };
         } else {
             let message = format!("{}: Executed {} commands", sender_username, results.len());
@@ -151,7 +162,8 @@ impl DiceBot {
 
             let result = self.client.room_send(&room_id, response, None).await;
             if let Err(e) = result {
-                error!("Error sending message: {}", e.to_string());
+                let message = extract_error_message(e);
+                error!("Error sending message: {}", message);
             };
         }
 
