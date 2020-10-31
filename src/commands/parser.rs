@@ -19,8 +19,11 @@ use combine::{any, many1, optional, Parser};
 use nom::Err as NomErr;
 use thiserror::Error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Error)]
+#[derive(Debug, Clone, PartialEq, Error)]
 pub enum CommandParsingError {
+    #[error("unrecognized command: {0}")]
+    UnrecognizedCommand(String),
+
     #[error("parser error: {0}")]
     InternalParseError(#[from] combine::error::StringStreamError),
 }
@@ -114,23 +117,21 @@ fn split_command(input: &str) -> Result<(String, String), CommandParsingError> {
 /// Potentially parse a command expression. If we recognize the
 /// command, an error should be raised if the command is misparsed. If
 /// we don't recognize the command, ignore it and return None.
-pub fn parse_command(input: &str) -> Result<Option<Box<dyn Command>>, BotError> {
+pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
     match split_command(input) {
         Ok((cmd, cmd_input)) => match cmd.as_ref() {
-            "variables" => get_all_variables().map(|command| Some(command)),
-            "get" => parse_get_variable_command(&cmd_input).map(|command| Some(command)),
-            "set" => parse_set_variable_command(&cmd_input).map(|command| Some(command)),
-            "del" => parse_delete_variable_command(&cmd_input).map(|command| Some(command)),
-            "r" | "roll" => parse_roll(&cmd_input).map(|command| Some(command)),
-            "rp" | "pool" => parse_pool_roll(&cmd_input).map(|command| Some(command)),
-            "cthroll" | "cthRoll" => parse_cth_roll(&cmd_input).map(|command| Some(command)),
-            "cthadv" | "cthARoll" => {
-                parse_cth_advancement_roll(&cmd_input).map(|command| Some(command))
-            }
-            "chance" => chance_die().map(|command| Some(command)),
-            "help" => help(&cmd_input).map(|command| Some(command)),
+            "variables" => get_all_variables(),
+            "get" => parse_get_variable_command(&cmd_input),
+            "set" => parse_set_variable_command(&cmd_input),
+            "del" => parse_delete_variable_command(&cmd_input),
+            "r" | "roll" => parse_roll(&cmd_input),
+            "rp" | "pool" => parse_pool_roll(&cmd_input),
+            "cthroll" | "cthRoll" => parse_cth_roll(&cmd_input),
+            "cthadv" | "cthARoll" => parse_cth_advancement_roll(&cmd_input),
+            "chance" => chance_die(),
+            "help" => help(&cmd_input),
             // No recognized command, ignore this.
-            _ => Ok(None),
+            _ => Err(CommandParsingError::UnrecognizedCommand(cmd).into()),
         },
         //All other errors passed up.
         Err(e) => Err(e.into()),

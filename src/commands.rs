@@ -1,6 +1,7 @@
 use crate::context::Context;
-use crate::error::BotError;
+use crate::error::{BotError, BotError::CommandParsingError};
 use async_trait::async_trait;
+use parser::CommandParsingError::UnrecognizedCommand;
 use thiserror::Error;
 
 pub mod basic_rolling;
@@ -45,8 +46,10 @@ pub trait Command: Send + Sync {
 /// parsed correctly. Returns Ok(None) if no command was recognized.
 pub fn parse(s: &str) -> Result<Box<dyn Command>, BotError> {
     match parser::parse_command(s) {
-        Ok(Some(command)) => Ok(command),
-        Ok(None) => Err(BotError::CommandError(CommandError::IgnoredCommand)),
+        Ok(command) => Ok(command),
+        Err(CommandParsingError(UnrecognizedCommand(_))) => {
+            Err(CommandError::IgnoredCommand.into())
+        }
         Err(e) => Err(e),
     }
 }
