@@ -144,7 +144,7 @@ impl fmt::Display for RolledDice {
 pub struct AdvancementRoll {
     /// The amount (0 to 100) of the existing skill. We must beat this
     /// target number to advance the skill, or roll above a 95.
-    existing_skill: u32,
+    pub existing_skill: u32,
 }
 
 /// A completed advancement roll.

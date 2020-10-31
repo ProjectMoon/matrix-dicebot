@@ -17,6 +17,13 @@ use crate::variables::parse_set_variable;
 use combine::parser::char::{char, letter, space};
 use combine::{any, many1, optional, Parser};
 use nom::Err as NomErr;
+use thiserror::Error;
+
+#[derive(Debug, Clone, Copy, PartialEq, Error)]
+pub enum CommandParsingError {
+    #[error("parser error: {0}")]
+    InternalParseError(#[from] combine::error::StringStreamError),
+}
 
 // Parse a roll expression.
 fn parse_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
@@ -75,7 +82,7 @@ fn help(topic: &str) -> Result<Box<dyn Command>, BotError> {
 /// else" parts. Extracts the command separately from its input (i.e.
 /// rest of the line) and returns a tuple of (command_input, command).
 /// Whitespace at the start and end of the command input is removed.
-fn split_command(input: &str) -> Result<(String, String), BotError> {
+fn split_command(input: &str) -> Result<(String, String), CommandParsingError> {
     let input = input.trim();
 
     let exclamation = char('!');
@@ -121,7 +128,7 @@ pub fn parse_command(input: &str) -> Result<Option<Box<dyn Command>>, BotError> 
             _ => Ok(None),
         },
         //All other errors passed up.
-        Err(e) => Err(e),
+        Err(e) => Err(e.into()),
     }
 }
 

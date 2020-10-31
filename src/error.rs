@@ -44,11 +44,11 @@ pub enum BotError {
     #[error("i/o error: {0}")]
     IoError(#[from] std::io::Error),
 
-    #[error("parsing error")]
-    ParserError(#[from] combine::error::StringStreamError),
-
     #[error("dice parsing error: {0}")]
-    DiceParsingError(#[from] crate::cofd::parser::DiceParsingError),
+    DiceParsingError(#[from] crate::parser::DiceParsingError),
+
+    #[error("command parsing error: {0}")]
+    CommandParsingError(#[from] crate::commands::parser::CommandParsingError),
 
     #[error("dice pool roll error: {0}")]
     DiceRollingError(#[from] DiceRollingError),

@@ -1,5 +1,6 @@
 use crate::context::Context;
 use crate::error::BotError;
+use crate::parser::{Amount, Element, Operator};
 use crate::roll::Rolled;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use itertools::Itertools;
@@ -14,33 +15,6 @@ pub enum DiceRollingError {
 
     #[error("dice pool expression too large")]
     ExpressionTooLarge,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Operator {
-    Plus,
-    Minus,
-}
-
-impl Operator {
-    pub fn mult(&self) -> i32 {
-        match self {
-            Operator::Plus => 1,
-            Operator::Minus => -1,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Element {
-    Variable(String),
-    Number(i32),
-}
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Amount {
-    pub operator: Operator,
-    pub element: Element,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
