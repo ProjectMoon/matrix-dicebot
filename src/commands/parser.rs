@@ -1,7 +1,12 @@
 use crate::cofd::parser::{create_chance_die, parse_dice_pool};
 use crate::commands::{
-    Command, DeleteVariableCommand, GetAllVariablesCommand, GetVariableCommand, HelpCommand,
-    PoolRollCommand, RollCommand, SetVariableCommand,
+    basic_rolling::RollCommand,
+    cofd::PoolRollCommand,
+    misc::HelpCommand,
+    variables::{
+        DeleteVariableCommand, GetAllVariablesCommand, GetVariableCommand, SetVariableCommand,
+    },
+    Command,
 };
 use crate::dice::parser::parse_element_expression;
 use crate::error::BotError;
