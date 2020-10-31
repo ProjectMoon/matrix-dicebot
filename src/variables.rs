@@ -1,4 +1,3 @@
-use crate::error::BotError;
 use combine::parser::char::{char, digit, letter, spaces};
 use combine::{many1, optional, Parser};
 use thiserror::Error;
@@ -15,9 +14,12 @@ pub enum VariableParsingError {
 
     #[error("unconsumed input")]
     UnconsumedInput,
+
+    #[error("parser error: {0}")]
+    InternalParseError(#[from] combine::error::StringStreamError),
 }
 
-pub fn parse_set_variable(input: &str) -> Result<(String, i32), BotError> {
+pub fn parse_set_variable(input: &str) -> Result<(String, i32), VariableParsingError> {
     let name = many1(letter()).map(|value: String| value);
 
     let maybe_minus = optional(char('-')).map(|value: Option<char>| match value {
@@ -41,14 +43,10 @@ pub fn parse_set_variable(input: &str) -> Result<(String, i32), BotError> {
     if rest.len() == 0 {
         match result {
             (variable_name, ParsedValue::Valid(value)) => Ok((variable_name, value)),
-            _ => Err(BotError::VariableParsingError(
-                VariableParsingError::InvalidValue,
-            )),
+            _ => Err(VariableParsingError::InvalidValue),
         }
     } else {
-        Err(BotError::VariableParsingError(
-            VariableParsingError::UnconsumedInput,
-        ))
+        Err(VariableParsingError::UnconsumedInput)
     }
 }
 
