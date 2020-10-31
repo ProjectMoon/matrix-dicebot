@@ -6,6 +6,6 @@ cache
 *.tar
 *.tar.gz
 test-db/
-
+bot-db*
 # We store a disabled async test in this file
 bigboy
