@@ -1,10 +1,22 @@
+use std::fmt;
+
 /// A planned dice roll.
+#[derive(Clone, Copy)]
 pub struct DiceRoll {
-    target: u32,
-    modifier: DiceRollModifier,
+    pub target: u32,
+    pub modifier: DiceRollModifier,
+}
+
+impl fmt::Display for DiceRoll {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = format!("target: {}, modifiers: {}", self.target, self.modifier);
+        write!(f, "{}", message)?;
+        Ok(())
+    }
 }
 
 /// Potential modifier on the die roll to be made.
+#[derive(Clone, Copy)]
 pub enum DiceRollModifier {
     /// No bonuses or penalties.
     Normal,
@@ -22,8 +34,23 @@ pub enum DiceRollModifier {
     TwoPenalty,
 }
 
+impl fmt::Display for DiceRollModifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            Self::Normal => "none",
+            Self::OneBonus => "one bonus",
+            Self::TwoBonus => "two bonus",
+            Self::OnePenalty => "one penalty",
+            Self::TwoPenalty => "two penalty",
+        };
+
+        write!(f, "{}", message)?;
+        Ok(())
+    }
+}
+
 /// The outcome of a die roll, either some kind of success or failure.
-enum RollResult {
+pub enum RollResult {
     /// Basic success. The rolled number was equal to or less than the target number.
     Success,
 
@@ -47,6 +74,22 @@ enum RollResult {
     Fumble,
 }
 
+impl fmt::Display for RollResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            Self::Success => "success!",
+            Self::HardSuccess => "hard success!",
+            Self::ExtremeSuccess => "extreme success!",
+            Self::CriticalSuccess => "critical success!",
+            Self::Failure => "failure!",
+            Self::Fumble => "fumble!",
+        };
+
+        write!(f, "{}", message)?;
+        Ok(())
+    }
+}
+
 /// The outcome of a roll.
 pub struct RolledDice {
     /// The d100 result actually rolled.
@@ -64,7 +107,7 @@ impl RolledDice {
     /// Calculate what type of success or failure this roll is.
     /// Consult the RollResult enum for descriptions of what each
     /// result requires.
-    fn result(&self) -> RollResult {
+    pub fn result(&self) -> RollResult {
         let hard_target = self.target / 2u32;
         let extreme_target = self.target / 5u32;
         if (self.target < 50 && self.num_rolled > 95) || self.num_rolled == 100 {
@@ -80,6 +123,19 @@ impl RolledDice {
         } else {
             RollResult::Failure
         }
+    }
+}
+
+impl fmt::Display for RolledDice {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = format!(
+            "{} against {}: {}",
+            self.num_rolled,
+            self.target,
+            self.result()
+        );
+        write!(f, "{}", message)?;
+        Ok(())
     }
 }
 
@@ -145,59 +201,63 @@ fn roll_percentile_dice<R: DieRoller>(roller: &mut R, unit_roll: u32) -> u32 {
     }
 }
 
-/// Make a roll with a target number and potential modifier. In a
-/// normal roll, only one percentile die is rolled (1d100). With
-/// bonuses or penalties, more dice are rolled, and either the lowest
-/// (in case of bonus) or highest (in case of penalty) result is
-/// picked. Rolls are not simply d100; the unit roll (ones place) is
-/// rolled separately from the tens place, and then the unit number is
-/// added to each potential roll before picking the lowest/highest
-/// result.
-fn roll(roll: DiceRoll) -> RolledDice {
-    use DiceRollModifier::*;
-    let num_rolls = match roll.modifier {
-        Normal => 1,
-        OneBonus | OnePenalty => 2,
-        TwoBonus | TwoPenalty => 3,
-    };
+impl DiceRoll {
+    /// Make a roll with a target number and potential modifier. In a
+    /// normal roll, only one percentile die is rolled (1d100). With
+    /// bonuses or penalties, more dice are rolled, and either the lowest
+    /// (in case of bonus) or highest (in case of penalty) result is
+    /// picked. Rolls are not simply d100; the unit roll (ones place) is
+    /// rolled separately from the tens place, and then the unit number is
+    /// added to each potential roll before picking the lowest/highest
+    /// result.
+    pub fn roll(&self) -> RolledDice {
+        use DiceRollModifier::*;
+        let num_rolls = match self.modifier {
+            Normal => 1,
+            OneBonus | OnePenalty => 2,
+            TwoBonus | TwoPenalty => 3,
+        };
 
-    let mut roller = RngDieRoller(rand::thread_rng());
-    let unit_roll = roller.roll();
+        let mut roller = RngDieRoller(rand::thread_rng());
+        let unit_roll = roller.roll();
 
-    let rolls: Vec<u32> = (0..num_rolls)
-        .map(|_| roll_percentile_dice(&mut roller, unit_roll))
-        .collect();
+        let rolls: Vec<u32> = (0..num_rolls)
+            .map(|_| roll_percentile_dice(&mut roller, unit_roll))
+            .collect();
 
-    let num_rolled = match roll.modifier {
-        Normal => rolls.first(),
-        OneBonus | TwoBonus => rolls.iter().min(),
-        OnePenalty | TwoPenalty => rolls.iter().max(),
-    }
-    .unwrap();
+        let num_rolled = match self.modifier {
+            Normal => rolls.first(),
+            OneBonus | TwoBonus => rolls.iter().min(),
+            OnePenalty | TwoPenalty => rolls.iter().max(),
+        }
+        .unwrap();
 
-    RolledDice {
-        modifier: roll.modifier,
-        num_rolled: *num_rolled,
-        target: roll.target,
+        RolledDice {
+            modifier: self.modifier,
+            num_rolled: *num_rolled,
+            target: self.target,
+        }
     }
 }
 
-fn advancement_roll(roll: AdvancementRoll) -> RolledAdvancement {
-    let mut roller = RngDieRoller(rand::thread_rng());
-    let unit_roll = roller.roll();
-    let percentile_roll = roll_percentile_dice(&mut roller, unit_roll);
+impl AdvancementRoll {
+    pub fn roll(&self) -> RolledAdvancement {
+        let mut roller = RngDieRoller(rand::thread_rng());
+        let unit_roll = roller.roll();
+        let percentile_roll = roll_percentile_dice(&mut roller, unit_roll);
 
-    if percentile_roll < roll.existing_skill || percentile_roll > 95 {
-        RolledAdvancement {
-            existing_skill: roll.existing_skill,
-            advancement: roller.roll() + 1,
-            successful: true,
-        }
-    } else {
-        RolledAdvancement {
-            existing_skill: roll.existing_skill,
-            advancement: 0,
-            successful: false,
+        if percentile_roll < self.existing_skill || percentile_roll > 95 {
+            RolledAdvancement {
+                existing_skill: self.existing_skill,
+                advancement: roller.roll() + 1,
+                successful: true,
+            }
+        } else {
+            RolledAdvancement {
+                existing_skill: self.existing_skill,
+                advancement: 0,
+                successful: false,
+            }
         }
     }
 }

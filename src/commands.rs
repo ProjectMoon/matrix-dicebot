@@ -5,6 +5,7 @@ use thiserror::Error;
 
 pub mod basic_rolling;
 pub mod cofd;
+pub mod cthulhu;
 pub mod misc;
 pub mod parser;
 pub mod variables;
