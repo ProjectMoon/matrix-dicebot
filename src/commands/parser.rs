@@ -2,14 +2,14 @@ use crate::cofd::parser::{create_chance_die, parse_dice_pool};
 use crate::commands::{
     basic_rolling::RollCommand,
     cofd::PoolRollCommand,
-    cthulhu::CthRoll,
+    cthulhu::{CthAdvanceRoll, CthRoll},
     misc::HelpCommand,
     variables::{
         DeleteVariableCommand, GetAllVariablesCommand, GetVariableCommand, SetVariableCommand,
     },
     Command,
 };
-use crate::cthulhu::dice::{DiceRoll, DiceRollModifier};
+use crate::cthulhu::parser::{parse_advancement_roll, parse_regular_roll};
 use crate::dice::parser::parse_element_expression;
 use crate::error::BotError;
 use crate::help::parse_help_topic;
@@ -57,11 +57,13 @@ fn parse_pool_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
 }
 
 fn parse_cth_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
-    let roll = DiceRoll {
-        target: 50,
-        modifier: DiceRollModifier::Normal,
-    };
+    let roll = parse_regular_roll(input)?;
     Ok(Box::new(CthRoll(roll)))
+}
+
+fn parse_cth_advancement_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
+    let roll = parse_advancement_roll(input)?;
+    Ok(Box::new(CthAdvanceRoll(roll)))
 }
 
 fn chance_die() -> Result<Box<dyn Command>, BotError> {
@@ -121,7 +123,10 @@ pub fn parse_command(input: &str) -> Result<Option<Box<dyn Command>>, BotError> 
             "del" => parse_delete_variable_command(&cmd_input).map(|command| Some(command)),
             "r" | "roll" => parse_roll(&cmd_input).map(|command| Some(command)),
             "rp" | "pool" => parse_pool_roll(&cmd_input).map(|command| Some(command)),
-            "cthroll" => parse_cth_roll(&cmd_input).map(|command| Some(command)),
+            "cthroll" | "cthRoll" => parse_cth_roll(&cmd_input).map(|command| Some(command)),
+            "cthadv" | "cthARoll" => {
+                parse_cth_advancement_roll(&cmd_input).map(|command| Some(command))
+            }
             "chance" => chance_die().map(|command| Some(command)),
             "help" => help(&cmd_input).map(|command| Some(command)),
             // No recognized command, ignore this.
