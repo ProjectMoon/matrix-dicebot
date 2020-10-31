@@ -90,6 +90,7 @@ impl fmt::Display for RollResult {
     }
 }
 
+//TODO need to keep track of all rolled numbers for informational purposes!
 /// The outcome of a roll.
 pub struct RolledDice {
     /// The d100 result actually rolled.
@@ -233,6 +234,34 @@ fn roll_percentile_dice<R: DieRoller>(roller: &mut R, unit_roll: u32) -> u32 {
     }
 }
 
+fn roll_regular_dice<R: DieRoller>(roll: &DiceRoll, roller: &mut R) -> RolledDice {
+    use DiceRollModifier::*;
+    let num_rolls = match roll.modifier {
+        Normal => 1,
+        OneBonus | OnePenalty => 2,
+        TwoBonus | TwoPenalty => 3,
+    };
+
+    let unit_roll = roller.roll();
+
+    let rolls: Vec<u32> = (0..num_rolls)
+        .map(|_| roll_percentile_dice(roller, unit_roll))
+        .collect();
+
+    let num_rolled = match roll.modifier {
+        Normal => rolls.first(),
+        OneBonus | TwoBonus => rolls.iter().min(),
+        OnePenalty | TwoPenalty => rolls.iter().max(),
+    }
+    .unwrap();
+
+    RolledDice {
+        modifier: roll.modifier,
+        num_rolled: *num_rolled,
+        target: roll.target,
+    }
+}
+
 impl DiceRoll {
     /// Make a roll with a target number and potential modifier. In a
     /// normal roll, only one percentile die is rolled (1d100). With
@@ -243,32 +272,8 @@ impl DiceRoll {
     /// added to each potential roll before picking the lowest/highest
     /// result.
     pub fn roll(&self) -> RolledDice {
-        use DiceRollModifier::*;
-        let num_rolls = match self.modifier {
-            Normal => 1,
-            OneBonus | OnePenalty => 2,
-            TwoBonus | TwoPenalty => 3,
-        };
-
         let mut roller = RngDieRoller(rand::thread_rng());
-        let unit_roll = roller.roll();
-
-        let rolls: Vec<u32> = (0..num_rolls)
-            .map(|_| roll_percentile_dice(&mut roller, unit_roll))
-            .collect();
-
-        let num_rolled = match self.modifier {
-            Normal => rolls.first(),
-            OneBonus | TwoBonus => rolls.iter().min(),
-            OnePenalty | TwoPenalty => rolls.iter().max(),
-        }
-        .unwrap();
-
-        RolledDice {
-            modifier: self.modifier,
-            num_rolled: *num_rolled,
-            target: self.target,
-        }
+        roll_regular_dice(&self, &mut roller)
     }
 }
 
@@ -293,5 +298,101 @@ impl AdvancementRoll {
                 successful: false,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Generate a series of numbers manually for testing. For this
+    /// die system, the first roll in the Vec should be the unit roll,
+    /// and any subsequent rolls should be the tens place roll. The
+    /// results rolled must come from a d10 (0 to 9).
+    struct SequentialDieRoller {
+        results: Vec<u32>,
+        position: usize,
+    }
+
+    impl SequentialDieRoller {
+        fn new(results: Vec<u32>) -> SequentialDieRoller {
+            SequentialDieRoller {
+                results: results,
+                position: 0,
+            }
+        }
+    }
+
+    impl DieRoller for SequentialDieRoller {
+        fn roll(&mut self) -> u32 {
+            let roll = self.results[self.position];
+            self.position += 1;
+            roll
+        }
+    }
+
+    #[test]
+    fn one_penalty_picks_highest_of_two() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::OnePenalty,
+        };
+
+        //Should only roll 30 and 40, not 50.
+        let mut roller = SequentialDieRoller::new(vec![0, 3, 4, 5]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(40, rolled.num_rolled);
+    }
+
+    #[test]
+    fn two_penalty_picks_highest_of_three() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::TwoPenalty,
+        };
+
+        //Should only roll 30, 40, 50, and not 60.
+        let mut roller = SequentialDieRoller::new(vec![0, 3, 4, 5, 6]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(50, rolled.num_rolled);
+    }
+
+    #[test]
+    fn one_bonus_picks_lowest_of_two() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::OneBonus,
+        };
+
+        //Should only roll 30 and 40, not 20.
+        let mut roller = SequentialDieRoller::new(vec![0, 3, 4, 2]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(30, rolled.num_rolled);
+    }
+
+    #[test]
+    fn two_bonus_picks_lowest_of_three() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::TwoBonus,
+        };
+
+        //Should only roll 30, 40, 50, and not 20.
+        let mut roller = SequentialDieRoller::new(vec![0, 3, 4, 5, 2]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(30, rolled.num_rolled);
+    }
+
+    #[test]
+    fn normal_modifier_rolls_once() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Should only roll 30, not 40.
+        let mut roller = SequentialDieRoller::new(vec![0, 3, 4]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(30, rolled.num_rolled);
     }
 }
