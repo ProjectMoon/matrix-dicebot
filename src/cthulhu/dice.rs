@@ -50,6 +50,7 @@ impl fmt::Display for DiceRollModifier {
 }
 
 /// The outcome of a die roll, either some kind of success or failure.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum RollResult {
     /// Basic success. The rolled number was equal to or less than the target number.
     Success,
@@ -262,6 +263,30 @@ fn roll_regular_dice<R: DieRoller>(roll: &DiceRoll, roller: &mut R) -> RolledDic
     }
 }
 
+fn roll_advancement_dice<R: DieRoller>(
+    roll: &AdvancementRoll,
+    roller: &mut R,
+) -> RolledAdvancement {
+    let unit_roll = roller.roll();
+    let percentile_roll = roll_percentile_dice(roller, unit_roll);
+
+    if percentile_roll > roll.existing_skill || percentile_roll > 95 {
+        RolledAdvancement {
+            num_rolled: percentile_roll,
+            existing_skill: roll.existing_skill,
+            advancement: roller.roll() + 1,
+            successful: true,
+        }
+    } else {
+        RolledAdvancement {
+            num_rolled: percentile_roll,
+            existing_skill: roll.existing_skill,
+            advancement: 0,
+            successful: false,
+        }
+    }
+}
+
 impl DiceRoll {
     /// Make a roll with a target number and potential modifier. In a
     /// normal roll, only one percentile die is rolled (1d100). With
@@ -280,24 +305,7 @@ impl DiceRoll {
 impl AdvancementRoll {
     pub fn roll(&self) -> RolledAdvancement {
         let mut roller = RngDieRoller(rand::thread_rng());
-        let unit_roll = roller.roll();
-        let percentile_roll = roll_percentile_dice(&mut roller, unit_roll);
-
-        if percentile_roll < self.existing_skill || percentile_roll > 95 {
-            RolledAdvancement {
-                num_rolled: percentile_roll,
-                existing_skill: self.existing_skill,
-                advancement: roller.roll() + 1,
-                successful: true,
-            }
-        } else {
-            RolledAdvancement {
-                num_rolled: percentile_roll,
-                existing_skill: self.existing_skill,
-                advancement: 0,
-                successful: false,
-            }
-        }
+        roll_advancement_dice(self, &mut roller)
     }
 }
 
@@ -329,6 +337,133 @@ mod tests {
             self.position += 1;
             roll
         }
+    }
+
+    #[test]
+    fn regular_roll_succeeds_when_below_target() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 30, succeeding.
+        let mut roller = SequentialDieRoller::new(vec![0, 3]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::Success, rolled.result());
+    }
+
+    #[test]
+    fn regular_roll_hard_success_when_rolling_half() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 25, succeeding.
+        let mut roller = SequentialDieRoller::new(vec![5, 2]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::HardSuccess, rolled.result());
+    }
+
+    #[test]
+    fn regular_roll_extreme_success_when_rolling_one_fifth() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 10, succeeding extremely.
+        let mut roller = SequentialDieRoller::new(vec![0, 1]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::ExtremeSuccess, rolled.result());
+    }
+
+    #[test]
+    fn regular_roll_extreme_success_target_above_100() {
+        let roll = DiceRoll {
+            target: 150,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 30, succeeding extremely.
+        let mut roller = SequentialDieRoller::new(vec![0, 3]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::ExtremeSuccess, rolled.result());
+    }
+
+    #[test]
+    fn regular_roll_critical_success_on_one() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 1.
+        let mut roller = SequentialDieRoller::new(vec![1, 0]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::CriticalSuccess, rolled.result());
+    }
+
+    #[test]
+    fn regular_roll_fail_when_above_target() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 60.
+        let mut roller = SequentialDieRoller::new(vec![0, 6]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::Failure, rolled.result());
+    }
+
+    #[test]
+    fn regular_roll_is_fumble_when_skill_below_50_and_roll_at_least_96() {
+        let roll = DiceRoll {
+            target: 49,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 96.
+        let mut roller = SequentialDieRoller::new(vec![6, 9]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::Fumble, rolled.result());
+    }
+
+    #[test]
+    fn regular_roll_is_failure_when_skill_at_or_above_50_and_roll_at_least_96() {
+        let roll = DiceRoll {
+            target: 50,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 96.
+        let mut roller = SequentialDieRoller::new(vec![6, 9]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::Failure, rolled.result());
+
+        let roll = DiceRoll {
+            target: 68,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 96.
+        let mut roller = SequentialDieRoller::new(vec![6, 9]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::Failure, rolled.result());
+    }
+
+    #[test]
+    fn regular_roll_always_fumble_on_100() {
+        let roll = DiceRoll {
+            target: 100,
+            modifier: DiceRollModifier::Normal,
+        };
+
+        //Roll 100.
+        let mut roller = SequentialDieRoller::new(vec![0, 0]);
+        let rolled = roll_regular_dice(&roll, &mut roller);
+        assert_eq!(RollResult::Fumble, rolled.result());
     }
 
     #[test]
@@ -394,5 +529,40 @@ mod tests {
         let mut roller = SequentialDieRoller::new(vec![0, 3, 4]);
         let rolled = roll_regular_dice(&roll, &mut roller);
         assert_eq!(30, rolled.num_rolled);
+    }
+
+    #[test]
+    fn advancement_succeeds_on_above_skill() {
+        let roll = AdvancementRoll { existing_skill: 30 };
+
+        //Roll 52, then advance skill by 5. (advancement adds +1 to 0-9 roll)
+        let mut roller = SequentialDieRoller::new(vec![2, 5, 4]);
+        let rolled = roll_advancement_dice(&roll, &mut roller);
+        assert!(rolled.successful());
+        assert_eq!(5, rolled.advancement());
+        assert_eq!(35, rolled.new_skill_amount());
+    }
+
+    #[test]
+    fn advancement_succeeds_on_above_95() {
+        let roll = AdvancementRoll { existing_skill: 97 };
+
+        //Roll 96, then advance skill by 1. (advancement adds +1 to 0-9 roll)
+        let mut roller = SequentialDieRoller::new(vec![6, 9, 0]);
+        let rolled = roll_advancement_dice(&roll, &mut roller);
+        assert!(rolled.successful());
+        assert_eq!(1, rolled.advancement());
+        assert_eq!(98, rolled.new_skill_amount());
+    }
+
+    #[test]
+    fn advancement_fails_on_below_skill() {
+        let roll = AdvancementRoll { existing_skill: 30 };
+
+        //Roll 25, failing.
+        let mut roller = SequentialDieRoller::new(vec![5, 2]);
+        let rolled = roll_advancement_dice(&roll, &mut roller);
+        assert!(!rolled.successful());
+        assert_eq!(0, rolled.advancement());
     }
 }
