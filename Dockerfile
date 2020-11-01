@@ -5,18 +5,12 @@ RUN xbps-install -Sy base-devel rust cargo cmake wget gnupg
 RUN xbps-install -Sy libressl-devel libstdc++-devel
 
 # Install tini for signal processing and zombie killing
-ENV TINI_VERSION v0.18.0
-ENV TINI_SIGN_KEY 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7
-RUN set -eux; \
-  wget -O /usr/local/bin/tini "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini"; \
-  wget -O /usr/local/bin/tini.asc "https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc"; \
-  export GNUPGHOME="$(mktemp -d)"; \
-  gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys "$TINI_SIGN_KEY"; \
-  gpg --batch --verify /usr/local/bin/tini.asc /usr/local/bin/tini; \
-  command -v gpgconf && gpgconf --kill all || :; \
-  rm -r "$GNUPGHOME" /usr/local/bin/tini.asc; \
-  chmod +x /usr/local/bin/tini; \
-	tini --version
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/local/bin/tini
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
+RUN gpg --batch --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7 \
+ && gpg --batch --verify /tini.asc /usr/local/bin/tini
+RUN chmod +x /usr/local/bin/tini
 
 # Build dicebot
 RUN mkdir -p /root/src
