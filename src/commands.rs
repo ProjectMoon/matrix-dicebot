@@ -43,7 +43,8 @@ pub trait Command: Send + Sync {
 
 /// Parse a command string into a dynamic command execution trait
 /// object. Returns an error if a command was recognized but not
-/// parsed correctly. Returns Ok(None) if no command was recognized.
+/// parsed correctly. Returns IgnoredCommand error if no command was
+/// recognized.
 pub fn parse(s: &str) -> Result<Box<dyn Command>, BotError> {
     match parser::parse_command(s) {
         Ok(command) => Ok(command),

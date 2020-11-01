@@ -143,31 +143,36 @@ impl DiceBot {
             }
         }
 
-        if results.len() == 1 {
-            let cmd_result = &results[0];
-            let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
-                NoticeMessageEventContent::html(cmd_result.plain.clone(), cmd_result.html.clone()),
-            ));
+        if results.len() >= 1 {
+            if results.len() == 1 {
+                let cmd_result = &results[0];
+                let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
+                    NoticeMessageEventContent::html(
+                        cmd_result.plain.clone(),
+                        cmd_result.html.clone(),
+                    ),
+                ));
 
-            let result = self.client.room_send(&room_id, response, None).await;
-            if let Err(e) = result {
-                let message = extract_error_message(e);
-                error!("Error sending message: {}", message);
-            };
-        } else {
-            let message = format!("{}: Executed {} commands", sender_username, results.len());
-            let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
-                NoticeMessageEventContent::html(&message, &message),
-            ));
+                let result = self.client.room_send(&room_id, response, None).await;
+                if let Err(e) = result {
+                    let message = extract_error_message(e);
+                    error!("Error sending message: {}", message);
+                };
+            } else if results.len() > 1 {
+                let message = format!("{}: Executed {} commands", sender_username, results.len());
+                let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
+                    NoticeMessageEventContent::html(&message, &message),
+                ));
 
-            let result = self.client.room_send(&room_id, response, None).await;
-            if let Err(e) = result {
-                let message = extract_error_message(e);
-                error!("Error sending message: {}", message);
-            };
+                let result = self.client.room_send(&room_id, response, None).await;
+                if let Err(e) = result {
+                    let message = extract_error_message(e);
+                    error!("Error sending message: {}", message);
+                };
+            }
+
+            info!("[{}] {} executed: {}", room_name, sender_username, msg_body);
         }
-
-        info!("[{}] {} executed: {}", room_name, sender_username, msg_body);
     }
 }
 
