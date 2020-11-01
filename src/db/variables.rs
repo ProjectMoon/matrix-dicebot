@@ -62,7 +62,7 @@ impl<'a> From<RoomAndUser<'a>> for Vec<u8> {
     fn from(value: RoomAndUser<'a>) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.extend_from_slice(value.0.as_bytes());
-        bytes.push(0xff);
+        bytes.push(0xfe);
         bytes.extend_from_slice(value.1.as_bytes());
         bytes
     }
