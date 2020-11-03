@@ -1,6 +1,7 @@
 use super::{Command, Execution};
 use crate::context::Context;
 use crate::db::errors::DataError;
+use crate::db::variables::UserAndRoom;
 use async_trait::async_trait;
 
 pub struct GetAllVariablesCommand;
@@ -11,11 +12,9 @@ impl Command for GetAllVariablesCommand {
         "get all variables"
     }
 
-    async fn execute(&self, ctx: &Context) -> Execution {
-        let result = ctx
-            .db
-            .variables
-            .get_user_variables(&ctx.room_id, &ctx.username);
+    async fn execute(&self, ctx: &Context<'_>) -> Execution {
+        let key = UserAndRoom(&ctx.username, &ctx.room_id);
+        let result = ctx.db.variables.get_user_variables(&key);
 
         let value = match result {
             Ok(variables) => {
@@ -47,12 +46,10 @@ impl Command for GetVariableCommand {
         "retrieve variable value"
     }
 
-    async fn execute(&self, ctx: &Context) -> Execution {
+    async fn execute(&self, ctx: &Context<'_>) -> Execution {
         let name = &self.0;
-        let result = ctx
-            .db
-            .variables
-            .get_user_variable(&ctx.room_id, &ctx.username, name);
+        let key = UserAndRoom(&ctx.username, &ctx.room_id);
+        let result = ctx.db.variables.get_user_variable(&key, name);
 
         let value = match result {
             Ok(num) => format!("{} = {}", name, num),
@@ -74,13 +71,11 @@ impl Command for SetVariableCommand {
         "set variable value"
     }
 
-    async fn execute(&self, ctx: &Context) -> Execution {
+    async fn execute(&self, ctx: &Context<'_>) -> Execution {
         let name = &self.0;
         let value = self.1;
-        let result = ctx
-            .db
-            .variables
-            .set_user_variable(&ctx.room_id, &ctx.username, name, value);
+        let key = UserAndRoom(&ctx.username, ctx.room_id);
+        let result = ctx.db.variables.set_user_variable(&key, name, value);
 
         let content = match result {
             Ok(_) => format!("{} = {}", name, value),
@@ -101,12 +96,10 @@ impl Command for DeleteVariableCommand {
         "delete variable"
     }
 
-    async fn execute(&self, ctx: &Context) -> Execution {
+    async fn execute(&self, ctx: &Context<'_>) -> Execution {
         let name = &self.0;
-        let result = ctx
-            .db
-            .variables
-            .delete_user_variable(&ctx.room_id, &ctx.username, name);
+        let key = UserAndRoom(&ctx.username, ctx.room_id);
+        let result = ctx.db.variables.delete_user_variable(&key, name);
 
         let value = match result {
             Ok(()) => format!("{} now unset", name),

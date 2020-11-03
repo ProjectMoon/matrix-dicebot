@@ -37,7 +37,7 @@ impl Execution {
 
 #[async_trait]
 pub trait Command: Send + Sync {
-    async fn execute(&self, ctx: &Context) -> Execution;
+    async fn execute(&self, ctx: &Context<'_>) -> Execution;
     fn name(&self) -> &'static str;
 }
 
@@ -64,7 +64,7 @@ pub struct CommandResult {
 /// go back to Matrix, if the command was executed (successfully or
 /// not). If a command is determined to be ignored, this function will
 /// return None, signifying that we should not send a response.
-pub async fn execute_command(ctx: &Context) -> Option<CommandResult> {
+pub async fn execute_command(ctx: &Context<'_>) -> Option<CommandResult> {
     let res = parse(&ctx.message_body);
 
     let (plain, html) = match res {

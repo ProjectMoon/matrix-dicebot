@@ -20,6 +20,9 @@ pub enum DataError {
     #[error("value does not exist for key: {0}")]
     KeyDoesNotExist(String),
 
+    #[error("too many entries")]
+    TooManyEntries,
+
     #[error("expected i32, but i32 schema was violated")]
     I32SchemaViolation,
 
@@ -37,6 +40,9 @@ pub enum DataError {
 
     #[error("data migration error: {0}")]
     MigrationError(#[from] MigrationError),
+
+    #[error("deserialization error: {0}")]
+    DeserializationError(#[from] bincode::Error),
 }
 
 /// This From implementation is necessary to deal with the recursive

@@ -11,7 +11,7 @@ impl Command for HelpCommand {
         "help information"
     }
 
-    async fn execute(&self, _ctx: &Context) -> Execution {
+    async fn execute(&self, _ctx: &Context<'_>) -> Execution {
         let help = match &self.0 {
             Some(topic) => topic.message(),
             _ => "There is no help for this topic",

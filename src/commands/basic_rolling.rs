@@ -12,7 +12,7 @@ impl Command for RollCommand {
         "roll regular dice"
     }
 
-    async fn execute(&self, _ctx: &Context) -> Execution {
+    async fn execute(&self, _ctx: &Context<'_>) -> Execution {
         let roll = self.0.roll();
         let plain = format!("Dice: {}\nResult: {}", self.0, roll);
         let html = format!(

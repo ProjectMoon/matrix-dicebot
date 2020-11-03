@@ -9,7 +9,9 @@ static MIGRATIONS: phf::Map<u32, DataMigration> = phf_map! {
     1u32 => (add_room_user_variable_count::migrate, "add_room_user_variable_count"),
     2u32 => (delete_v0_schema, "delete_v0_schema"),
     3u32 => (delete_variable_count, "delete_variable_count"),
-    4u32 => (change_delineator_delimiter::migrate, "change_delineator_delimiter")
+    4u32 => (change_delineator_delimiter::migrate, "change_delineator_delimiter"),
+    5u32 => (change_tree_structure::migrate, "change_tree_structure"),
+
 };
 
 pub fn get_migrations(versions: &[u32]) -> Result<Vec<DataMigration>, MigrationError> {

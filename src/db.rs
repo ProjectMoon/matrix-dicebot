@@ -2,7 +2,7 @@ use crate::db::errors::{DataError, MigrationError};
 use crate::db::migrations::{get_migration_version, Migrations};
 use crate::db::variables::Variables;
 use log::info;
-use sled::Db;
+use sled::{Config, Db};
 use std::path::Path;
 
 pub mod data_migrations;
@@ -19,16 +19,25 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Database, DataError> {
-        let db = sled::open(path)?;
-        let variables = db.open_tree("variables")?;
+    fn new_db(db: sled::Db) -> Result<Database, DataError> {
         let migrations = db.open_tree("migrations")?;
 
         Ok(Database {
             db: db.clone(),
-            variables: Variables(variables),
+            variables: Variables::new(&db)?,
             migrations: Migrations(migrations),
         })
+    }
+
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Database, DataError> {
+        let db = sled::open(path)?;
+        Self::new_db(db)
+    }
+
+    pub fn new_temp() -> Result<Database, DataError> {
+        let config = Config::new().temporary(true);
+        let db = config.open()?;
+        Self::new_db(db)
     }
 
     pub fn migrate(&self, to_version: u32) -> Result<(), DataError> {
