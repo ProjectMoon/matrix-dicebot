@@ -11,7 +11,7 @@ impl Command for PoolRollCommand {
         "roll dice pool"
     }
 
-    async fn execute(&self, ctx: &Context) -> Execution {
+    async fn execute(&self, ctx: &Context<'_>) -> Execution {
         let pool_with_ctx = DicePoolWithContext(&self.0, ctx);
         let roll_result = roll_pool(&pool_with_ctx).await;
 

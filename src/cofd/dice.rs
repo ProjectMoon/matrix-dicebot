@@ -1,4 +1,5 @@
 use crate::context::Context;
+use crate::db::variables::UserAndRoom;
 use crate::error::BotError;
 use crate::parser::{Amount, Element, Operator};
 use crate::roll::Rolled;
@@ -93,15 +94,10 @@ pub struct DicePool {
     pub(crate) modifiers: DicePoolModifiers,
 }
 
-async fn calculate_dice_amount<'a>(pool: &'a DicePoolWithContext<'a>) -> Result<i32, BotError> {
+async fn calculate_dice_amount(pool: &DicePoolWithContext<'_>) -> Result<i32, BotError> {
     let stream = stream::iter(&pool.0.amounts);
-    let variables = pool
-        .1
-        .db
-        .variables
-        .get_user_variables(&pool.1.room_id, &pool.1.username)?;
-
-    let variables = &variables;
+    let key = UserAndRoom(&pool.1.username, &pool.1.room_id);
+    let variables = &pool.1.db.variables.get_user_variables(&key)?;
 
     use DiceRollingError::VariableNotFound;
     let dice_amount: Result<i32, BotError> = stream
@@ -242,7 +238,7 @@ impl DicePoolRoll {
 }
 
 /// Attach a Context to a dice pool. Needed for database access.
-pub struct DicePoolWithContext<'a>(pub &'a DicePool, pub &'a Context);
+pub struct DicePoolWithContext<'a>(pub &'a DicePool, pub &'a Context<'a>);
 
 impl Rolled for DicePoolRoll {
     fn rolled_value(&self) -> i32 {
@@ -368,7 +364,6 @@ pub async fn roll_pool(pool: &DicePoolWithContext<'_>) -> Result<RolledDicePool,
 mod tests {
     use super::*;
     use crate::db::Database;
-    use tempfile::tempdir;
 
     ///Instead of being random, generate a series of numbers we have complete
     ///control over.
@@ -507,7 +502,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_large_expression_test() {
-        let db = Database::new(&tempdir().unwrap()).unwrap();
+        let db = Database::new_temp().unwrap();
         let ctx = Context::new(&db, "roomid", "username", "message");
 
         let mut amounts = vec![];
@@ -532,7 +527,7 @@ mod tests {
 
     #[tokio::test]
     async fn converts_to_chance_die_test() {
-        let db = Database::new(&tempdir().unwrap()).unwrap();
+        let db = Database::new_temp().unwrap();
         let ctx = Context::new(&db, "roomid", "username", "message");
 
         let mut amounts = vec![];
@@ -554,11 +549,12 @@ mod tests {
 
     #[tokio::test]
     async fn can_resolve_variables_test() {
-        let db = Database::new(&tempdir().unwrap()).unwrap();
+        let db = Database::new_temp().unwrap();
         let ctx = Context::new(&db, "roomid", "username", "message");
+        let user_and_room = crate::db::variables::UserAndRoom(&ctx.username, &ctx.room_id);
 
         db.variables
-            .set_user_variable(&ctx.room_id, &ctx.username, "myvariable", 10)
+            .set_user_variable(&user_and_room, "myvariable", 10)
             .expect("could not set myvariable to 10");
 
         let amounts = vec![Amount {

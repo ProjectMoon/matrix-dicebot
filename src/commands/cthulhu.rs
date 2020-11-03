@@ -11,7 +11,7 @@ impl Command for CthRoll {
         "roll percentile pool"
     }
 
-    async fn execute(&self, _ctx: &Context) -> Execution {
+    async fn execute(&self, _ctx: &Context<'_>) -> Execution {
         //TODO this will be converted to a result when supporting variables.
         let roll = self.0.roll();
         let plain = format!("Roll: {}\nResult: {}", self.0, roll);
@@ -32,7 +32,7 @@ impl Command for CthAdvanceRoll {
         "roll percentile pool"
     }
 
-    async fn execute(&self, _ctx: &Context) -> Execution {
+    async fn execute(&self, _ctx: &Context<'_>) -> Execution {
         //TODO this will be converted to a result when supporting variables.
         let roll = self.0.roll();
         let plain = format!("Roll: {}\nResult: {}", self.0, roll);
