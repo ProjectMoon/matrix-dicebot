@@ -41,7 +41,7 @@ the Docker image](#running-the-bot).
 ### Build from Source
 
 Precompiled executables are not yet available. Clone this repository
-and run `OLM_LINK_VARIANT=dylib cargo install`.
+and run `cargo install`.
 
 Building the project requires:
 
@@ -49,12 +49,8 @@ Building the project requires:
   on Void and Arch, etc).
 * Rust 1.45.0 or higher.
 * OpenSSL/LibreSSL development headers installed.
-* `olm-sys` crate dependencies: cmake, libstdc++, libolm and its
-  development headers.
+* `olm-sys` crate dependencies: cmake, libstdc++.
 * glibc.
-
-Note: The `olm-sys` crate must be built in dynamic linking mode until
-a [bug][gnome-bug] in its build process is fixed.
 
 #### Why doesn't it build on musl libc?
 
@@ -219,7 +215,6 @@ The most basic plans are:
   would need a sheet service.
 * Use environment variables instead of config file in Docker image.
 
-[gnome-bug]: https://gitlab.gnome.org/BrainBlasted/olm-sys/-/issues/6
 [config-file]: #Configuration-File
 [docker-image]: https://github.com/users/ProjectMoon/packages/container/package/chronicle-dicebot
 [dirs]: https://docs.rs/dirs/2.0.2/dirs/
