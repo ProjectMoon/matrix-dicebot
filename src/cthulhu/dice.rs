@@ -1,19 +1,17 @@
+use crate::context::Context;
+use crate::error::{BotError, DiceRollingError};
+use crate::parser::Amount;
+use std::convert::TryFrom;
 use std::fmt;
 
 /// A planned dice roll.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DiceRoll {
-    pub target: u32,
+    pub amounts: Vec<Amount>,
     pub modifier: DiceRollModifier,
 }
 
-impl fmt::Display for DiceRoll {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let message = format!("target: {}, with {}", self.target, self.modifier);
-        write!(f, "{}", message)?;
-        Ok(())
-    }
-}
+pub struct DiceRollWithContext<'a>(pub &'a DiceRoll, pub &'a Context<'a>);
 
 /// Potential modifier on the die roll to be made.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -91,6 +89,26 @@ impl fmt::Display for RollResult {
     }
 }
 
+pub struct ExecutedDiceRoll {
+    /// The number we must meet for the roll to be considered a
+    /// success.
+    pub target: u32,
+
+    /// Stored for informational purposes in display.
+    pub modifier: DiceRollModifier,
+
+    /// The actual roll result.
+    pub roll: RolledDice,
+}
+
+impl fmt::Display for ExecutedDiceRoll {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = format!("target: {}, with {}", self.target, self.modifier);
+        write!(f, "{}", message)?;
+        Ok(())
+    }
+}
+
 //TODO need to keep track of all rolled numbers for informational purposes!
 /// The outcome of a roll.
 pub struct RolledDice {
@@ -100,10 +118,6 @@ pub struct RolledDice {
     /// The number we must meet for the roll to be considered a
     /// success.
     target: u32,
-
-    /// Stored for informational purposes in display.
-    #[allow(dead_code)]
-    modifier: DiceRollModifier,
 }
 
 impl RolledDice {
@@ -235,9 +249,14 @@ fn roll_percentile_dice<R: DieRoller>(roller: &mut R, unit_roll: u32) -> u32 {
     }
 }
 
-fn roll_regular_dice<R: DieRoller>(roll: &DiceRoll, roller: &mut R) -> RolledDice {
+fn roll_regular_dice<R: DieRoller>(
+    modifier: &DiceRollModifier,
+    target: u32,
+    roller: &mut R,
+) -> RolledDice {
     use DiceRollModifier::*;
-    let num_rolls = match roll.modifier {
+
+    let num_rolls = match modifier {
         Normal => 1,
         OneBonus | OnePenalty => 2,
         TwoBonus | TwoPenalty => 3,
@@ -249,7 +268,7 @@ fn roll_regular_dice<R: DieRoller>(roll: &DiceRoll, roller: &mut R) -> RolledDic
         .map(|_| roll_percentile_dice(roller, unit_roll))
         .collect();
 
-    let num_rolled = match roll.modifier {
+    let num_rolled = match modifier {
         Normal => rolls.first(),
         OneBonus | TwoBonus => rolls.iter().min(),
         OnePenalty | TwoPenalty => rolls.iter().max(),
@@ -257,9 +276,8 @@ fn roll_regular_dice<R: DieRoller>(roll: &DiceRoll, roller: &mut R) -> RolledDic
     .unwrap();
 
     RolledDice {
-        modifier: roll.modifier,
         num_rolled: *num_rolled,
-        target: roll.target,
+        target: target,
     }
 }
 
@@ -287,19 +305,29 @@ fn roll_advancement_dice<R: DieRoller>(
     }
 }
 
-impl DiceRoll {
-    /// Make a roll with a target number and potential modifier. In a
-    /// normal roll, only one percentile die is rolled (1d100). With
-    /// bonuses or penalties, more dice are rolled, and either the lowest
-    /// (in case of bonus) or highest (in case of penalty) result is
-    /// picked. Rolls are not simply d100; the unit roll (ones place) is
-    /// rolled separately from the tens place, and then the unit number is
-    /// added to each potential roll before picking the lowest/highest
-    /// result.
-    pub fn roll(&self) -> RolledDice {
-        let mut roller = RngDieRoller(rand::thread_rng());
-        roll_regular_dice(&self, &mut roller)
-    }
+/// Make a roll with a target number and potential modifier. In a
+/// normal roll, only one percentile die is rolled (1d100). With
+/// bonuses or penalties, more dice are rolled, and either the lowest
+/// (in case of bonus) or highest (in case of penalty) result is
+/// picked. Rolls are not simply d100; the unit roll (ones place) is
+/// rolled separately from the tens place, and then the unit number is
+/// added to each potential roll before picking the lowest/highest
+/// result.
+pub async fn regular_roll(
+    roll_with_ctx: &DiceRollWithContext<'_>,
+) -> Result<ExecutedDiceRoll, BotError> {
+    let target =
+        crate::dice::calculate_dice_amount(&roll_with_ctx.0.amounts, roll_with_ctx.1).await?;
+
+    let target = u32::try_from(target).map_err(|_| DiceRollingError::InvalidAmount)?;
+    let mut roller = RngDieRoller(rand::thread_rng());
+    let rolled_dice = roll_regular_dice(&roll_with_ctx.0.modifier, target, &mut roller);
+
+    Ok(ExecutedDiceRoll {
+        target: target,
+        modifier: roll_with_ctx.0.modifier,
+        roll: rolled_dice,
+    })
 }
 
 impl AdvancementRoll {
@@ -312,6 +340,8 @@ impl AdvancementRoll {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db::Database;
+    use crate::parser::{Amount, Element, Operator};
 
     /// Generate a series of numbers manually for testing. For this
     /// die system, the first roll in the Vec should be the unit roll,
@@ -339,195 +369,141 @@ mod tests {
         }
     }
 
-    #[test]
-    fn regular_roll_succeeds_when_below_target() {
+    #[tokio::test]
+    async fn regular_roll_converts_u32_safely() {
         let roll = DiceRoll {
-            target: 50,
+            amounts: vec![Amount {
+                operator: Operator::Plus,
+                element: Element::Number(-10),
+            }],
             modifier: DiceRollModifier::Normal,
         };
 
+        let db = Database::new_temp().unwrap();
+        let ctx = Context::new(&db, "roomid", "username", "message");
+        let roll_with_ctx = DiceRollWithContext(&roll, &ctx);
+        let result = regular_roll(&roll_with_ctx).await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(BotError::DiceRollingError(DiceRollingError::InvalidAmount))
+        ));
+    }
+
+    #[test]
+    fn regular_roll_succeeds_when_below_target() {
         //Roll 30, succeeding.
         let mut roller = SequentialDieRoller::new(vec![0, 3]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 50, &mut roller);
         assert_eq!(RollResult::Success, rolled.result());
     }
 
     #[test]
     fn regular_roll_hard_success_when_rolling_half() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Roll 25, succeeding.
         let mut roller = SequentialDieRoller::new(vec![5, 2]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 50, &mut roller);
         assert_eq!(RollResult::HardSuccess, rolled.result());
     }
 
     #[test]
     fn regular_roll_extreme_success_when_rolling_one_fifth() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Roll 10, succeeding extremely.
         let mut roller = SequentialDieRoller::new(vec![0, 1]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 50, &mut roller);
         assert_eq!(RollResult::ExtremeSuccess, rolled.result());
     }
 
     #[test]
     fn regular_roll_extreme_success_target_above_100() {
-        let roll = DiceRoll {
-            target: 150,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Roll 30, succeeding extremely.
         let mut roller = SequentialDieRoller::new(vec![0, 3]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 150, &mut roller);
         assert_eq!(RollResult::ExtremeSuccess, rolled.result());
     }
 
     #[test]
     fn regular_roll_critical_success_on_one() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Roll 1.
         let mut roller = SequentialDieRoller::new(vec![1, 0]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 50, &mut roller);
         assert_eq!(RollResult::CriticalSuccess, rolled.result());
     }
 
     #[test]
     fn regular_roll_fail_when_above_target() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Roll 60.
         let mut roller = SequentialDieRoller::new(vec![0, 6]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 50, &mut roller);
         assert_eq!(RollResult::Failure, rolled.result());
     }
 
     #[test]
     fn regular_roll_is_fumble_when_skill_below_50_and_roll_at_least_96() {
-        let roll = DiceRoll {
-            target: 49,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Roll 96.
         let mut roller = SequentialDieRoller::new(vec![6, 9]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 49, &mut roller);
         assert_eq!(RollResult::Fumble, rolled.result());
     }
 
     #[test]
     fn regular_roll_is_failure_when_skill_at_or_above_50_and_roll_at_least_96() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Roll 96.
         let mut roller = SequentialDieRoller::new(vec![6, 9]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 50, &mut roller);
         assert_eq!(RollResult::Failure, rolled.result());
 
-        let roll = DiceRoll {
-            target: 68,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Roll 96.
         let mut roller = SequentialDieRoller::new(vec![6, 9]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 68, &mut roller);
         assert_eq!(RollResult::Failure, rolled.result());
     }
 
     #[test]
     fn regular_roll_always_fumble_on_100() {
-        let roll = DiceRoll {
-            target: 100,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Roll 100.
         let mut roller = SequentialDieRoller::new(vec![0, 0]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 100, &mut roller);
         assert_eq!(RollResult::Fumble, rolled.result());
     }
 
     #[test]
     fn one_penalty_picks_highest_of_two() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::OnePenalty,
-        };
-
         //Should only roll 30 and 40, not 50.
         let mut roller = SequentialDieRoller::new(vec![0, 3, 4, 5]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::OnePenalty, 50, &mut roller);
         assert_eq!(40, rolled.num_rolled);
     }
 
     #[test]
     fn two_penalty_picks_highest_of_three() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::TwoPenalty,
-        };
-
         //Should only roll 30, 40, 50, and not 60.
         let mut roller = SequentialDieRoller::new(vec![0, 3, 4, 5, 6]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::TwoPenalty, 50, &mut roller);
         assert_eq!(50, rolled.num_rolled);
     }
 
     #[test]
     fn one_bonus_picks_lowest_of_two() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::OneBonus,
-        };
-
         //Should only roll 30 and 40, not 20.
         let mut roller = SequentialDieRoller::new(vec![0, 3, 4, 2]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::OneBonus, 50, &mut roller);
         assert_eq!(30, rolled.num_rolled);
     }
 
     #[test]
     fn two_bonus_picks_lowest_of_three() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::TwoBonus,
-        };
-
         //Should only roll 30, 40, 50, and not 20.
         let mut roller = SequentialDieRoller::new(vec![0, 3, 4, 5, 2]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::TwoBonus, 50, &mut roller);
         assert_eq!(30, rolled.num_rolled);
     }
 
     #[test]
     fn normal_modifier_rolls_once() {
-        let roll = DiceRoll {
-            target: 50,
-            modifier: DiceRollModifier::Normal,
-        };
-
         //Should only roll 30, not 40.
         let mut roller = SequentialDieRoller::new(vec![0, 3, 4]);
-        let rolled = roll_regular_dice(&roll, &mut roller);
+        let rolled = roll_regular_dice(&DiceRollModifier::Normal, 50, &mut roller);
         assert_eq!(30, rolled.num_rolled);
     }
 

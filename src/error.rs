@@ -1,4 +1,3 @@
-use crate::cofd::dice::DiceRollingError;
 use crate::commands::CommandError;
 use crate::config::ConfigError;
 use crate::db::errors::DataError;
@@ -50,7 +49,7 @@ pub enum BotError {
     #[error("command parsing error: {0}")]
     CommandParsingError(#[from] crate::commands::parser::CommandParsingError),
 
-    #[error("dice pool roll error: {0}")]
+    #[error("dice rolling error: {0}")]
     DiceRollingError(#[from] DiceRollingError),
 
     #[error("variable parsing error: {0}")]
@@ -67,4 +66,16 @@ pub enum BotError {
 
     #[error("database error")]
     DatabaseErrror(#[from] sled::Error),
+}
+
+#[derive(Error, Debug)]
+pub enum DiceRollingError {
+    #[error("variable not found: {0}")]
+    VariableNotFound(String),
+
+    #[error("invalid amount")]
+    InvalidAmount,
+
+    #[error("dice pool expression too large")]
+    ExpressionTooLarge,
 }
