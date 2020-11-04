@@ -17,7 +17,7 @@ pub enum DiceParsingError {
     #[error("extraneous input detected")]
     UnconsumedInput,
 
-    #[error("parser error: {0}")]
+    #[error("{0}")]
     InternalParseError(#[from] combine::error::StringStreamError),
 }
 
