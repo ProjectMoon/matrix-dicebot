@@ -1,22 +1,10 @@
 use crate::context::Context;
-use crate::db::variables::UserAndRoom;
-use crate::error::BotError;
+use crate::error::{BotError, DiceRollingError};
 use crate::parser::{Amount, Element, Operator};
 use crate::roll::Rolled;
-use futures::stream::{self, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use std::convert::TryFrom;
 use std::fmt;
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum DiceRollingError {
-    #[error("variable not found: {0}")]
-    VariableNotFound(String),
-
-    #[error("dice pool expression too large")]
-    ExpressionTooLarge,
-}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum DicePoolQuality {
@@ -92,29 +80,6 @@ pub struct DicePool {
     pub(crate) amounts: Vec<Amount>,
     pub(crate) sides: i32,
     pub(crate) modifiers: DicePoolModifiers,
-}
-
-async fn calculate_dice_amount(pool: &DicePoolWithContext<'_>) -> Result<i32, BotError> {
-    let stream = stream::iter(&pool.0.amounts);
-    let key = UserAndRoom(&pool.1.username, &pool.1.room_id);
-    let variables = &pool.1.db.variables.get_user_variables(&key)?;
-
-    use DiceRollingError::VariableNotFound;
-    let dice_amount: Result<i32, BotError> = stream
-        .then(|amount| async move {
-            match &amount.element {
-                Element::Number(num_dice) => Ok(*num_dice * amount.operator.mult()),
-                Element::Variable(variable) => variables
-                    .get(variable)
-                    .ok_or(VariableNotFound(variable.clone().to_string()))
-                    .map(|i| *i)
-                    .map_err(|e| e.into()),
-            }
-        })
-        .try_fold(0, |total, num_dice| async move { Ok(total + num_dice) })
-        .await;
-
-    dice_amount
 }
 
 impl DicePool {
@@ -346,7 +311,7 @@ pub async fn roll_pool(pool: &DicePoolWithContext<'_>) -> Result<RolledDicePool,
         return Err(DiceRollingError::ExpressionTooLarge.into());
     }
 
-    let num_dice = calculate_dice_amount(&pool).await?;
+    let num_dice = crate::dice::calculate_dice_amount(&pool.0.amounts, &pool.1).await?;
     let mut roller = RngDieRoller(rand::thread_rng());
 
     if num_dice > 0 {
@@ -563,9 +528,13 @@ mod tests {
         }];
 
         let pool = DicePool::new(amounts, DicePoolModifiers::default());
-        let pool_with_ctx = DicePoolWithContext(&pool, &ctx);
 
-        assert_eq!(calculate_dice_amount(&pool_with_ctx).await.unwrap(), 10);
+        assert_eq!(
+            crate::dice::calculate_dice_amount(&pool.amounts, &ctx)
+                .await
+                .unwrap(),
+            10
+        );
     }
 
     //DicePool tests
