@@ -1,3 +1,4 @@
+use crate::basic::parser::parse_element_expression;
 use crate::cofd::parser::{create_chance_die, parse_dice_pool};
 use crate::commands::{
     basic_rolling::RollCommand,
@@ -10,7 +11,6 @@ use crate::commands::{
     Command,
 };
 use crate::cthulhu::parser::{parse_advancement_roll, parse_regular_roll};
-use crate::dice::parser::parse_element_expression;
 use crate::error::BotError;
 use crate::help::parse_help_topic;
 use crate::variables::parse_set_variable;

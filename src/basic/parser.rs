@@ -1,10 +1,24 @@
+use nom::bytes::complete::take_while;
 use nom::{
     alt, bytes::complete::tag, character::complete::digit1, complete, many0, named,
     sequence::tuple, tag, IResult,
 };
 
-use crate::dice::{Dice, Element, ElementExpression, SignedElement};
-use crate::parser::eat_whitespace;
+use super::dice::*;
+
+//******************************
+//Legacy Code
+//******************************
+
+fn is_whitespace(input: char) -> bool {
+    input == ' ' || input == '\n' || input == '\t' || input == '\r'
+}
+
+/// Eat whitespace, returning it
+pub fn eat_whitespace(input: &str) -> IResult<&str, &str> {
+    let (input, whitespace) = take_while(is_whitespace)(input)?;
+    Ok((input, whitespace))
+}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum Sign {

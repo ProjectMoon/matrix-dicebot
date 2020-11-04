@@ -1,4 +1,4 @@
-use crate::dice;
+use crate::basic::dice;
 use rand::prelude::*;
 use std::fmt;
 use std::ops::{Deref, DerefMut};

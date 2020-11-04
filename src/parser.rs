@@ -1,6 +1,5 @@
 use combine::parser::char::{digit, letter, spaces};
 use combine::{many, many1, one_of, Parser};
-use nom::{bytes::complete::take_while, IResult};
 use thiserror::Error;
 
 //******************************
@@ -120,20 +119,6 @@ pub fn parse_amounts(input: &str) -> Result<Vec<Amount>, DiceParsingError> {
     } else {
         Err(DiceParsingError::UnconsumedInput)
     }
-}
-
-//******************************
-//Legacy Code
-//******************************
-
-fn is_whitespace(input: char) -> bool {
-    input == ' ' || input == '\n' || input == '\t' || input == '\r'
-}
-
-/// Eat whitespace, returning it
-pub fn eat_whitespace(input: &str) -> IResult<&str, &str> {
-    let (input, whitespace) = take_while(is_whitespace)(input)?;
-    Ok((input, whitespace))
 }
 
 #[cfg(test)]

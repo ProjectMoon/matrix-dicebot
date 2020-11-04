@@ -1,7 +1,6 @@
 use crate::context::Context;
 use crate::error::{BotError, DiceRollingError};
 use crate::parser::{Amount, Element, Operator};
-use crate::roll::Rolled;
 use itertools::Itertools;
 use std::convert::TryFrom;
 use std::fmt;
@@ -204,12 +203,6 @@ impl DicePoolRoll {
 
 /// Attach a Context to a dice pool. Needed for database access.
 pub struct DicePoolWithContext<'a>(pub &'a DicePool, pub &'a Context<'a>);
-
-impl Rolled for DicePoolRoll {
-    fn rolled_value(&self) -> i32 {
-        self.successes()
-    }
-}
 
 impl fmt::Display for DicePoolRoll {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
