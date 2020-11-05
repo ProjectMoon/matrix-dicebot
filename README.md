@@ -222,4 +222,4 @@ The most basic plans are:
 [docker-image]: https://github.com/users/ProjectMoon/packages/container/package/chronicle-dicebot
 [dirs]: https://docs.rs/dirs/2.0.2/dirs/
 [main-repo]: https://git.agnos.is/projectmoon/matrix-dicebot
-[github-repo]: https://git.agnos.is/projectmoon/matrix-dicebot
+[github-repo]: https://github.com/ProjectMoon/matrix-dicebot
