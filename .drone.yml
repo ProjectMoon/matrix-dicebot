@@ -21,5 +21,5 @@ steps:
       from_secret: docker_username
     password:
       from_secret: docker_password
-    repo: ghcr.io/projectmoon/chronicle-dicebot
+    repo: projectmoon/chronicle-dicebot
     registry: gchr.io
