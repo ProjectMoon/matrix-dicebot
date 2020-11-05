@@ -1,5 +1,7 @@
 # matrix-dicebot
 
+__This repository is in the process of being moved from GitHub.__
+
 This is a fork of the
 [axfive-matrix-dicebot](https://gitlab.com/Taywee/axfive-matrix-dicebot)
 with basic support for the Chronicles of Darkness 2E Storytelling
