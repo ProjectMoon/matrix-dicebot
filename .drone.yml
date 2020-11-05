@@ -9,3 +9,17 @@ steps:
   - apt-get install -y cmake
   - cargo build --verbose --all
   - cargo test --verbose --all
+
+- name: docker
+  image: plugins/docker
+  when:
+    branch:
+    - master
+  settings:
+    auto_tag: true
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    repo: ghcr.io/projectmoon/chronicle-dicebot
+    registry: gchr.io
