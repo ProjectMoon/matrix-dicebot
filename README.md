@@ -163,7 +163,7 @@ home_server = 'https://example.com'
 username = 'thisismyusername'
 password = 'thisismypassword'
 
-[datbase]
+[database]
 path = '/path/to/database/directory/'
 
 [bot]
