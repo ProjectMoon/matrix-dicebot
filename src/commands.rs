@@ -55,6 +55,7 @@ pub fn parse(s: &str) -> Result<Box<dyn Command>, BotError> {
     }
 }
 
+#[derive(Debug)]
 pub struct CommandResult {
     pub plain: String,
     pub html: String,

@@ -164,6 +164,21 @@ mod tests {
     }
 
     #[test]
+    fn newline_test() {
+        assert!(parse_command("\n!roll 1d4").is_ok());
+    }
+
+    #[test]
+    fn whitespace_and_newline_test() {
+        assert!(parse_command("    \n!roll 1d4").is_ok());
+    }
+
+    #[test]
+    fn newline_and_whitespace_test() {
+        assert!(parse_command("\n    !cthroll 50").is_ok());
+    }
+
+    #[test]
     fn word_with_exclamation_mark_test() {
         let result1 = parse_command("hello !notacommand");
         assert!(result1.is_err());

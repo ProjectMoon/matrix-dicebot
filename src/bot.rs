@@ -6,7 +6,7 @@ use crate::error::BotError;
 use crate::state::DiceBotState;
 use async_trait::async_trait;
 use dirs;
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, info, warn};
 use matrix_sdk::Error as MatrixError;
 use matrix_sdk::{
     self,
@@ -136,10 +136,11 @@ impl DiceBot {
         let mut results = Vec::with_capacity(msg_body.lines().count());
 
         for command in msg_body.lines() {
-            let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &command);
-
-            if let Some(cmd_result) = execute_command(&ctx).await {
-                results.push(cmd_result);
+            if !command.is_empty() {
+                let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &command);
+                if let Some(cmd_result) = execute_command(&ctx).await {
+                    results.push(cmd_result);
+                }
             }
         }
 
@@ -229,13 +230,6 @@ async fn should_process<'a>(
     } else {
         (String::new(), String::new())
     };
-
-    //Command parser can handle non-commands, but faster to
-    //not parse them.
-    if !msg_body.starts_with("!") {
-        trace!("Ignoring non-command: {}", msg_body);
-        return Err(BotError::ShouldNotProcessError);
-    }
 
     Ok((msg_body, sender_username))
 }
