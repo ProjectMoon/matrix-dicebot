@@ -1,5 +1,7 @@
 # matrix-dicebot
 
+[![Build Status](https://drone.agnos.is/api/badges/projectmoon/matrix-dicebot/status.svg)](https://drone.agnos.is/projectmoon/matrix-dicebot)
+
 _This repository is hosted on [Agnos.is Git][main-repo] and mirrored
 to [GitHub][github-repo]._
 
