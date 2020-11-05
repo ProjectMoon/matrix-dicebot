@@ -1,6 +1,7 @@
 # matrix-dicebot
 
-_This repository is in the process of being moved from GitHub._
+_This repository is hosted on [Agnos.is Git][main-repo] and mirrored
+to [GitHub][github-repo]._
 
 This is a fork of the
 [axfive-matrix-dicebot](https://gitlab.com/Taywee/axfive-matrix-dicebot)
@@ -22,9 +23,9 @@ System.
 
 ### Docker Image
 
-The easiest way to run the dice bot is to use the official Docker
-image. It is distributed on GitHub Container Registry by a CI
-pipeline.
+The easiest way to run the dice bot is to use the [official Docker
+image][docker-image]. It is distributed on GitHub Container Registry
+by a CI pipeline.
 
 The `latest` tag always points to the most recent successfully built
 master commit and is considered unstable, while individual tags are
@@ -220,3 +221,5 @@ The most basic plans are:
 [config-file]: #Configuration-File
 [docker-image]: https://github.com/users/ProjectMoon/packages/container/package/chronicle-dicebot
 [dirs]: https://docs.rs/dirs/2.0.2/dirs/
+[main-repo]: https://git.agnos.is/projectmoon/matrix-dicebot
+[github-repo]: https://git.agnos.is/projectmoon/matrix-dicebot
