@@ -1,6 +1,6 @@
 # matrix-dicebot
 
-__This repository is in the process of being moved from GitHub.__
+_This repository is in the process of being moved from GitHub._
 
 This is a fork of the
 [axfive-matrix-dicebot](https://gitlab.com/Taywee/axfive-matrix-dicebot)
