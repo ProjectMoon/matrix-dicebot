@@ -6,8 +6,8 @@ to [GitHub][github-repo]._
 This is a fork of the
 [axfive-matrix-dicebot](https://gitlab.com/Taywee/axfive-matrix-dicebot)
 with basic support for the Chronicles of Darkness 2E Storytelling
-System, with future plans to extend the codebase further to support
-variables and perhaps character sheet management.
+System and Call of Cthulhu, with future plans to extend the codebase
+further to support variables and perhaps character sheet management.
 
 ## Features
 
