@@ -22,4 +22,4 @@ steps:
     password:
       from_secret: docker_password
     repo: ghcr.io/projectmoon/chronicle-dicebot
-    registry: gchr.io
+    registry: ghcr.io
