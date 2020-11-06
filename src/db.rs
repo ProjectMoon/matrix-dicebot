@@ -1,5 +1,6 @@
 use crate::db::errors::{DataError, MigrationError};
 use crate::db::migrations::{get_migration_version, Migrations};
+use crate::db::rooms::Rooms;
 use crate::db::variables::Variables;
 use log::info;
 use sled::{Config, Db};
@@ -8,6 +9,7 @@ use std::path::Path;
 pub mod data_migrations;
 pub mod errors;
 pub mod migrations;
+pub mod rooms;
 pub mod schema;
 pub mod variables;
 
@@ -16,6 +18,7 @@ pub struct Database {
     db: Db,
     pub(crate) variables: Variables,
     pub(crate) migrations: Migrations,
+    pub(crate) rooms: Rooms,
 }
 
 impl Database {
@@ -26,6 +29,7 @@ impl Database {
             db: db.clone(),
             variables: Variables::new(&db)?,
             migrations: Migrations(migrations),
+            rooms: Rooms::new(&db)?,
         })
     }
 

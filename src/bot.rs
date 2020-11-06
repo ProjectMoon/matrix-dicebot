@@ -11,9 +11,9 @@ use matrix_sdk::Error as MatrixError;
 use matrix_sdk::{
     self,
     events::{
-        room::member::MemberEventContent,
+        room::member::{MemberEventContent, MembershipState},
         room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
-        AnyMessageEventContent, StrippedStateEvent, SyncMessageEvent,
+        AnyMessageEventContent, StrippedStateEvent, SyncMessageEvent, SyncStateEvent,
     },
     Client, ClientConfig, EventEmitter, JsonStore, Room, SyncRoom, SyncSettings,
 };
@@ -229,6 +229,37 @@ async fn should_process<'a>(
 /// Originally adapted from the matrix-rust-sdk examples.
 #[async_trait]
 impl EventEmitter for DiceBot {
+    async fn on_room_member(
+        &self,
+        room: SyncRoom,
+        room_member: &SyncStateEvent<MemberEventContent>,
+    ) {
+        //When joining a channel, we get join events from other users.
+        //content is MemberContent, and it has a membership type.
+
+        //Ignore if state_key is our username, because we only care about other users.
+        let event_affects_us = if let Some(our_user_id) = self.client.user_id().await {
+            room_member.state_key == our_user_id
+        } else {
+            false
+        };
+
+        let should_add = match room_member.content.membership {
+            MembershipState::Join => true,
+            MembershipState::Leave | MembershipState::Ban => false,
+            _ => return,
+        };
+
+        //if event affects us and is leave/ban, delete all our info.
+        //if event does not affect us, delete info only for that user.
+
+        //TODO replace with call to new db.rooms thing.
+        println!(
+            "member {} recorded with action {:?} to/from db.",
+            room_member.state_key, should_add
+        );
+    }
+
     async fn on_stripped_state_member(
         &self,
         room: SyncRoom,
