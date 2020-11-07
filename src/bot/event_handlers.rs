@@ -100,13 +100,13 @@ impl EventEmitter for DiceBot {
             let (room_id, username) = (room.room_id.as_str(), &room_member.state_key);
 
             let result = if event_affects_us && !adding_user {
-                debug!("Clearing all information for room ID {}", room_id);
+                info!("Clearing all information for room ID {}", room_id);
                 self.db.rooms.clear_info(room_id)
             } else if !event_affects_us && adding_user {
-                debug!("Adding {} to room ID {}", username, room_id);
+                info!("Adding user {} to room ID {}", username, room_id);
                 self.db.rooms.add_user_to_room(username, room_id)
             } else if !event_affects_us && !adding_user {
-                debug!("Removing {} from room ID {}", username, room_id);
+                info!("Removing user {} from room ID {}", username, room_id);
                 self.db.rooms.remove_user_from_room(username, room_id)
             } else {
                 debug!("Ignoring a room member event: {:#?}", room_member);

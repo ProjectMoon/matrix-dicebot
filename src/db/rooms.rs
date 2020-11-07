@@ -17,6 +17,7 @@ pub struct Rooms {
     pub(in crate::db) username_roomids: Tree,
 }
 
+#[derive(Clone, Copy)]
 enum TxableTree<'a> {
     Tree(&'a Tree),
     Tx(&'a TransactionalTree),
@@ -43,6 +44,17 @@ fn get_set<'a, T: Into<TxableTree<'a>>>(tree: T, key: &[u8]) -> Result<HashSet<S
     .unwrap_or(Ok(HashSet::new()))?;
 
     Ok(set)
+}
+
+fn remove_from_set<'a, T: Into<TxableTree<'a>> + Copy>(
+    tree: T,
+    key: &[u8],
+    value_to_remove: &str,
+) -> Result<(), DataError> {
+    let mut set = get_set(tree, key)?;
+    set.remove(value_to_remove);
+    insert_set(tree, key, set)?;
+    Ok(())
 }
 
 fn insert_set<'a, T: Into<TxableTree<'a>>>(
@@ -115,13 +127,25 @@ impl Rooms {
         Ok(())
     }
 
-    pub fn clear_info(&self, _room_id: &str) -> Result<(), DataError> {
-        //TODO implement me
-        //when bot leaves a room, it must, atomically:
-        // - delete roominfo struct from room info tree.
-        // - load list of users it knows about in room.
-        // - remove room id from every user's list. (cannot reuse existing fn because atomicity)
-        // - delete list of users in room from tree.
+    pub fn clear_info(&self, room_id: &str) -> Result<(), DataError> {
+        (&self.username_roomids, &self.roomid_usernames).transaction(
+            |(tx_username_roomids, tx_roomid_usernames)| {
+                let roomid_key = room_id.as_bytes();
+                let users_in_room = get_set(tx_roomid_usernames, roomid_key)?;
+
+                //Remove the room ID from every user's room ID list.
+                for username in users_in_room {
+                    remove_from_set(tx_username_roomids, username.as_bytes(), room_id)?;
+                }
+
+                //Remove this room entry for the room ID -> username tree.
+                tx_roomid_usernames.remove(roomid_key)?;
+
+                //TODO: delete roominfo struct from room info tree.
+                Ok(())
+            },
+        )?;
+
         Ok(())
     }
 }
@@ -183,5 +207,43 @@ mod tests {
 
         assert_eq!(HashSet::new(), users_in_room);
         assert_eq!(HashSet::new(), rooms_for_user);
+    }
+
+    #[test]
+    fn clear_info() {
+        let rooms = create_test_instance();
+        rooms
+            .add_user_to_room("testuser", "myroom1")
+            .expect("Could not add user to room1");
+
+        rooms
+            .add_user_to_room("testuser", "myroom2")
+            .expect("Could not add user to room2");
+
+        rooms
+            .clear_info("myroom1")
+            .expect("Could not clear room info");
+
+        let users_in_room1 = rooms
+            .get_users_in_room("myroom1")
+            .expect("Could not retrieve users in room1");
+
+        let users_in_room2 = rooms
+            .get_users_in_room("myroom2")
+            .expect("Could not retrieve users in room2");
+
+        let rooms_for_user = rooms
+            .get_rooms_for_user("testuser")
+            .expect("Could not get rooms for user");
+
+        let expected_users_in_room2: HashSet<String> =
+            vec![String::from("testuser")].into_iter().collect();
+
+        let expected_rooms_for_user: HashSet<String> =
+            vec![String::from("myroom2")].into_iter().collect();
+
+        assert_eq!(HashSet::new(), users_in_room1);
+        assert_eq!(expected_users_in_room2, users_in_room2);
+        assert_eq!(expected_rooms_for_user, rooms_for_user);
     }
 }
