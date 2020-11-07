@@ -17,28 +17,6 @@ pub struct Rooms {
     pub(in crate::db) username_roomids: Tree,
 }
 
-// /// Request soemthing by a username and room ID.
-// pub struct UserAndRoom<'a>(pub &'a str, pub &'a str);
-
-// fn to_vec(value: &UserAndRoom<'_>) -> Vec<u8> {
-//     let mut bytes = vec![];
-//     bytes.extend_from_slice(value.0.as_bytes());
-//     bytes.push(0xfe);
-//     bytes.extend_from_slice(value.1.as_bytes());
-//     bytes
-// }
-
-// impl From<UserAndRoom<'_>> for Vec<u8> {
-//     fn from(value: UserAndRoom) -> Vec<u8> {
-//         to_vec(&value)
-//     }
-// }
-
-// impl From<&UserAndRoom<'_>> for Vec<u8> {
-//     fn from(value: &UserAndRoom) -> Vec<u8> {
-//         to_vec(value)
-//     }
-// }
 enum TxableTree<'a> {
     Tree(&'a Tree),
     Tx(&'a TransactionalTree),
