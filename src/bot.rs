@@ -4,26 +4,24 @@ use crate::context::Context;
 use crate::db::Database;
 use crate::error::BotError;
 use crate::state::DiceBotState;
-use async_trait::async_trait;
 use dirs;
-use log::{debug, error, info, warn};
+use log::{error, info};
 use matrix_sdk::Error as MatrixError;
 use matrix_sdk::{
     self,
     events::{
-        room::member::{MemberEventContent, MembershipState},
-        room::message::{MessageEventContent, NoticeMessageEventContent, TextMessageEventContent},
-        AnyMessageEventContent, StrippedStateEvent, SyncMessageEvent, SyncStateEvent,
+        room::message::{MessageEventContent, NoticeMessageEventContent},
+        AnyMessageEventContent,
     },
-    Client, ClientConfig, EventEmitter, JsonStore, Room, SyncRoom, SyncSettings,
+    Client, ClientConfig, JsonStore, Room, SyncSettings,
 };
 //use matrix_sdk_common_macros::async_trait;
 use std::clone::Clone;
-use std::ops::Sub;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, SystemTime};
 use url::Url;
+
+pub mod event_handlers;
 
 /// The DiceBot struct represents an active dice bot. The bot is not
 /// connected to Matrix until its run() function is called.
@@ -164,138 +162,6 @@ impl DiceBot {
             }
 
             info!("[{}] {} executed: {}", room_name, sender_username, msg_body);
-        }
-    }
-}
-
-/// Check if a message is recent enough to actually process. If the
-/// message is within "oldest_message_age" seconds, this function
-/// returns true. If it's older than that, it returns false and logs a
-/// debug message.
-fn check_message_age(
-    event: &SyncMessageEvent<MessageEventContent>,
-    oldest_message_age: u64,
-) -> bool {
-    let sending_time = event.origin_server_ts;
-    let oldest_timestamp = SystemTime::now().sub(Duration::new(oldest_message_age, 0));
-
-    if sending_time > oldest_timestamp {
-        true
-    } else {
-        let age = match oldest_timestamp.duration_since(sending_time) {
-            Ok(n) => format!("{} seconds too old", n.as_secs()),
-            Err(_) => "before the UNIX epoch".to_owned(),
-        };
-
-        debug!("Ignoring message because it is {}: {:?}", age, event);
-        false
-    }
-}
-
-async fn should_process<'a>(
-    bot: &DiceBot,
-    event: &SyncMessageEvent<MessageEventContent>,
-) -> Result<(String, String), BotError> {
-    //Ignore messages that are older than configured duration.
-    if !check_message_age(event, bot.config.oldest_message_age()) {
-        let state_check = bot.state.read().unwrap();
-        if !((*state_check).logged_skipped_old_messages()) {
-            drop(state_check);
-            let mut state = bot.state.write().unwrap();
-            (*state).skipped_old_messages();
-        }
-
-        return Err(BotError::ShouldNotProcessError);
-    }
-
-    let (msg_body, sender_username) = if let SyncMessageEvent {
-        content: MessageEventContent::Text(TextMessageEventContent { body, .. }),
-        sender,
-        ..
-    } = event
-    {
-        (
-            body.clone(),
-            format!("@{}:{}", sender.localpart(), sender.server_name()),
-        )
-    } else {
-        (String::new(), String::new())
-    };
-
-    Ok((msg_body, sender_username))
-}
-
-/// This event emitter listens for messages with dice rolling commands.
-/// Originally adapted from the matrix-rust-sdk examples.
-#[async_trait]
-impl EventEmitter for DiceBot {
-    async fn on_room_member(
-        &self,
-        room: SyncRoom,
-        room_member: &SyncStateEvent<MemberEventContent>,
-    ) {
-        //When joining a channel, we get join events from other users.
-        //content is MemberContent, and it has a membership type.
-
-        //Ignore if state_key is our username, because we only care about other users.
-        let event_affects_us = if let Some(our_user_id) = self.client.user_id().await {
-            room_member.state_key == our_user_id
-        } else {
-            false
-        };
-
-        let should_add = match room_member.content.membership {
-            MembershipState::Join => true,
-            MembershipState::Leave | MembershipState::Ban => false,
-            _ => return,
-        };
-
-        //if event affects us and is leave/ban, delete all our info.
-        //if event does not affect us, delete info only for that user.
-
-        //TODO replace with call to new db.rooms thing.
-        println!(
-            "member {} recorded with action {:?} to/from db.",
-            room_member.state_key, should_add
-        );
-    }
-
-    async fn on_stripped_state_member(
-        &self,
-        room: SyncRoom,
-        room_member: &StrippedStateEvent<MemberEventContent>,
-        _: Option<MemberEventContent>,
-    ) {
-        if let SyncRoom::Invited(room) = room {
-            if let Some(user_id) = self.client.user_id().await {
-                if room_member.state_key != user_id {
-                    return;
-                }
-            }
-
-            let room = room.read().await;
-            info!("Autojoining room {}", room.display_name());
-
-            if let Err(e) = self.client.join_room_by_id(&room.room_id).await {
-                warn!("Could not join room: {}", e.to_string())
-            }
-        }
-    }
-
-    async fn on_room_message(&self, room: SyncRoom, event: &SyncMessageEvent<MessageEventContent>) {
-        if let SyncRoom::Joined(room) = room {
-            let (msg_body, sender_username) =
-                if let Ok((msg_body, sender_username)) = should_process(self, &event).await {
-                    (msg_body, sender_username)
-                } else {
-                    return;
-                };
-
-            //we clone here to hold the lock for as little time as possible.
-            let real_room = room.read().await.clone();
-
-            self.execute_commands(&real_room, &sender_username, &msg_body)
-                .await;
         }
     }
 }

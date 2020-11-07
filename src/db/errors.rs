@@ -62,13 +62,11 @@ impl From<TransactionError<DataError>> for DataError {
     }
 }
 
-// impl From<ConflictableTransactionError<DataError>> for DataError {
-//     fn from(error: ConflictableTransactionError<DataError>) -> Self {
-//         match error {
-//             ConflictableTransactionError::Abort(data_err) => data_err,
-//             ConflictableTransactionError::Storage(storage_err) => {
-//                 DataError::TransactionError(TransactionError::Storage(storage_err))
-//             }
-//         }
-//     }
-// }
+/// Automatically aborts transactions that hit a DataError by using
+/// the try (question mark) operator when this trait implementation is
+/// in scope.
+impl From<DataError> for sled::transaction::ConflictableTransactionError<DataError> {
+    fn from(error: DataError) -> Self {
+        sled::transaction::ConflictableTransactionError::Abort(error)
+    }
+}
