@@ -99,20 +99,11 @@ impl DiceBot {
 
         info!("Logged in as {}", username);
 
-        //If the local json store has not been created yet, we need to do a single initial sync.
-        //It stores data under username's localpart.
-        let should_sync = {
-            let mut cache = cache_dir()?;
-            cache.push(username);
-            !cache.exists()
-        };
+        // Initial sync without event handler prevents responding to
+        // messages received while bot was offline. TODO: selectively
+        // respond to old messages? e.g. comands missed while offline.
+        self.client.sync_once(SyncSettings::default()).await?;
 
-        if should_sync {
-            info!("Performing initial sync");
-            self.client.sync(SyncSettings::default()).await?;
-        }
-
-        //Attach event handler.
         client.add_event_emitter(Box::new(self)).await;
         info!("Listening for commands");
 
@@ -123,9 +114,9 @@ impl DiceBot {
 
         let settings = SyncSettings::default().token(token);
 
-        //this keeps state from the server streaming in to the dice bot via the EventEmitter trait
-        //TODO somehow figure out how to "sync_until" instead of sync_forever... copy code and modify?
-        client.sync_forever(settings, |_| async {}).await;
+        // TODO replace with sync_with_callback for cleaner shutdown
+        // process.
+        client.sync(settings).await;
         Ok(())
     }
 
