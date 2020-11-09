@@ -41,7 +41,13 @@ fn check_message_age(
     }
 }
 
-async fn should_process<'a>(
+/// Determine whether or not to process a received message. This check
+/// is necessary in addition to the event processing check because we
+/// may receive message events when entering a room for the first
+/// time, and we don't want to respond to things before the bot was in
+/// the channel, but we do want to respond to things that were sent if
+/// the bot left and rejoined quickly.
+async fn should_process_message<'a>(
     bot: &DiceBot,
     event: &SyncMessageEvent<MessageEventContent>,
 ) -> Result<(String, String), BotError> {
@@ -138,12 +144,12 @@ impl EventEmitter for DiceBot {
     async fn on_stripped_state_member(
         &self,
         room: SyncRoom,
-        room_member: &StrippedStateEvent<MemberEventContent>,
+        event: &StrippedStateEvent<MemberEventContent>,
         _: Option<MemberEventContent>,
     ) {
         if let SyncRoom::Invited(room) = room {
             if let Some(user_id) = self.client.user_id().await {
-                if room_member.state_key != user_id {
+                if event.state_key != user_id {
                     return;
                 }
             }
@@ -160,17 +166,22 @@ impl EventEmitter for DiceBot {
 
     async fn on_room_message(&self, room: SyncRoom, event: &SyncMessageEvent<MessageEventContent>) {
         if let SyncRoom::Joined(room) = room {
-            let (msg_body, sender_username) =
-                if let Ok((msg_body, sender_username)) = should_process(self, &event).await {
-                    (msg_body, sender_username)
-                } else {
-                    return;
-                };
+            //Clone to avoid holding lock.
+            let room = room.read().await.clone();
+            let room_id = room.room_id.as_str();
+            if !should_process_event(&self.db, room_id, event.event_id.as_str()) {
+                return;
+            }
 
-            //we clone here to hold the lock for as little time as possible.
-            let real_room = room.read().await.clone();
+            let (msg_body, sender_username) = if let Ok((msg_body, sender_username)) =
+                should_process_message(self, &event).await
+            {
+                (msg_body, sender_username)
+            } else {
+                return;
+            };
 
-            self.execute_commands(&real_room, &sender_username, &msg_body)
+            self.execute_commands(&room, &sender_username, &msg_body)
                 .await;
         }
     }
