@@ -26,6 +26,9 @@ pub enum DataError {
     #[error("expected i32, but i32 schema was violated")]
     I32SchemaViolation,
 
+    #[error("unexpected or corruptd data bytes")]
+    InvalidValue,
+
     #[error("expected string, but utf8 schema was violated: {0}")]
     Utf8chemaViolation(#[from] std::str::Utf8Error),
 

@@ -25,12 +25,18 @@ impl Database {
     fn new_db(db: sled::Db) -> Result<Database, DataError> {
         let migrations = db.open_tree("migrations")?;
 
-        Ok(Database {
+        let database = Database {
             db: db.clone(),
             variables: Variables::new(&db)?,
             migrations: Migrations(migrations),
             rooms: Rooms::new(&db)?,
-        })
+        };
+
+        //Start any event handlers.
+        database.rooms.start_handler();
+
+        info!("Opened database.");
+        Ok(database)
     }
 
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Database, DataError> {
