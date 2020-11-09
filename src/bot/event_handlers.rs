@@ -1,10 +1,11 @@
+use crate::db::Database;
 use crate::error::BotError;
 use async_trait::async_trait;
 use log::{debug, error, info, warn};
 use matrix_sdk::{
     self,
     events::{
-        room::member::{MemberEventContent, MembershipState},
+        room::member::{MemberEventContent, MembershipChange},
         room::message::{MessageEventContent, TextMessageEventContent},
         StrippedStateEvent, SyncMessageEvent, SyncStateEvent,
     },
@@ -73,31 +74,44 @@ async fn should_process<'a>(
     Ok((msg_body, sender_username))
 }
 
+fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
+    db.rooms
+        .should_process(room_id, event_id)
+        .unwrap_or_else(|e| {
+            error!(
+                "Database error when checking if we should process an event: {}",
+                e.to_string()
+            );
+            false
+        })
+}
+
 /// This event emitter listens for messages with dice rolling commands.
 /// Originally adapted from the matrix-rust-sdk examples.
 #[async_trait]
 impl EventEmitter for DiceBot {
-    async fn on_room_member(
-        &self,
-        room: SyncRoom,
-        room_member: &SyncStateEvent<MemberEventContent>,
-    ) {
-        if let SyncRoom::Joined(room) = room {
+    async fn on_room_member(&self, room: SyncRoom, event: &SyncStateEvent<MemberEventContent>) {
+        if let SyncRoom::Joined(room) | SyncRoom::Left(room) = room {
+            //Clone to avoid holding lock.
+            let room = room.read().await.clone();
+            let (room_id, username) = (room.room_id.as_str(), &event.state_key);
+
+            if !should_process_event(&self.db, room_id, event.event_id.as_str()) {
+                return;
+            }
+
             let event_affects_us = if let Some(our_user_id) = self.client.user_id().await {
-                room_member.state_key == our_user_id
+                event.state_key == our_user_id
             } else {
                 false
             };
 
-            let adding_user = match room_member.content.membership {
-                MembershipState::Join => true,
-                MembershipState::Leave | MembershipState::Ban => false,
+            use MembershipChange::*;
+            let adding_user = match event.membership_change() {
+                Joined => true,
+                Banned | Left | Kicked | KickedAndBanned => false,
                 _ => return,
             };
-
-            //Clone to avoid holding lock.
-            let room = room.read().await.clone();
-            let (room_id, username) = (room.room_id.as_str(), &room_member.state_key);
 
             let result = if event_affects_us && !adding_user {
                 info!("Clearing all information for room ID {}", room_id);
@@ -109,7 +123,7 @@ impl EventEmitter for DiceBot {
                 info!("Removing user {} from room ID {}", username, room_id);
                 self.db.rooms.remove_user_from_room(username, room_id)
             } else {
-                debug!("Ignoring a room member event: {:#?}", room_member);
+                debug!("Ignoring a room member event: {:#?}", event);
                 Ok(())
             };
 
