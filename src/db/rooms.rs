@@ -115,7 +115,7 @@ mod hashset_tree {
 }
 
 /// Functions that specifically relate to the "timestamp index" tree,
-/// which is stored on the Room sinstance as a tree called
+/// which is stored on the Rooms instance as a tree called
 /// roomtimestamp_eventid. Tightly coupled to the event watcher in the
 /// Rooms impl, and only factored out for unit testing.
 mod timestamp_index {
