@@ -1,7 +1,7 @@
 use crate::db::errors::DataError;
 use crate::db::schema::convert_u64;
 use byteorder::BigEndian;
-use log::{error, log_enabled, trace};
+use log::{debug, error, log_enabled, trace};
 use sled::transaction::TransactionalTree;
 use sled::Transactional;
 use sled::{CompareAndSwapError, Tree};
@@ -134,12 +134,14 @@ mod timestamp_index {
     ) -> Result<(), DataError> {
         let parts: Vec<&[u8]> = key.split(|&b| b == 0xff).collect();
         if let [room_id, event_id] = parts[..] {
+            let event_id = str::from_utf8(event_id)?;
+            debug!("Adding event ID {} to timestamp index", event_id);
+
             let mut ts_key = room_id.to_vec();
             ts_key.push(0xff);
             ts_key.extend_from_slice(&timestamp_bytes);
             trace_index_record(room_id, event_id, &timestamp_bytes);
 
-            let event_id = str::from_utf8(event_id)?;
             hashset_tree::add_to_set(roomtimestamp_eventid, &ts_key, event_id.to_owned())?;
             Ok(())
         } else {
@@ -234,6 +236,7 @@ impl Rooms {
     }
 
     pub fn add_user_to_room(&self, username: &str, room_id: &str) -> Result<(), DataError> {
+        debug!("Adding user {} to room {}", username, room_id);
         (&self.username_roomids, &self.roomid_usernames).transaction(
             |(tx_username_rooms, tx_room_usernames)| {
                 let username_key = &username.as_bytes();
@@ -250,6 +253,7 @@ impl Rooms {
     }
 
     pub fn remove_user_from_room(&self, username: &str, room_id: &str) -> Result<(), DataError> {
+        debug!("Removing user {} from room {}", username, room_id);
         (&self.username_roomids, &self.roomid_usernames).transaction(
             |(tx_username_rooms, tx_room_usernames)| {
                 let username_key = &username.as_bytes();
@@ -266,6 +270,7 @@ impl Rooms {
     }
 
     pub fn clear_info(&self, room_id: &str) -> Result<(), DataError> {
+        debug!("Clearing all information for room {}", room_id);
         (&self.username_roomids, &self.roomid_usernames).transaction(
             |(tx_username_roomids, tx_roomid_usernames)| {
                 let roomid_key = room_id.as_bytes();

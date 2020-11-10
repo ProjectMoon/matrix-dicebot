@@ -9,7 +9,8 @@ use matrix_sdk::{
         room::message::{MessageEventContent, TextMessageEventContent},
         StrippedStateEvent, SyncMessageEvent, SyncStateEvent,
     },
-    EventEmitter, SyncRoom,
+    identifiers::RoomId,
+    Client, EventEmitter, SyncRoom,
 };
 //use matrix_sdk_common_macros::async_trait;
 use super::DiceBot;
@@ -92,6 +93,19 @@ fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
         })
 }
 
+async fn get_users_in_room(client: &Client, room_id: &RoomId) -> Vec<String> {
+    if let Some(joined_room) = client.get_joined_room(room_id).await {
+        let joined_room: matrix_sdk::Room = joined_room.read().await.clone();
+        joined_room
+            .joined_members
+            .keys()
+            .map(|user_id| format!("@{}:{}", user_id.localpart(), user_id.server_name()))
+            .collect()
+    } else {
+        vec![]
+    }
+}
+
 /// This event emitter listens for messages with dice rolling commands.
 /// Originally adapted from the matrix-rust-sdk examples.
 #[async_trait]
@@ -124,7 +138,12 @@ impl EventEmitter for DiceBot {
                 self.db.rooms.clear_info(room_id)
             } else if event_affects_us && adding_user {
                 info!("Joined room {}; recording user information", room_id);
-                Ok(())
+                let usernames = get_users_in_room(&self.client, &room.room_id).await;
+                usernames
+                    .into_iter()
+                    .filter(|username| username != &event.state_key)
+                    .map(|username| self.db.rooms.add_user_to_room(&username, room_id))
+                    .collect() //Make use of collect impl on Result.
             } else if !event_affects_us && adding_user {
                 info!("Adding user {} to room ID {}", username, room_id);
                 self.db.rooms.add_user_to_room(username, room_id)
