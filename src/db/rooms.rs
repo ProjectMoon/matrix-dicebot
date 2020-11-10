@@ -1,7 +1,7 @@
 use crate::db::errors::DataError;
 use crate::db::schema::convert_u64;
 use byteorder::BigEndian;
-use log::{debug, error, log_enabled, trace};
+use log::{debug, error, log_enabled};
 use sled::transaction::TransactionalTree;
 use sled::Transactional;
 use sled::{CompareAndSwapError, Tree};
@@ -134,14 +134,12 @@ mod timestamp_index {
     ) -> Result<(), DataError> {
         let parts: Vec<&[u8]> = key.split(|&b| b == 0xff).collect();
         if let [room_id, event_id] = parts[..] {
-            let event_id = str::from_utf8(event_id)?;
-            debug!("Adding event ID {} to timestamp index", event_id);
-
             let mut ts_key = room_id.to_vec();
             ts_key.push(0xff);
             ts_key.extend_from_slice(&timestamp_bytes);
-            trace_index_record(room_id, event_id, &timestamp_bytes);
+            log_index_record(room_id, event_id, &timestamp_bytes);
 
+            let event_id = str::from_utf8(event_id)?;
             hashset_tree::add_to_set(roomtimestamp_eventid, &ts_key, event_id.to_owned())?;
             Ok(())
         } else {
@@ -149,10 +147,10 @@ mod timestamp_index {
         }
     }
 
-    /// Log a trace message.
-    fn trace_index_record(room_id: &[u8], event_id: &[u8], timestamp: &[u8]) {
-        if log_enabled!(log::Level::Trace) {
-            trace!(
+    /// Log a debug message.
+    fn log_index_record(room_id: &[u8], event_id: &[u8], timestamp: &[u8]) {
+        if log_enabled!(log::Level::Debug) {
+            debug!(
                 "Recording event {} | {} received at {} in timestamp index.",
                 str::from_utf8(room_id).unwrap_or("[invalid room id]"),
                 str::from_utf8(event_id).unwrap_or("[invalid event id]"),
