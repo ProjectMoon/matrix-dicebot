@@ -7,7 +7,7 @@ use chronicle_dicebot::error::BotError;
 async fn main() -> Result<(), BotError> {
     let db = Database::new_temp()?;
     let input = std::env::args().skip(1).collect::<Vec<String>>().join(" ");
-    let command = match commands::parse(&input) {
+    let command = match commands::parser::parse_command(&input) {
         Ok(command) => command,
         Err(e) => return Err(e),
     };

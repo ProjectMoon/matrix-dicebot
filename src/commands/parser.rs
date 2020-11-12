@@ -116,7 +116,7 @@ fn split_command(input: &str) -> Result<(String, String), CommandParsingError> {
 
 /// Potentially parse a command expression. If we recognize the
 /// command, an error should be raised if the command is misparsed. If
-/// we don't recognize the command, ignore it and return None.
+/// we don't recognize the command, return an error.
 pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
     match split_command(input) {
         Ok((cmd, cmd_input)) => match cmd.as_ref() {
@@ -130,7 +130,6 @@ pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
             "cthadv" | "cthARoll" => parse_cth_advancement_roll(&cmd_input),
             "chance" => chance_die(),
             "help" => help(&cmd_input),
-            // No recognized command, ignore this.
             _ => Err(CommandParsingError::UnrecognizedCommand(cmd).into()),
         },
         //All other errors passed up.
@@ -239,5 +238,43 @@ mod tests {
     fn bad_command_test() {
         assert!(split_command("roll 1d4").is_err());
         assert!(split_command("roll").is_err());
+    }
+
+    #[test]
+    fn chance_die_is_not_malformed() {
+        assert!(parse_command("!chance").is_ok());
+    }
+
+    #[test]
+    fn roll_malformed_expression_test() {
+        assert!(parse_command("!roll 1d20asdlfkj").is_err());
+        assert!(parse_command("!roll 1d20asdlfkj   ").is_err());
+    }
+
+    #[test]
+    fn roll_dice_pool_malformed_expression_test() {
+        assert!(parse_command("!pool 8abc").is_err());
+        assert!(parse_command("!pool 8abc    ").is_err());
+    }
+
+    #[test]
+    fn pool_whitespace_test() {
+        parse_command("!pool ns3:8   ").expect("was error");
+        parse_command("   !pool ns3:8").expect("was error");
+        parse_command("   !pool ns3:8   ").expect("was error");
+    }
+
+    #[test]
+    fn help_whitespace_test() {
+        parse_command("!help stuff   ").expect("was error");
+        parse_command("   !help stuff").expect("was error");
+        parse_command("   !help stuff   ").expect("was error");
+    }
+
+    #[test]
+    fn roll_whitespace_test() {
+        parse_command("!roll 1d4 + 5d6 -3   ").expect("was error");
+        parse_command("!roll 1d4 + 5d6 -3   ").expect("was error");
+        parse_command("   !roll 1d4 + 5d6 -3   ").expect("was error");
     }
 }

@@ -128,9 +128,8 @@ impl DiceBot {
 
         for command in commands {
             let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &command);
-            if let Some(cmd_result) = execute_command(&ctx).await {
-                results.push(cmd_result);
-            }
+            let cmd_result = execute_command(&ctx).await;
+            results.push(cmd_result);
         }
 
         if results.len() >= 1 {
