@@ -124,12 +124,12 @@ impl DiceBot {
 
         let mut results = Vec::with_capacity(msg_body.lines().count());
 
-        for command in msg_body.lines() {
-            if !command.is_empty() {
-                let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &command);
-                if let Some(cmd_result) = execute_command(&ctx).await {
-                    results.push(cmd_result);
-                }
+        let commands = msg_body.trim().lines().filter(|line| line.starts_with("!"));
+
+        for command in commands {
+            let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &command);
+            if let Some(cmd_result) = execute_command(&ctx).await {
+                results.push(cmd_result);
             }
         }
 
