@@ -9,6 +9,7 @@ pub mod db;
 pub mod dice;
 pub mod error;
 mod help;
+pub mod matrix;
 pub mod models;
 mod parser;
 pub mod state;

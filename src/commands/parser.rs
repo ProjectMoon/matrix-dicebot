@@ -4,6 +4,7 @@ use crate::commands::{
     basic_rolling::RollCommand,
     cofd::PoolRollCommand,
     cthulhu::{CthAdvanceRoll, CthRoll},
+    management::ResyncCommand,
     misc::HelpCommand,
     variables::{
         DeleteVariableCommand, GetAllVariablesCommand, GetVariableCommand, SetVariableCommand,
@@ -78,6 +79,10 @@ fn get_all_variables() -> Result<Box<dyn Command>, BotError> {
     Ok(Box::new(GetAllVariablesCommand))
 }
 
+fn parse_resync() -> Result<Box<dyn Command>, BotError> {
+    Ok(Box::new(ResyncCommand))
+}
+
 fn help(topic: &str) -> Result<Box<dyn Command>, BotError> {
     let topic = parse_help_topic(topic);
     Ok(Box::new(HelpCommand(topic)))
@@ -124,6 +129,7 @@ pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
             "get" => parse_get_variable_command(&cmd_input),
             "set" => parse_set_variable_command(&cmd_input),
             "del" => parse_delete_variable_command(&cmd_input),
+            "resync" => parse_resync(),
             "r" | "roll" => parse_roll(&cmd_input),
             "rp" | "pool" => parse_pool_roll(&cmd_input),
             "cthroll" | "cthRoll" => parse_cth_roll(&cmd_input),
