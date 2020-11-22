@@ -380,7 +380,14 @@ mod tests {
         };
 
         let db = Database::new_temp().unwrap();
-        let ctx = Context::new(&db, "roomid", "username", "message");
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new("https://example.com").unwrap(),
+            room_id: "roomid",
+            username: "username",
+            message_body: "message",
+        };
+
         let roll_with_ctx = DiceRollWithContext(&roll, &ctx);
         let result = regular_roll(&roll_with_ctx).await;
         assert!(result.is_err());

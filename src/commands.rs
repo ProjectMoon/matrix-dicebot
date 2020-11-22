@@ -80,7 +80,13 @@ mod tests {
     #[tokio::test]
     async fn unrecognized_command() {
         let db = crate::db::Database::new_temp().unwrap();
-        let ctx = Context::new(&db, "myroomid", "@testuser:example.com", "!notacommand");
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
+            room_id: "myroomid",
+            username: "myusername",
+            message_body: "!notacommand",
+        };
         let result = execute_command(&ctx).await;
         assert!(result.plain.contains("Error"));
     }

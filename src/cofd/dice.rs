@@ -461,7 +461,13 @@ mod tests {
     #[tokio::test]
     async fn rejects_large_expression_test() {
         let db = Database::new_temp().unwrap();
-        let ctx = Context::new(&db, "roomid", "username", "message");
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
+            room_id: "roomid",
+            username: "username",
+            message_body: "message",
+        };
 
         let mut amounts = vec![];
 
@@ -486,7 +492,13 @@ mod tests {
     #[tokio::test]
     async fn converts_to_chance_die_test() {
         let db = Database::new_temp().unwrap();
-        let ctx = Context::new(&db, "roomid", "username", "message");
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
+            room_id: "roomid",
+            username: "username",
+            message_body: "message",
+        };
 
         let mut amounts = vec![];
 
@@ -508,7 +520,13 @@ mod tests {
     #[tokio::test]
     async fn can_resolve_variables_test() {
         let db = Database::new_temp().unwrap();
-        let ctx = Context::new(&db, "roomid", "username", "message");
+        let ctx = Context {
+            db: db.clone(),
+            matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
+            room_id: "roomid",
+            username: "username",
+            message_body: "message",
+        };
         let user_and_room = crate::db::variables::UserAndRoom(&ctx.username, &ctx.room_id);
 
         db.variables

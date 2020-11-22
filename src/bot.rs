@@ -127,7 +127,14 @@ impl DiceBot {
         let commands = msg_body.trim().lines().filter(|line| line.starts_with("!"));
 
         for command in commands {
-            let ctx = Context::new(&self.db, &room_id.as_str(), &sender_username, &command);
+            let ctx = Context {
+                db: self.db.clone(),
+                matrix_client: &self.client,
+                room_id: room_id.as_str(),
+                username: &sender_username,
+                message_body: &command,
+            };
+
             let cmd_result = execute_command(&ctx).await;
             results.push(cmd_result);
         }

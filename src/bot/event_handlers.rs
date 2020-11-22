@@ -1,3 +1,4 @@
+use super::DiceBot;
 use crate::db::Database;
 use crate::error::BotError;
 use async_trait::async_trait;
@@ -12,8 +13,6 @@ use matrix_sdk::{
     identifiers::RoomId,
     Client, EventEmitter, SyncRoom,
 };
-//use matrix_sdk_common_macros::async_trait;
-use super::DiceBot;
 use std::clone::Clone;
 use std::ops::Sub;
 use std::time::{Duration, SystemTime};

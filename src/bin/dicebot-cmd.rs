@@ -12,7 +12,15 @@ async fn main() -> Result<(), BotError> {
         Err(e) => return Err(e),
     };
 
-    let context = Context::new(&db, "roomid", "localuser", &input);
+    let context = Context {
+        db: db,
+        matrix_client: &matrix_sdk::Client::new("http://example.com")
+            .expect("Could not create matrix client"),
+        room_id: "roomid",
+        username: "@localuser:example.com",
+        message_body: &input,
+    };
+
     println!("{}", command.execute(&context).await.plain());
     Ok(())
 }
