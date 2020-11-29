@@ -401,6 +401,36 @@ mod tests {
     }
 
     #[test]
+    fn insert_room_info_updates_data() {
+        let rooms = create_test_instance();
+
+        let mut info = RoomInfo {
+            room_id: matrix_sdk::identifiers::room_id!("!fakeroom:example.com")
+                .as_str()
+                .to_owned(),
+            room_name: "fake room name".to_owned(),
+        };
+
+        rooms
+            .insert_room_info(&info)
+            .expect("Could insert room info");
+
+        //Update info to have a new room name before inserting again.
+        info.room_name = "new fake room name".to_owned();
+
+        rooms
+            .insert_room_info(&info)
+            .expect("Could insert room info");
+
+        let found_info = rooms
+            .get_room_info("!fakeroom:example.com")
+            .expect("Error loading room info");
+
+        assert!(found_info.is_some());
+        assert_eq!(info, found_info.unwrap());
+    }
+
+    #[test]
     fn get_room_info_none_when_room_does_not_exist() {
         let rooms = create_test_instance();
 
