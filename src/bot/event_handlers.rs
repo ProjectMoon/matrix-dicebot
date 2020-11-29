@@ -100,6 +100,16 @@ async fn record_room_information(
 ) -> Result<(), crate::db::errors::DataError> {
     let room_id_str = room.room_id.as_str();
     let usernames = matrix::get_users_in_room(&client, &room.room_id).await;
+
+    let info = crate::models::RoomInfo {
+        room_id: room_id_str.to_owned(),
+        room_name: room.display_name(),
+    };
+
+    // TODO this and the username adding should be one whole
+    // transaction in the db.
+    db.rooms.insert_room_info(&info)?;
+
     usernames
         .into_iter()
         .filter(|username| username != our_username)
