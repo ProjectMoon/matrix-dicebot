@@ -343,6 +343,14 @@ mod tests {
     use crate::db::Database;
     use crate::parser::{Amount, Element, Operator};
 
+    /// Create a dummy room instance.
+    fn dummy_room() -> matrix_sdk::Room {
+        matrix_sdk::Room::new(
+            &matrix_sdk::identifiers::room_id!("!fakeroomid:example.com"),
+            &matrix_sdk::identifiers::user_id!("@fakeuserid:example.com"),
+        )
+    }
+
     /// Generate a series of numbers manually for testing. For this
     /// die system, the first roll in the Vec should be the unit roll,
     /// and any subsequent rolls should be the tens place roll. The
@@ -383,7 +391,7 @@ mod tests {
         let ctx = Context {
             db: db,
             matrix_client: &matrix_sdk::Client::new("https://example.com").unwrap(),
-            room_id: "roomid",
+            room: &dummy_room(),
             username: "username",
             message_body: "message",
         };

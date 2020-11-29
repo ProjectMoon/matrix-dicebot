@@ -130,7 +130,7 @@ impl DiceBot {
             let ctx = Context {
                 db: self.db.clone(),
                 matrix_client: &self.client,
-                room_id: room_id.as_str(),
+                room: room,
                 username: &sender_username,
                 message_body: &command,
             };

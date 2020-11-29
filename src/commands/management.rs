@@ -3,8 +3,7 @@ use crate::context::Context;
 use crate::db::errors::DataError;
 use crate::matrix;
 use async_trait::async_trait;
-use matrix_sdk::identifiers::{RoomId, UserId};
-use std::convert::TryFrom;
+use matrix_sdk::identifiers::UserId;
 
 pub struct ResyncCommand;
 
@@ -17,7 +16,7 @@ impl Command for ResyncCommand {
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> Execution {
-        let room_id = RoomId::try_from(ctx.room_id).expect("failed to decode room ID");
+        let room_id = &ctx.room.room_id;
         let our_username: Option<UserId> = ctx.matrix_client.user_id().await;
         let our_username: &str = our_username.as_ref().map_or("", UserId::as_str);
 

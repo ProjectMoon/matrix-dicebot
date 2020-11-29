@@ -13,7 +13,7 @@ impl Command for GetAllVariablesCommand {
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> Execution {
-        let key = UserAndRoom(&ctx.username, &ctx.room_id);
+        let key = UserAndRoom(&ctx.username, &ctx.room.room_id.as_str());
         let result = ctx.db.variables.get_user_variables(&key);
 
         let value = match result {
@@ -48,7 +48,7 @@ impl Command for GetVariableCommand {
 
     async fn execute(&self, ctx: &Context<'_>) -> Execution {
         let name = &self.0;
-        let key = UserAndRoom(&ctx.username, &ctx.room_id);
+        let key = UserAndRoom(&ctx.username, &ctx.room.room_id.as_str());
         let result = ctx.db.variables.get_user_variable(&key, name);
 
         let value = match result {
@@ -74,7 +74,7 @@ impl Command for SetVariableCommand {
     async fn execute(&self, ctx: &Context<'_>) -> Execution {
         let name = &self.0;
         let value = self.1;
-        let key = UserAndRoom(&ctx.username, ctx.room_id);
+        let key = UserAndRoom(&ctx.username, ctx.room.room_id.as_str());
         let result = ctx.db.variables.set_user_variable(&key, name, value);
 
         let content = match result {
@@ -98,7 +98,7 @@ impl Command for DeleteVariableCommand {
 
     async fn execute(&self, ctx: &Context<'_>) -> Execution {
         let name = &self.0;
-        let key = UserAndRoom(&ctx.username, ctx.room_id);
+        let key = UserAndRoom(&ctx.username, ctx.room.room_id.as_str());
         let result = ctx.db.variables.delete_user_variable(&key, name);
 
         let value = match result {

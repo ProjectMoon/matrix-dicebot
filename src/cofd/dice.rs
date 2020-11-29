@@ -323,6 +323,14 @@ mod tests {
     use super::*;
     use crate::db::Database;
 
+    /// Create dummy room instance.
+    fn dummy_room() -> matrix_sdk::Room {
+        matrix_sdk::Room::new(
+            &matrix_sdk::identifiers::room_id!("!fakeroomid:example.com"),
+            &matrix_sdk::identifiers::user_id!("@fakeuserid:example.com"),
+        )
+    }
+
     ///Instead of being random, generate a series of numbers we have complete
     ///control over.
     struct SequentialDieRoller {
@@ -464,7 +472,7 @@ mod tests {
         let ctx = Context {
             db: db,
             matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
-            room_id: "roomid",
+            room: &dummy_room(),
             username: "username",
             message_body: "message",
         };
@@ -495,7 +503,7 @@ mod tests {
         let ctx = Context {
             db: db,
             matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
-            room_id: "roomid",
+            room: &dummy_room(),
             username: "username",
             message_body: "message",
         };
@@ -519,15 +527,18 @@ mod tests {
 
     #[tokio::test]
     async fn can_resolve_variables_test() {
+        use crate::db::variables::UserAndRoom;
+
         let db = Database::new_temp().unwrap();
         let ctx = Context {
             db: db.clone(),
             matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
-            room_id: "roomid",
+            room: &dummy_room(),
             username: "username",
             message_body: "message",
         };
-        let user_and_room = crate::db::variables::UserAndRoom(&ctx.username, &ctx.room_id);
+
+        let user_and_room = UserAndRoom(&ctx.username, &ctx.room.room_id.as_str());
 
         db.variables
             .set_user_variable(&user_and_room, "myvariable", 10)
