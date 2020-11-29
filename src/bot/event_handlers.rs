@@ -92,7 +92,7 @@ fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
         })
 }
 
-async fn record_users_in_room(
+async fn record_room_information(
     client: &matrix_sdk::Client,
     db: &crate::db::Database,
     room: &matrix_sdk::Room,
@@ -138,8 +138,8 @@ impl EventEmitter for DiceBot {
                 info!("Clearing all information for room ID {}", room_id);
                 self.db.rooms.clear_info(room_id)
             } else if event_affects_us && adding_user {
-                info!("Joined room {}; recording user information", room_id);
-                record_users_in_room(&self.client, &self.db, &room, &event.state_key).await
+                info!("Joined room {}; recording room information", room_id);
+                record_room_information(&self.client, &self.db, &room, &event.state_key).await
             } else if !event_affects_us && adding_user {
                 info!("Adding user {} to room ID {}", username, room_id);
                 self.db.rooms.add_user_to_room(username, room_id)
