@@ -92,7 +92,9 @@ fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
         })
 }
 
-async fn record_room_information(
+//TODO this needs to be moved to a common API layer.
+/// Record the information about a room, including users in it.
+pub async fn record_room_information(
     client: &matrix_sdk::Client,
     db: &crate::db::Database,
     room: &matrix_sdk::Room,

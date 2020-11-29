@@ -1,7 +1,6 @@
 use super::{Command, Execution};
 use crate::context::Context;
 use crate::db::errors::DataError;
-use crate::matrix;
 use async_trait::async_trait;
 use matrix_sdk::identifiers::UserId;
 
@@ -16,17 +15,16 @@ impl Command for ResyncCommand {
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> Execution {
-        let room_id = &ctx.room.room_id;
         let our_username: Option<UserId> = ctx.matrix_client.user_id().await;
         let our_username: &str = our_username.as_ref().map_or("", UserId::as_str);
 
-        let usernames = matrix::get_users_in_room(&ctx.matrix_client, &room_id).await;
-
-        let result: ResyncResult = usernames
-            .into_iter()
-            .filter(|username| username != our_username)
-            .map(|username| ctx.db.rooms.add_user_to_room(&username, room_id.as_str()))
-            .collect(); //Make use of collect impl on Result.
+        let result: ResyncResult = crate::bot::event_handlers::record_room_information(
+            ctx.matrix_client,
+            &ctx.db,
+            &ctx.room,
+            our_username,
+        )
+        .await;
 
         let (plain, html) = match result {
             Ok(()) => {
