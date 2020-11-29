@@ -412,7 +412,7 @@ mod tests {
     }
 
     #[test]
-    fn clear_info() {
+    fn clear_info_modifies_removes_requested_room() {
         let rooms = create_test_instance();
 
         rooms
