@@ -237,12 +237,13 @@ impl Rooms {
     pub fn get_room_info(&self, info: &RoomInfo) -> Result<Option<RoomInfo>, DataError> {
         let key = info.room_id.as_bytes();
 
-        //swap/flatten Result<Option<Result>> down into the return type.
-        self.roomid_roominfo
-            .get(key)
-            .map(|bytes| bytes.map(|b| bincode::deserialize::<RoomInfo>(&b)))?
-            .transpose()
-            .map_err(|e| e.into())
+        let room_info: Option<RoomInfo> = self
+            .roomid_roominfo
+            .get(key)?
+            .map(|bytes| bincode::deserialize(&bytes))
+            .transpose()?;
+
+        Ok(room_info)
     }
 
     pub fn get_rooms_for_user(&self, username: &str) -> Result<HashSet<String>, DataError> {
