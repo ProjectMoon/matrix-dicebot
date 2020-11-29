@@ -234,8 +234,8 @@ impl Rooms {
         Ok(())
     }
 
-    pub fn get_room_info(&self, info: &RoomInfo) -> Result<Option<RoomInfo>, DataError> {
-        let key = info.room_id.as_bytes();
+    pub fn get_room_info(&self, room_id: &str) -> Result<Option<RoomInfo>, DataError> {
+        let key = room_id.as_bytes();
 
         let room_info: Option<RoomInfo> = self
             .roomid_roominfo
@@ -375,6 +375,40 @@ mod tests {
 
         assert_eq!(HashSet::new(), users_in_room);
         assert_eq!(HashSet::new(), rooms_for_user);
+    }
+
+    #[test]
+    fn insert_room_info_works() {
+        let rooms = create_test_instance();
+
+        let info = RoomInfo {
+            room_id: matrix_sdk::identifiers::room_id!("!fakeroom:example.com")
+                .as_str()
+                .to_owned(),
+            room_name: "fake room name".to_owned(),
+        };
+
+        rooms
+            .insert_room_info(&info)
+            .expect("Could insert room info");
+
+        let found_info = rooms
+            .get_room_info("!fakeroom:example.com")
+            .expect("Error loading room info");
+
+        assert!(found_info.is_some());
+        assert_eq!(info, found_info.unwrap());
+    }
+
+    #[test]
+    fn get_room_info_none_when_room_does_not_exist() {
+        let rooms = create_test_instance();
+
+        let found_info = rooms
+            .get_room_info("!fakeroom:example.com")
+            .expect("Error loading room info");
+
+        assert!(found_info.is_none());
     }
 
     #[test]
