@@ -92,6 +92,21 @@ fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
         })
 }
 
+async fn record_users_in_room(
+    client: &matrix_sdk::Client,
+    db: &crate::db::Database,
+    room: &matrix_sdk::Room,
+    our_username: &str,
+) -> Result<(), crate::db::errors::DataError> {
+    let room_id_str = room.room_id.as_str();
+    let usernames = matrix::get_users_in_room(&client, &room.room_id).await;
+    usernames
+        .into_iter()
+        .filter(|username| username != our_username)
+        .map(|username| db.rooms.add_user_to_room(&username, room_id_str))
+        .collect() //Make use of collect impl on Result.
+}
+
 /// This event emitter listens for messages with dice rolling commands.
 /// Originally adapted from the matrix-rust-sdk examples.
 #[async_trait]
@@ -124,12 +139,7 @@ impl EventEmitter for DiceBot {
                 self.db.rooms.clear_info(room_id)
             } else if event_affects_us && adding_user {
                 info!("Joined room {}; recording user information", room_id);
-                let usernames = matrix::get_users_in_room(&self.client, &room.room_id).await;
-                usernames
-                    .into_iter()
-                    .filter(|username| username != &event.state_key)
-                    .map(|username| self.db.rooms.add_user_to_room(&username, room_id))
-                    .collect() //Make use of collect impl on Result.
+                record_users_in_room(&self.client, &self.db, &room, &event.state_key).await
             } else if !event_affects_us && adding_user {
                 info!("Adding user {} to room ID {}", username, room_id);
                 self.db.rooms.add_user_to_room(username, room_id)

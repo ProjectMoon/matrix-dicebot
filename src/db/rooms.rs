@@ -1,5 +1,6 @@
 use crate::db::errors::DataError;
 use crate::db::schema::convert_u64;
+use crate::models::RoomInfo;
 use byteorder::BigEndian;
 use log::{debug, error, log_enabled};
 use sled::transaction::TransactionalTree;
@@ -14,7 +15,8 @@ use zerocopy::AsBytes;
 
 #[derive(Clone)]
 pub struct Rooms {
-    /// Room ID -> RoomInfo struct (single entries)
+    /// Room ID -> RoomInfo struct (single entries).
+    /// Key is just room ID as bytes.
     pub(in crate::db) roomid_roominfo: Tree,
 
     /// Room ID -> list of usernames in room.
@@ -223,6 +225,24 @@ impl Rooms {
             Ok(()) => Ok(true),
             Err(CompareAndSwapError { .. }) => Ok(false),
         }
+    }
+
+    pub fn insert_room_info(&self, info: &RoomInfo) -> Result<(), DataError> {
+        let key = info.room_id.as_bytes();
+        let serialized = bincode::serialize(&info)?;
+        self.roomid_roominfo.insert(key, serialized)?;
+        Ok(())
+    }
+
+    pub fn get_room_info(&self, info: &RoomInfo) -> Result<Option<RoomInfo>, DataError> {
+        let key = info.room_id.as_bytes();
+
+        //swap/flatten Result<Option<Result>> down into the return type.
+        self.roomid_roominfo
+            .get(key)
+            .map(|bytes| bytes.map(|b| bincode::deserialize::<RoomInfo>(&b)))?
+            .transpose()
+            .map_err(|e| e.into())
     }
 
     pub fn get_rooms_for_user(&self, username: &str) -> Result<HashSet<String>, DataError> {
