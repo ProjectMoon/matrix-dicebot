@@ -5,11 +5,11 @@
 _This repository is hosted on [Agnos.is Git][main-repo] and mirrored
 to [GitHub][github-repo]._
 
-This is a fork of the
-[axfive-matrix-dicebot](https://gitlab.com/Taywee/axfive-matrix-dicebot)
-with basic support for the Chronicles of Darkness 2E Storytelling
-System and Call of Cthulhu, with future plans to extend the codebase
-further to support variables and perhaps character sheet management.
+This is a dice rolling bot for facilitating roleplaying games on the
+Matrix messaging platform. It currently has basic support for the
+Chronicles of Darkness 2E Storytelling System and Call of Cthulhu,
+with plans to extend the codebase further to support other systems and
+character sheet management.
 
 ## Features
 
@@ -20,6 +20,7 @@ following features:
 * Rolling dice pools for the Chronicles of Darkness 2E Storytelling
 System.
 * Works in encrypted or unencrypted Matrix rooms.
+* Storing variables created by the user.
 
 ## Building and Installation
 
@@ -213,15 +214,21 @@ commands locally.
 
 The most basic plans are:
 
-* To add support for simple per-user variable management, e.g. setting
-  a name to a value (`gnosis = 3`) and then using those in dice rolls.
-  This lays the foundation for character sheet integration.
+* Resource counting: creation of custom counters that can go up and
+  down.
 * Perhaps some sort of character sheet integration. But for that, we
   would need a sheet service.
 * Use environment variables instead of config file in Docker image.
 
+## Credits
+
+This was orignally a fork of the [axfive-matrix-dicebot][axfive], with
+support added for Chronicles of Darkness and Call of Cthulhu.
+
+[axfive]: https://gitlab.com/Taywee/axfive-matrix-dicebot
 [config-file]: #Configuration-File
 [docker-image]: https://github.com/users/ProjectMoon/packages/container/package/chronicle-dicebot
 [dirs]: https://docs.rs/dirs/2.0.2/dirs/
 [main-repo]: https://git.agnos.is/projectmoon/matrix-dicebot
 [github-repo]: https://github.com/ProjectMoon/matrix-dicebot
+[roadmap]: https://git.agnos.is/projectmoon/matrix-dicebot/wiki/Roadmap
