@@ -19,6 +19,7 @@ following features:
 * Rolling arbitrary dice expressions (e.g. 1d4, 1d20+5, 1d8+1d6, etc).
 * Rolling dice pools for the Chronicles of Darkness 2E Storytelling
 System.
+* Rolling dice for the Call of Cthulhu system.
 * Works in encrypted or unencrypted Matrix rooms.
 * Storing variables created by the user.
 
@@ -107,10 +108,27 @@ colon.
 Examples:
 
 ```
-!pool 8     //regular pool of 8 dice
+!pool 8      //regular pool of 8 dice
 !pool n:8    //roll 8 dice, 9-again
 !pool ns3:8  //roll 8 dice, 9-again with only 3 successes for exceptional
 !pool rs2:5  //5 dice, rote quality, 2 successes for exceptional
+```
+
+### Call of Cthulhu System
+
+The commands `!cthRoll`, `!cthroll`, `!cthARoll` and `!cthadv` are for
+the Call of Cthulhu system. `!cthRoll` and `!cthroll` are for rolling
+percentile dice against a target number. A `b:` or `bb:` can be
+prepended to get one or two bonus dice.
+
+`!cthARoll` and `!cthadv` are for skill advancement.
+
+Examples:
+
+```
+!cthRoll 50     //roll against a target of 50
+!cthRoll bb:60  //roll against a target of 60 with 2 bonus dice
+!cthARoll 30    //advancement roll against a target of 30
 ```
 
 ### User Variables
