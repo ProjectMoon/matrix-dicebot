@@ -689,4 +689,32 @@ mod tests {
             fmt_rolls(&result)
         );
     }
+
+    #[test]
+    fn shows_more_than_10_dice_test() {
+        //Make sure we display more than 10 dice when below the display limit (15).
+        let result = DicePoolRoll {
+            modifiers: DicePoolModifiers::default(),
+            rolls: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+        };
+
+        assert_eq!(
+            "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14",
+            fmt_rolls(&result)
+        );
+    }
+
+    #[test]
+    fn shows_exactly_15_dice_test() {
+        //If we are at format limit (15), make sure all are shown
+        let result = DicePoolRoll {
+            modifiers: DicePoolModifiers::default(),
+            rolls: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+        };
+
+        assert_eq!(
+            "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15",
+            fmt_rolls(&result)
+        );
+    }
 }
