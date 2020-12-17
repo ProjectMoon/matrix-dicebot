@@ -190,12 +190,12 @@ impl DicePoolRoll {
     }
 
     pub fn successes(&self) -> i32 {
-        let successes = self
+        let successes: usize = self
             .rolls
             .iter()
-            .cloned()
-            .filter(|&roll| roll >= self.modifiers.success_on)
+            .filter(|&roll| *roll >= self.modifiers.success_on)
             .count();
+
         i32::try_from(successes).unwrap_or(0)
     }
 
