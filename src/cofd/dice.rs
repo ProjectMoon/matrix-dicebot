@@ -156,15 +156,18 @@ pub struct DicePoolRoll {
     rolls: Vec<i32>,
 }
 
+/// Amount of dice to display before cutting off and showing "and X
+/// more", so we don't spam the room with huge messages.
+const MAX_DISPLAYED_ROLLS: usize = 15;
+
 fn fmt_rolls(pool: &DicePoolRoll) -> String {
-    let max_displayed_rolls = 15;
     let rolls = pool.rolls();
-    if rolls.len() > max_displayed_rolls {
-        let first_ten = rolls.iter().take(max_displayed_rolls).join(", ");
+    if rolls.len() > MAX_DISPLAYED_ROLLS {
+        let shown_amount = rolls.iter().take(MAX_DISPLAYED_ROLLS).join(", ");
         format!(
             "{}, and {} more",
-            first_ten,
-            rolls.len() - max_displayed_rolls
+            shown_amount,
+            rolls.len() - MAX_DISPLAYED_ROLLS
         )
     } else {
         rolls.iter().join(", ")
