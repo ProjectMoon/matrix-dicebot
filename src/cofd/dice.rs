@@ -163,14 +163,14 @@ const MAX_DISPLAYED_ROLLS: usize = 15;
 fn fmt_rolls(pool: &DicePoolRoll) -> String {
     let rolls = pool.rolls();
     if rolls.len() > MAX_DISPLAYED_ROLLS {
-        let shown_amount = rolls.iter().take(MAX_DISPLAYED_ROLLS).join(", ");
+        let shown_amount = rolls.into_iter().take(MAX_DISPLAYED_ROLLS).join(", ");
         format!(
             "{}, and {} more",
             shown_amount,
             rolls.len() - MAX_DISPLAYED_ROLLS
         )
     } else {
-        rolls.iter().join(", ")
+        rolls.into_iter().join(", ")
     }
 }
 
