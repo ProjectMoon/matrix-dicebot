@@ -167,7 +167,7 @@ fn fmt_rolls(pool: &DicePoolRoll) -> String {
             rolls.len() - max_displayed_rolls
         )
     } else {
-        rolls.iter().take(10).join(", ")
+        rolls.iter().join(", ")
     }
 }
 
