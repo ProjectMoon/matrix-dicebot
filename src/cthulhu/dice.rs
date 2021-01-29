@@ -343,12 +343,13 @@ mod tests {
     use crate::db::Database;
     use crate::parser::{Amount, Element, Operator};
 
-    /// Create a dummy room instance.
-    fn dummy_room() -> matrix_sdk::Room {
-        matrix_sdk::Room::new(
-            &matrix_sdk::identifiers::room_id!("!fakeroomid:example.com"),
-            &matrix_sdk::identifiers::user_id!("@fakeuserid:example.com"),
-        )
+    macro_rules! dummy_room {
+        () => {
+            crate::context::RoomContext {
+                id: &matrix_sdk::identifiers::room_id!("!fakeroomid:example.com"),
+                display_name: "displayname",
+            }
+        };
     }
 
     /// Generate a series of numbers manually for testing. For this
@@ -391,7 +392,7 @@ mod tests {
         let ctx = Context {
             db: db,
             matrix_client: &matrix_sdk::Client::new("https://example.com").unwrap(),
-            room: &dummy_room(),
+            room: dummy_room!(),
             username: "username",
             message_body: "message",
         };

@@ -1,6 +1,6 @@
 use crate::commands::execute_command;
 use crate::config::*;
-use crate::context::Context;
+use crate::context::{Context, RoomContext};
 use crate::db::Database;
 use crate::error::BotError;
 use crate::state::DiceBotState;
@@ -13,7 +13,7 @@ use matrix_sdk::{
         room::message::{MessageEventContent, NoticeMessageEventContent},
         AnyMessageEventContent,
     },
-    Client, ClientConfig, JsonStore, Room, SyncSettings,
+    Client, ClientConfig, JoinedRoom, SyncSettings,
 };
 //use matrix_sdk_common_macros::async_trait;
 use std::clone::Clone;
@@ -48,8 +48,8 @@ fn cache_dir() -> Result<PathBuf, BotError> {
 /// Creates the matrix client.
 fn create_client(config: &Config) -> Result<Client, BotError> {
     let cache_dir = cache_dir()?;
-    let store = JsonStore::open(&cache_dir)?;
-    let client_config = ClientConfig::new().state_store(Box::new(store));
+    //let store = JsonStore::open(&cache_dir)?;
+    let client_config = ClientConfig::new().store_path(cache_dir);
     let homeserver_url = Url::parse(&config.matrix_homeserver())?;
 
     Ok(Client::new_with_config(homeserver_url, client_config)?)
@@ -90,7 +90,7 @@ impl DiceBot {
         let password = &self.config.matrix_password();
 
         //TODO provide a device id from config.
-        let mut client = self.client.clone();
+        let client = self.client.clone();
         client
             .login(username, password, None, Some("matrix dice bot"))
             .await?;
@@ -118,9 +118,9 @@ impl DiceBot {
         Ok(())
     }
 
-    async fn execute_commands(&self, room: &Room, sender_username: &str, msg_body: &str) {
-        let room_name = room.display_name().clone();
-        let room_id = room.room_id.clone();
+    async fn execute_commands(&self, room: &JoinedRoom, sender_username: &str, msg_body: &str) {
+        let room_name = room.display_name().await.ok().unwrap_or_default();
+        let room_id = room.room_id().clone();
 
         let mut results = Vec::with_capacity(msg_body.lines().count());
 
@@ -130,7 +130,7 @@ impl DiceBot {
             let ctx = Context {
                 db: self.db.clone(),
                 matrix_client: &self.client,
-                room: room,
+                room: RoomContext::new_with_name(&room, &room_name),
                 username: &sender_username,
                 message_body: &command,
             };

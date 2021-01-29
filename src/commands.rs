@@ -78,12 +78,13 @@ pub async fn execute_command(ctx: &Context<'_>) -> CommandResult {
 mod tests {
     use super::*;
 
-    /// Create a dummy room instance.
-    fn dummy_room() -> matrix_sdk::Room {
-        matrix_sdk::Room::new(
-            &matrix_sdk::identifiers::room_id!("!fakeroomid:example.com"),
-            &matrix_sdk::identifiers::user_id!("@fakeuserid:example.com"),
-        )
+    macro_rules! dummy_room {
+        () => {
+            crate::context::RoomContext {
+                id: &matrix_sdk::identifiers::room_id!("!fakeroomid:example.com"),
+                display_name: "displayname",
+            }
+        };
     }
 
     #[tokio::test]
@@ -92,7 +93,7 @@ mod tests {
         let ctx = Context {
             db: db,
             matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
-            room: &dummy_room(),
+            room: dummy_room!(),
             username: "myusername",
             message_body: "!notacommand",
         };

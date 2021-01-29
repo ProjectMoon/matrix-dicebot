@@ -11,7 +11,8 @@ use matrix_sdk::{
         room::message::{MessageEventContent, TextMessageEventContent},
         StrippedStateEvent, SyncMessageEvent, SyncStateEvent,
     },
-    EventEmitter, SyncRoom,
+    identifiers::RoomId,
+    EventEmitter, RoomState,
 };
 use std::clone::Clone;
 use std::ops::Sub;
@@ -92,86 +93,112 @@ fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
         })
 }
 
+/// Convert room state object to the room ID and display name, if
+/// possible. We only care about the room if it is a joined or left
+/// room.
+async fn convert_room_state(state: &RoomState) -> Option<(&RoomId, String)> {
+    match state {
+        RoomState::Joined(room) => Some((
+            room.room_id(),
+            room.display_name().await.ok().unwrap_or_default(),
+        )),
+        RoomState::Left(room) => Some((
+            room.room_id(),
+            room.display_name().await.ok().unwrap_or_default(),
+        )),
+        _ => None,
+    }
+}
+
 /// This event emitter listens for messages with dice rolling commands.
 /// Originally adapted from the matrix-rust-sdk examples.
 #[async_trait]
 impl EventEmitter for DiceBot {
-    async fn on_room_member(&self, room: SyncRoom, event: &SyncStateEvent<MemberEventContent>) {
-        if let SyncRoom::Joined(room) | SyncRoom::Left(room) = room {
-            //Clone to avoid holding lock.
-            let room = room.read().await.clone();
-            let (room_id, username) = (room.room_id.as_str(), &event.state_key);
+    async fn on_room_member(&self, state: RoomState, event: &SyncStateEvent<MemberEventContent>) {
+        let (room_id, room_display_name) = match convert_room_state(&state).await {
+            Some((room_id, room_display_name)) => (room_id, room_display_name),
+            _ => return,
+        };
 
-            if !should_process_event(&self.db, room_id, event.event_id.as_str()) {
-                return;
-            }
+        let room_id_str = room_id.as_str();
+        let username = &event.state_key;
 
-            let event_affects_us = if let Some(our_user_id) = self.client.user_id().await {
-                event.state_key == our_user_id
-            } else {
-                false
-            };
+        if !should_process_event(&self.db, room_id_str, event.event_id.as_str()) {
+            return;
+        }
 
-            use MembershipChange::*;
-            let adding_user = match event.membership_change() {
-                Joined => true,
-                Banned | Left | Kicked | KickedAndBanned => false,
-                _ => return,
-            };
+        let event_affects_us = if let Some(our_user_id) = self.client.user_id().await {
+            event.state_key == our_user_id
+        } else {
+            false
+        };
 
-            let result = if event_affects_us && !adding_user {
-                info!("Clearing all information for room ID {}", room_id);
-                self.db.rooms.clear_info(room_id)
-            } else if event_affects_us && adding_user {
-                info!("Joined room {}; recording room information", room_id);
-                record_room_information(&self.client, &self.db, &room, &event.state_key).await
-            } else if !event_affects_us && adding_user {
-                info!("Adding user {} to room ID {}", username, room_id);
-                self.db.rooms.add_user_to_room(username, room_id)
-            } else if !event_affects_us && !adding_user {
-                info!("Removing user {} from room ID {}", username, room_id);
-                self.db.rooms.remove_user_from_room(username, room_id)
-            } else {
-                debug!("Ignoring a room member event: {:#?}", event);
-                Ok(())
-            };
+        use MembershipChange::*;
+        let adding_user = match event.membership_change() {
+            Joined => true,
+            Banned | Left | Kicked | KickedAndBanned => false,
+            _ => return,
+        };
 
-            if let Err(e) = result {
-                error!("Could not update room information: {}", e.to_string());
-            } else {
-                debug!("Successfully processed room member update.");
-            }
+        let result = if event_affects_us && !adding_user {
+            info!("Clearing all information for room ID {}", room_id);
+            self.db.rooms.clear_info(room_id_str)
+        } else if event_affects_us && adding_user {
+            info!("Joined room {}; recording room information", room_id);
+            record_room_information(
+                &self.client,
+                &self.db,
+                &room_id,
+                &room_display_name,
+                &event.state_key,
+            )
+            .await
+        } else if !event_affects_us && adding_user {
+            info!("Adding user {} to room ID {}", username, room_id);
+            self.db.rooms.add_user_to_room(username, room_id_str)
+        } else if !event_affects_us && !adding_user {
+            info!("Removing user {} from room ID {}", username, room_id);
+            self.db.rooms.remove_user_from_room(username, room_id_str)
+        } else {
+            debug!("Ignoring a room member event: {:#?}", event);
+            Ok(())
+        };
+
+        if let Err(e) = result {
+            error!("Could not update room information: {}", e.to_string());
+        } else {
+            debug!("Successfully processed room member update.");
         }
     }
 
     async fn on_stripped_state_member(
         &self,
-        room: SyncRoom,
+        state: RoomState,
         event: &StrippedStateEvent<MemberEventContent>,
         _: Option<MemberEventContent>,
     ) {
-        if let SyncRoom::Invited(room) = room {
+        if let RoomState::Invited(room) = state {
             if let Some(user_id) = self.client.user_id().await {
                 if event.state_key != user_id {
                     return;
                 }
             }
 
-            //Clone to avoid holding lock.
-            let room = room.read().await.clone();
-            info!("Autojoining room {}", room.display_name());
+            info!("Autojoining room {}", room.display_name().await);
 
-            if let Err(e) = self.client.join_room_by_id(&room.room_id).await {
+            if let Err(e) = self.client.join_room_by_id(&room.room_id()).await {
                 warn!("Could not join room: {}", e.to_string())
             }
         }
     }
 
-    async fn on_room_message(&self, room: SyncRoom, event: &SyncMessageEvent<MessageEventContent>) {
-        if let SyncRoom::Joined(room) = room {
-            //Clone to avoid holding lock.
-            let room = room.read().await.clone();
-            let room_id = room.room_id.as_str();
+    async fn on_room_message(
+        &self,
+        state: RoomState,
+        event: &SyncMessageEvent<MessageEventContent>,
+    ) {
+        if let RoomState::Joined(room) = state {
+            let room_id = room.room_id().as_str();
             if !should_process_event(&self.db, room_id, event.event_id.as_str()) {
                 return;
             }

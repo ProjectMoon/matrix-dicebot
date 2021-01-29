@@ -27,6 +27,9 @@ pub enum BotError {
     #[error("could not parse URL")]
     UrlParseError(#[from] url::ParseError),
 
+    #[error("error in matrix state store: {0}")]
+    MatrixStateStoreError(#[from] matrix_sdk::StoreError),
+
     #[error("uncategorized matrix SDK error")]
     MatrixError(#[from] matrix_sdk::Error),
 
