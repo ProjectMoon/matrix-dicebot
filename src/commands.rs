@@ -1,4 +1,5 @@
 use crate::context::Context;
+use crate::error::BotError;
 use async_trait::async_trait;
 use thiserror::Error;
 
@@ -10,6 +11,8 @@ pub mod misc;
 pub mod parser;
 pub mod variables;
 
+/// A custom error type specifically related to parsing command text.
+/// Does not wrap an execution failure.
 #[derive(Error, Debug)]
 pub enum CommandError {
     #[error("invalid command: {0}")]
@@ -19,31 +22,96 @@ pub enum CommandError {
     IgnoredCommand,
 }
 
+/// A successfully executed command returns a message to be sent back
+/// to the user in both plain text and HTML, one of which will be
+/// displayed in the user's client depending on its capabilities.
+#[derive(Debug)]
 pub struct Execution {
     plain: String,
     html: String,
 }
 
 impl Execution {
-    pub fn plain(&self) -> &str {
-        &self.plain
+    pub fn new(plain: String, html: String) -> CommandResult {
+        Ok(Execution { plain, html })
     }
 
-    pub fn html(&self) -> &str {
-        &self.html
+    /// Response message in plain text.
+    pub fn plain(&self) -> String {
+        self.plain.clone()
+    }
+
+    /// Response message in HTML.
+    pub fn html(&self) -> String {
+        self.html.clone()
     }
 }
 
+/// Wraps a command execution failure. Provides plain-text and HTML
+/// formatting for any error message from the BotError type, similar
+/// to how Response provides formatting for successfully executed
+/// commands.
+#[derive(Error, Debug)]
+#[error("{0}")]
+pub struct ExecutionError(#[from] BotError);
+
+impl From<crate::db::errors::DataError> for ExecutionError {
+    fn from(error: crate::db::errors::DataError) -> Self {
+        Self(BotError::DataError(error))
+    }
+}
+
+impl ExecutionError {
+    /// Error message in plain text.
+    pub fn plain(&self) -> String {
+        format!("{}", self.0)
+    }
+
+    /// Error message in bolded HTML.
+    pub fn html(&self) -> String {
+        format!("<p><strong>{}</strong></p>", self.0)
+    }
+}
+
+/// Wraps either a successful command execution response, or an error
+/// that occurred.
+pub type CommandResult = Result<Execution, ExecutionError>;
+
+/// Extract response messages out of a type, whether it is success or
+/// failure.
+pub trait ResponseExtractor {
+    /// Plain-text representation of the message, directly mentioning
+    /// the username.
+    fn message_plain(&self, username: &str) -> String;
+
+    /// HTML representation of the message, directly mentioning the
+    /// username.
+    fn message_html(&self, username: &str) -> String;
+}
+
+impl ResponseExtractor for CommandResult {
+    /// Error message in plain text.
+    fn message_plain(&self, username: &str) -> String {
+        match self {
+            Ok(resp) => format!("{}\n{}", username, resp.plain()),
+            Err(e) => format!("{}\n{}", username, e.plain()),
+        }
+    }
+
+    /// Error message in bolded HTML.
+    fn message_html(&self, username: &str) -> String {
+        match self {
+            Ok(resp) => format!("<p>{}</p>\n{}", username, resp.html),
+            Err(e) => format!("<p>{}</p>\n{}", username, e.html()),
+        }
+    }
+}
+
+/// The trait that any command that can be executed must implement.
 #[async_trait]
 pub trait Command: Send + Sync {
-    async fn execute(&self, ctx: &Context<'_>) -> Execution;
+    async fn execute(&self, ctx: &Context<'_>) -> CommandResult;
     fn name(&self) -> &'static str;
-}
-
-#[derive(Debug)]
-pub struct CommandResult {
-    pub plain: String,
-    pub html: String,
 }
 
 /// Attempt to execute a command, and return the content that should
@@ -51,27 +119,8 @@ pub struct CommandResult {
 /// not). If a command is determined to be ignored, this function will
 /// return None, signifying that we should not send a response.
 pub async fn execute_command(ctx: &Context<'_>) -> CommandResult {
-    let res = parser::parse_command(&ctx.message_body);
-
-    let (plain, html) = match res {
-        Ok(cmd) => {
-            let execution = cmd.execute(ctx).await;
-            (execution.plain().into(), execution.html().into())
-        }
-        Err(e) => {
-            let message = format!("Error parsing command: {}", e);
-            let html_message = format!("<p><strong>{}</strong></p>", message);
-            (message, html_message)
-        }
-    };
-
-    let plain = format!("{}\n{}", ctx.username, plain);
-    let html = format!("<p>{}</p>\n{}", ctx.username, html);
-
-    CommandResult {
-        plain: plain,
-        html: html,
-    }
+    let cmd = parser::parse_command(&ctx.message_body)?;
+    cmd.execute(ctx).await
 }
 
 #[cfg(test)]
@@ -98,6 +147,6 @@ mod tests {
             message_body: "!notacommand",
         };
         let result = execute_command(&ctx).await;
-        assert!(result.plain.contains("Error"));
+        assert!(result.is_err());
     }
 }

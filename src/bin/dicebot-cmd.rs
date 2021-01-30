@@ -1,4 +1,5 @@
 use chronicle_dicebot::commands;
+use chronicle_dicebot::commands::ResponseExtractor;
 use chronicle_dicebot::context::{Context, RoomContext};
 use chronicle_dicebot::db::Database;
 use chronicle_dicebot::error::BotError;
@@ -24,6 +25,9 @@ async fn main() -> Result<(), BotError> {
         message_body: &input,
     };
 
-    println!("{}", command.execute(&context).await.plain());
+    println!(
+        "{}",
+        command.execute(&context).await.message_plain("fakeuser")
+    );
     Ok(())
 }

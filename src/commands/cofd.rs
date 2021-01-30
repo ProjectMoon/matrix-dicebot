@@ -1,4 +1,4 @@
-use super::{Command, Execution};
+use super::{Command, CommandResult, Execution};
 use crate::cofd::dice::{roll_pool, DicePool, DicePoolWithContext};
 use crate::context::Context;
 use async_trait::async_trait;
@@ -11,26 +11,16 @@ impl Command for PoolRollCommand {
         "roll dice pool"
     }
 
-    async fn execute(&self, ctx: &Context<'_>) -> Execution {
+    async fn execute(&self, ctx: &Context<'_>) -> CommandResult {
         let pool_with_ctx = DicePoolWithContext(&self.0, ctx);
-        let roll_result = roll_pool(&pool_with_ctx).await;
+        let rolled_pool = roll_pool(&pool_with_ctx).await?;
 
-        let (plain, html) = match roll_result {
-            Ok(rolled_pool) => {
-                let plain = format!("Pool: {}\nResult: {}", rolled_pool, rolled_pool.roll);
-                let html = format!(
-                    "<p><strong>Pool:</strong> {}</p><p><strong>Result</strong>: {}</p>",
-                    rolled_pool, rolled_pool.roll
-                );
-                (plain, html)
-            }
-            Err(e) => {
-                let plain = format!("Error: {}", e);
-                let html = format!("<p><strong>Error:</strong> {}</p>", e);
-                (plain, html)
-            }
-        };
+        let plain = format!("Pool: {}\nResult: {}", rolled_pool, rolled_pool.roll);
+        let html = format!(
+            "<p><strong>Pool:</strong> {}</p><p><strong>Result</strong>: {}</p>",
+            rolled_pool, rolled_pool.roll
+        );
 
-        Execution { plain, html }
+        Execution::new(plain, html)
     }
 }

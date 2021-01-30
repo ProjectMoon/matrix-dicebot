@@ -1,4 +1,4 @@
-use super::{Command, Execution};
+use super::{Command, CommandResult, Execution};
 use crate::basic::dice::ElementExpression;
 use crate::basic::roll::Roll;
 use crate::context::Context;
@@ -12,13 +12,14 @@ impl Command for RollCommand {
         "roll regular dice"
     }
 
-    async fn execute(&self, _ctx: &Context<'_>) -> Execution {
+    async fn execute(&self, _ctx: &Context<'_>) -> CommandResult {
         let roll = self.0.roll();
         let plain = format!("Dice: {}\nResult: {}", self.0, roll);
         let html = format!(
             "<p><strong>Dice:</strong> {}</p><p><strong>Result</strong>: {}</p>",
             self.0, roll
         );
-        Execution { plain, html }
+
+        Execution::new(plain, html)
     }
 }

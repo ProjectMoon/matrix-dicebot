@@ -139,13 +139,15 @@ impl DiceBot {
             results.push(cmd_result);
         }
 
+        use crate::commands::ResponseExtractor;
+
         if results.len() >= 1 {
             if results.len() == 1 {
                 let cmd_result = &results[0];
                 let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
                     NoticeMessageEventContent::html(
-                        cmd_result.plain.clone(),
-                        cmd_result.html.clone(),
+                        cmd_result.message_plain(&sender_username),
+                        cmd_result.message_html(&sender_username),
                     ),
                 ));
 
