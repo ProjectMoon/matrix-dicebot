@@ -16,10 +16,10 @@ impl Command for GetAllVariablesCommand {
         let key = UserAndRoom(&ctx.username, &ctx.room.id.as_str());
         let variables = ctx.db.variables.get_user_variables(&key)?;
 
-        let mut variable_list = variables
+        let mut variable_list: Vec<String> = variables
             .into_iter()
             .map(|(name, value)| format!(" - {} = {}", name, value))
-            .collect::<Vec<_>>();
+            .collect();
 
         variable_list.sort();
 
