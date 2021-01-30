@@ -1,4 +1,4 @@
-use crate::commands::execute_command;
+use crate::commands::{execute_command, CommandResult, ExecutionError, ResponseExtractor};
 use crate::config::*;
 use crate::context::{Context, RoomContext};
 use crate::db::Database;
@@ -10,9 +10,10 @@ use matrix_sdk::Error as MatrixError;
 use matrix_sdk::{
     self,
     events::{
-        room::message::{MessageEventContent, NoticeMessageEventContent},
-        AnyMessageEventContent,
+        room::message::{MessageEventContent::Notice, NoticeMessageEventContent},
+        AnyMessageEventContent::RoomMessage,
     },
+    identifiers::RoomId,
     Client, ClientConfig, JoinedRoom, SyncSettings,
 };
 //use matrix_sdk_common_macros::async_trait;
@@ -62,6 +63,58 @@ fn extract_error_message(error: MatrixError) -> String {
         RumaResponse(ruma_error) => ruma_error.to_string(),
         _ => error.to_string(),
     }
+}
+
+/// Handle responding to a single command being executed. Wil print
+/// out the full result of that command.
+async fn handle_single_result(
+    client: &Client,
+    cmd_result: &CommandResult,
+    respond_to: &str,
+    room_id: &RoomId,
+) {
+    let plain = cmd_result.message_plain(respond_to);
+    let html = cmd_result.message_html(respond_to);
+
+    let response = RoomMessage(Notice(NoticeMessageEventContent::html(plain, html)));
+
+    let result = client.room_send(&room_id, response, None).await;
+    if let Err(e) = result {
+        let message = extract_error_message(e);
+        error!("Error sending message: {}", message);
+    };
+}
+
+/// Handle responding to multiple commands being executed. Will print
+/// out how many commands succeeded and failed (if any failed).
+async fn handle_multiple_results(
+    client: &Client,
+    results: &[CommandResult],
+    respond_to: &str,
+    room_id: &RoomId,
+) {
+    // TODO we should also pass in the original command so we can
+    // properly link errors to commands in output.
+    let errors: Vec<&ExecutionError> = results.iter().filter_map(|r| r.as_ref().err()).collect();
+
+    let message = if errors.len() == 0 {
+        format!("{}: Executed {} commands", respond_to, results.len(),)
+    } else {
+        format!(
+            "{}: Executed {} commands ({} failed)",
+            respond_to,
+            results.len(),
+            errors.len()
+        )
+    };
+
+    let response = RoomMessage(Notice(NoticeMessageEventContent::html(&message, &message)));
+
+    let result = client.room_send(&room_id, response, None).await;
+    if let Err(e) = result {
+        let message = extract_error_message(e);
+        error!("Error sending message: {}", message);
+    };
 }
 
 impl DiceBot {
@@ -139,34 +192,11 @@ impl DiceBot {
             results.push(cmd_result);
         }
 
-        use crate::commands::ResponseExtractor;
-
         if results.len() >= 1 {
             if results.len() == 1 {
-                let cmd_result = &results[0];
-                let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
-                    NoticeMessageEventContent::html(
-                        cmd_result.message_plain(&sender_username),
-                        cmd_result.message_html(&sender_username),
-                    ),
-                ));
-
-                let result = self.client.room_send(&room_id, response, None).await;
-                if let Err(e) = result {
-                    let message = extract_error_message(e);
-                    error!("Error sending message: {}", message);
-                };
+                handle_single_result(&self.client, &results[0], sender_username, &room_id).await;
             } else if results.len() > 1 {
-                let message = format!("{}: Executed {} commands", sender_username, results.len());
-                let response = AnyMessageEventContent::RoomMessage(MessageEventContent::Notice(
-                    NoticeMessageEventContent::html(&message, &message),
-                ));
-
-                let result = self.client.room_send(&room_id, response, None).await;
-                if let Err(e) = result {
-                    let message = extract_error_message(e);
-                    error!("Error sending message: {}", message);
-                };
+                handle_multiple_results(&self.client, &results, sender_username, &room_id).await;
             }
 
             info!("[{}] {} executed: {}", room_name, sender_username, msg_body);
