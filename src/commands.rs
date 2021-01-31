@@ -101,8 +101,8 @@ impl ResponseExtractor for CommandResult {
     /// Error message in bolded HTML.
     fn message_html(&self, username: &str) -> String {
         match self {
-            Ok(resp) => format!("<p>{}</p>\n{}", username, resp.html),
-            Err(e) => format!("<p>{}</p>\n{}", username, e.html()),
+            Ok(resp) => format!("<p>{}</p>\n{}", username, resp.html).replace("\n", "<br/>"),
+            Err(e) => format!("<p>{}</p>\n{}", username, e.html()).replace("\n", "<br/>"),
         }
     }
 }

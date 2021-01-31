@@ -89,26 +89,40 @@ async fn handle_single_result(
 /// out how many commands succeeded and failed (if any failed).
 async fn handle_multiple_results(
     client: &Client,
-    results: &[CommandResult],
+    results: &[(&str, CommandResult)],
     respond_to: &str,
     room_id: &RoomId,
 ) {
-    // TODO we should also pass in the original command so we can
-    // properly link errors to commands in output.
-    let errors: Vec<&ExecutionError> = results.iter().filter_map(|r| r.as_ref().err()).collect();
+    let errors: Vec<(&str, &ExecutionError)> = results
+        .into_iter()
+        .filter_map(|(cmd, result)| match result {
+            Err(e) => Some((*cmd, e)),
+            _ => None,
+        })
+        .collect();
 
     let message = if errors.len() == 0 {
-        format!("{}: Executed {} commands", respond_to, results.len(),)
+        format!("{}: Executed {} commands", respond_to, results.len())
     } else {
+        let failures: String = errors
+            .iter()
+            .map(|&(cmd, err)| format!("{}: {}", cmd, err))
+            .collect::<Vec<_>>()
+            .join("\n");
+
         format!(
-            "{}: Executed {} commands ({} failed)",
+            "{}: Executed {} commands ({} failed)\n\nFailures:\n{}",
             respond_to,
             results.len(),
-            errors.len()
+            errors.len(),
+            failures
         )
     };
 
-    let response = RoomMessage(Notice(NoticeMessageEventContent::html(&message, &message)));
+    // TODO Need separate code that handles message formatting and
+    // sending so we aren't littering codebase with replace calls.
+    let html = message.replace("\n", "<br/>");
+    let response = RoomMessage(Notice(NoticeMessageEventContent::html(&message, &html)));
 
     let result = client.room_send(&room_id, response, None).await;
     if let Err(e) = result {
@@ -175,7 +189,7 @@ impl DiceBot {
         let room_name = room.display_name().await.ok().unwrap_or_default();
         let room_id = room.room_id().clone();
 
-        let mut results = Vec::with_capacity(msg_body.lines().count());
+        let mut results: Vec<(&str, CommandResult)> = Vec::with_capacity(msg_body.lines().count());
 
         let commands = msg_body.trim().lines().filter(|line| line.starts_with("!"));
 
@@ -189,12 +203,12 @@ impl DiceBot {
             };
 
             let cmd_result = execute_command(&ctx).await;
-            results.push(cmd_result);
+            results.push((&command, cmd_result));
         }
 
         if results.len() >= 1 {
             if results.len() == 1 {
-                handle_single_result(&self.client, &results[0], sender_username, &room_id).await;
+                handle_single_result(&self.client, &results[0].1, sender_username, &room_id).await;
             } else if results.len() > 1 {
                 handle_multiple_results(&self.client, &results, sender_username, &room_id).await;
             }
