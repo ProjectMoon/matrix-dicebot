@@ -15,13 +15,12 @@ impl Command for CthRoll {
         let roll_with_ctx = DiceRollWithContext(&self.0, ctx);
         let executed_roll = regular_roll(&roll_with_ctx).await?;
 
-        let plain = format!("Roll: {}\nResult: {}", executed_roll, executed_roll.roll);
         let html = format!(
             "<p><strong>Roll:</strong> {}</p><p><strong>Result</strong>: {}</p>",
             executed_roll, executed_roll.roll
         );
 
-        Execution::new(plain, html)
+        Execution::new(html)
     }
 }
 
@@ -36,12 +35,11 @@ impl Command for CthAdvanceRoll {
     async fn execute(&self, _ctx: &Context<'_>) -> CommandResult {
         //TODO this will be converted to a result when supporting variables.
         let roll = self.0.roll();
-        let plain = format!("Roll: {}\nResult: {}", self.0, roll);
         let html = format!(
             "<p><strong>Roll:</strong> {}</p><p><strong>Result</strong>: {}</p>",
             self.0, roll
         );
 
-        Execution::new(plain, html)
+        Execution::new(html)
     }
 }

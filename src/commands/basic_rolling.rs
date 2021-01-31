@@ -14,12 +14,11 @@ impl Command for RollCommand {
 
     async fn execute(&self, _ctx: &Context<'_>) -> CommandResult {
         let roll = self.0.roll();
-        let plain = format!("Dice: {}\nResult: {}", self.0, roll);
         let html = format!(
             "<p><strong>Dice:</strong> {}</p><p><strong>Result</strong>: {}</p>",
             self.0, roll
         );
 
-        Execution::new(plain, html)
+        Execution::new(html)
     }
 }

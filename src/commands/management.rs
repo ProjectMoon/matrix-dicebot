@@ -25,9 +25,7 @@ impl Command for ResyncCommand {
         )
         .await?;
 
-        let plain = "Room information resynced".to_string();
-        let html = "<p>Room information resynced.</p>".to_string();
-
-        Execution::new(plain, html)
+        let message = "Room information resynced.".to_string();
+        Execution::new(message)
     }
 }

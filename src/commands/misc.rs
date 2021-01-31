@@ -17,8 +17,7 @@ impl Command for HelpCommand {
             _ => "There is no help for this topic",
         };
 
-        let plain = format!("Help: {}", help);
-        let html = format!("<p><strong>Help:</strong> {}", help.replace("\n", "<br/>"));
-        Execution::new(plain, html)
+        let html = format!("<strong>Help:</strong> {}", help.replace("\n", "<br/>"));
+        Execution::new(html)
     }
 }

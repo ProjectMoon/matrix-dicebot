@@ -25,9 +25,8 @@ async fn main() -> Result<(), BotError> {
         message_body: &input,
     };
 
-    println!(
-        "{}",
-        command.execute(&context).await.message_plain("fakeuser")
-    );
+    let message = command.execute(&context).await.message_html("fakeuser");
+    let message = html2text::from_read(message.as_bytes(), 80);
+    println!("{}", message.trim());
     Ok(())
 }

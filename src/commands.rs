@@ -23,22 +23,16 @@ pub enum CommandError {
 }
 
 /// A successfully executed command returns a message to be sent back
-/// to the user in both plain text and HTML, one of which will be
-/// displayed in the user's client depending on its capabilities.
+/// to the user in HTML (plain text used as a fallback by message
+/// formatter).
 #[derive(Debug)]
 pub struct Execution {
-    plain: String,
     html: String,
 }
 
 impl Execution {
-    pub fn new(plain: String, html: String) -> CommandResult {
-        Ok(Execution { plain, html })
-    }
-
-    /// Response message in plain text.
-    pub fn plain(&self) -> String {
-        self.plain.clone()
+    pub fn new(html: String) -> CommandResult {
+        Ok(Execution { html })
     }
 
     /// Response message in HTML.
@@ -47,10 +41,9 @@ impl Execution {
     }
 }
 
-/// Wraps a command execution failure. Provides plain-text and HTML
-/// formatting for any error message from the BotError type, similar
-/// to how Response provides formatting for successfully executed
-/// commands.
+/// Wraps a command execution failure. Provides HTML formatting for
+/// any error message from the BotError type, similar to how Execution
+/// provides formatting for successfully executed commands.
 #[derive(Error, Debug)]
 #[error("{0}")]
 pub struct ExecutionError(#[from] BotError);
@@ -62,11 +55,6 @@ impl From<crate::db::errors::DataError> for ExecutionError {
 }
 
 impl ExecutionError {
-    /// Error message in plain text.
-    pub fn plain(&self) -> String {
-        format!("{}", self.0)
-    }
-
     /// Error message in bolded HTML.
     pub fn html(&self) -> String {
         format!("<p><strong>{}</strong></p>", self.0)
@@ -80,29 +68,17 @@ pub type CommandResult = Result<Execution, ExecutionError>;
 /// Extract response messages out of a type, whether it is success or
 /// failure.
 pub trait ResponseExtractor {
-    /// Plain-text representation of the message, directly mentioning
-    /// the username.
-    fn message_plain(&self, username: &str) -> String;
-
     /// HTML representation of the message, directly mentioning the
     /// username.
     fn message_html(&self, username: &str) -> String;
 }
 
 impl ResponseExtractor for CommandResult {
-    /// Error message in plain text.
-    fn message_plain(&self, username: &str) -> String {
-        match self {
-            Ok(resp) => format!("{}\n{}", username, resp.plain()),
-            Err(e) => format!("{}\n{}", username, e.plain()),
-        }
-    }
-
     /// Error message in bolded HTML.
     fn message_html(&self, username: &str) -> String {
         match self {
-            Ok(resp) => format!("<p>{}</p>\n{}", username, resp.html).replace("\n", "<br/>"),
-            Err(e) => format!("<p>{}</p>\n{}", username, e.html()).replace("\n", "<br/>"),
+            Ok(resp) => format!("<p>{}</p><p>{}</p>", username, resp.html).replace("\n", "<br/>"),
+            Err(e) => format!("<p>{}</p><p>{}</p>", username, e.html()).replace("\n", "<br/>"),
         }
     }
 }

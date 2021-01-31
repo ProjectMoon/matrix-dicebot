@@ -3,19 +3,11 @@ use crate::config::*;
 use crate::context::{Context, RoomContext};
 use crate::db::Database;
 use crate::error::BotError;
+use crate::matrix;
 use crate::state::DiceBotState;
 use dirs;
-use log::{error, info};
-use matrix_sdk::Error as MatrixError;
-use matrix_sdk::{
-    self,
-    events::{
-        room::message::{MessageEventContent::Notice, NoticeMessageEventContent},
-        AnyMessageEventContent::RoomMessage,
-    },
-    identifiers::RoomId,
-    Client, ClientConfig, JoinedRoom, SyncSettings,
-};
+use log::info;
+use matrix_sdk::{self, identifiers::RoomId, Client, ClientConfig, JoinedRoom, SyncSettings};
 //use matrix_sdk_common_macros::async_trait;
 use std::clone::Clone;
 use std::path::PathBuf;
@@ -56,15 +48,6 @@ fn create_client(config: &Config) -> Result<Client, BotError> {
     Ok(Client::new_with_config(homeserver_url, client_config)?)
 }
 
-/// Extracts more detailed error messages out of a matrix SDK error.
-fn extract_error_message(error: MatrixError) -> String {
-    use matrix_sdk::Error::RumaResponse;
-    match error {
-        RumaResponse(ruma_error) => ruma_error.to_string(),
-        _ => error.to_string(),
-    }
-}
-
 /// Handle responding to a single command being executed. Wil print
 /// out the full result of that command.
 async fn handle_single_result(
@@ -73,16 +56,8 @@ async fn handle_single_result(
     respond_to: &str,
     room_id: &RoomId,
 ) {
-    let plain = cmd_result.message_plain(respond_to);
     let html = cmd_result.message_html(respond_to);
-
-    let response = RoomMessage(Notice(NoticeMessageEventContent::html(plain, html)));
-
-    let result = client.room_send(&room_id, response, None).await;
-    if let Err(e) = result {
-        let message = extract_error_message(e);
-        error!("Error sending message: {}", message);
-    };
+    matrix::send_message(client, room_id, &html).await;
 }
 
 /// Handle responding to multiple commands being executed. Will print
@@ -106,7 +81,7 @@ async fn handle_multiple_results(
     } else {
         let failures: String = errors
             .iter()
-            .map(|&(cmd, err)| format!("{}: {}", cmd, err))
+            .map(|&(cmd, err)| format!("<strong>{}:</strong> {}", cmd, err))
             .collect::<Vec<_>>()
             .join("\n");
 
@@ -117,18 +92,10 @@ async fn handle_multiple_results(
             errors.len(),
             failures
         )
+        .replace("\n", "<br/>")
     };
 
-    // TODO Need separate code that handles message formatting and
-    // sending so we aren't littering codebase with replace calls.
-    let html = message.replace("\n", "<br/>");
-    let response = RoomMessage(Notice(NoticeMessageEventContent::html(&message, &html)));
-
-    let result = client.room_send(&room_id, response, None).await;
-    if let Err(e) = result {
-        let message = extract_error_message(e);
-        error!("Error sending message: {}", message);
-    };
+    matrix::send_message(client, room_id, &message).await;
 }
 
 impl DiceBot {

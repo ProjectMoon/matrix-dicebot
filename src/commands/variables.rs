@@ -24,12 +24,11 @@ impl Command for GetAllVariablesCommand {
         variable_list.sort();
 
         let value = variable_list.join("\n");
-        let plain = format!("Variables:\n{}", value);
         let html = format!(
-            "<p><strong>Variables:</strong><br/>{}",
+            "<strong>Variables:</strong><br/>{}",
             value.replace("\n", "<br/>")
         );
-        Execution::new(plain, html)
+        Execution::new(html)
     }
 }
 
@@ -52,9 +51,8 @@ impl Command for GetVariableCommand {
             Err(e) => return Err(e.into()),
         };
 
-        let plain = format!("Variable: {}", value);
-        let html = format!("<p><strong>Variable:</strong> {}", value);
-        Execution::new(plain, html)
+        let html = format!("<strong>Variable:</strong> {}", value);
+        Execution::new(html)
     }
 }
 
@@ -74,9 +72,8 @@ impl Command for SetVariableCommand {
         ctx.db.variables.set_user_variable(&key, name, value)?;
 
         let content = format!("{} = {}", name, value);
-        let plain = format!("Set Variable: {}", content);
-        let html = format!("<p><strong>Set Variable:</strong> {}", content);
-        Execution::new(plain, html)
+        let html = format!("<strong>Set Variable:</strong> {}", content);
+        Execution::new(html)
     }
 }
 
@@ -99,8 +96,7 @@ impl Command for DeleteVariableCommand {
             Err(e) => return Err(e.into()),
         };
 
-        let plain = format!("Remove Variable: {}", value);
-        let html = format!("<p><strong>Remove Variable:</strong> {}", value);
-        Execution::new(plain, html)
+        let html = format!("<strong>Remove Variable:</strong> {}", value);
+        Execution::new(html)
     }
 }

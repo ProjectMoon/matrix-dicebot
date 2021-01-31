@@ -15,12 +15,11 @@ impl Command for PoolRollCommand {
         let pool_with_ctx = DicePoolWithContext(&self.0, ctx);
         let rolled_pool = roll_pool(&pool_with_ctx).await?;
 
-        let plain = format!("Pool: {}\nResult: {}", rolled_pool, rolled_pool.roll);
         let html = format!(
             "<p><strong>Pool:</strong> {}</p><p><strong>Result</strong>: {}</p>",
             rolled_pool, rolled_pool.roll
         );
 
-        Execution::new(plain, html)
+        Execution::new(html)
     }
 }
