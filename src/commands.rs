@@ -76,6 +76,11 @@ pub trait ResponseExtractor {
 impl ResponseExtractor for CommandResult {
     /// Error message in bolded HTML.
     fn message_html(&self, username: &str) -> String {
+        //TODO use user display name too
+        let username = format!(
+            "<a href=\"https://matrix.to/#/{}\">{}</a>",
+            username, username
+        );
         match self {
             Ok(resp) => format!("<p>{}</p><p>{}</p>", username, resp.html).replace("\n", "<br/>"),
             Err(e) => format!("<p>{}</p><p>{}</p>", username, e.html()).replace("\n", "<br/>"),
@@ -110,6 +115,15 @@ mod tests {
                 display_name: "displayname",
             }
         };
+    }
+
+    #[test]
+    fn command_result_extractor_creates_bubble() {
+        let result = Execution::new("test".to_string());
+        let message = result.message_html("@myuser:example.com");
+        assert!(message.contains(
+            "<a href=\"https://matrix.to/#/@myuser:example.com\">@myuser:example.com</a>"
+        ));
     }
 
     #[tokio::test]
