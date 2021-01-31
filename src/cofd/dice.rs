@@ -141,10 +141,11 @@ impl RolledDicePool {
 
 impl fmt::Display for RolledDicePool {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let dice_plural = if self.num_dice == 1 { "die" } else { "dice" };
         write!(
             f,
-            "{} dice ({}, exceptional on {} successes)",
-            self.num_dice, self.modifiers.quality, self.modifiers.exceptional_on
+            "{} {} ({}, exceptional on {} successes)",
+            self.num_dice, dice_plural, self.modifiers.quality, self.modifiers.exceptional_on
         )
     }
 }
@@ -654,6 +655,30 @@ mod tests {
     }
 
     //Format tests
+    #[test]
+    fn formats_rolled_dice_pool_single_die() {
+        let pool = DicePool::easy_pool(5, DicePoolQuality::TenAgain);
+        let rolled_pool = RolledDicePool::from(&pool, 1, vec![1]);
+        let message = format!("{}", rolled_pool);
+        assert!(message.starts_with("1 die"));
+    }
+
+    #[test]
+    fn formats_rolled_dice_pool_multiple_dice() {
+        let pool = DicePool::easy_pool(5, DicePoolQuality::TenAgain);
+        let rolled_pool = RolledDicePool::from(&pool, 2, vec![1, 2]);
+        let message = format!("{}", rolled_pool);
+        assert!(message.starts_with("2 dice"));
+    }
+
+    #[test]
+    fn formats_rolled_dice_pool_zero_dice() {
+        let pool = DicePool::easy_pool(5, DicePoolQuality::TenAgain);
+        let rolled_pool = RolledDicePool::from(&pool, 0, vec![]);
+        let message = format!("{}", rolled_pool);
+        assert!(message.starts_with("0 dice"));
+    }
+
     #[test]
     fn formats_dramatic_failure_test() {
         let result = DicePoolRoll {
