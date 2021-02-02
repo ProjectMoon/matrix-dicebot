@@ -46,7 +46,7 @@ impl Execution {
 /// provides formatting for successfully executed commands.
 #[derive(Error, Debug)]
 #[error("{0}")]
-pub struct ExecutionError(#[from] BotError);
+pub struct ExecutionError(#[from] pub BotError);
 
 impl From<crate::db::errors::DataError> for ExecutionError {
     fn from(error: crate::db::errors::DataError) -> Self {

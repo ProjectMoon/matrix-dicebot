@@ -6,15 +6,19 @@ use crate::error::BotError;
 use crate::matrix;
 use crate::state::DiceBotState;
 use dirs;
+use futures::stream::{self, StreamExt};
 use log::info;
 use matrix_sdk::{self, identifiers::RoomId, Client, ClientConfig, JoinedRoom, SyncSettings};
-//use matrix_sdk_common_macros::async_trait;
 use std::clone::Clone;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use url::Url;
 
 pub mod event_handlers;
+
+/// How many commands can be in one message. If the amount is higher
+/// than this, we reject execution.
+const MAX_COMMANDS_PER_MESSAGE: usize = 50;
 
 /// The DiceBot struct represents an active dice bot. The bot is not
 /// connected to Matrix until its run() function is called.
@@ -153,25 +157,34 @@ impl DiceBot {
     }
 
     async fn execute_commands(&self, room: &JoinedRoom, sender_username: &str, msg_body: &str) {
-        let room_name = room.display_name().await.ok().unwrap_or_default();
+        let room_name: &str = &room.display_name().await.ok().unwrap_or_default();
         let room_id = room.room_id().clone();
 
-        let mut results: Vec<(&str, CommandResult)> = Vec::with_capacity(msg_body.lines().count());
+        let commands: Vec<&str> = msg_body
+            .lines()
+            .filter(|line| line.starts_with("!"))
+            .collect();
 
-        let commands = msg_body.trim().lines().filter(|line| line.starts_with("!"));
+        //Up to 50 commands allowed, otherwise we send back an error.
+        let results: Vec<(&str, CommandResult)> = if commands.len() < MAX_COMMANDS_PER_MESSAGE {
+            stream::iter(commands)
+                .then(|command| async move {
+                    let ctx = Context {
+                        db: self.db.clone(),
+                        matrix_client: &self.client,
+                        room: RoomContext::new_with_name(&room, room_name),
+                        username: &sender_username,
+                        message_body: &command,
+                    };
 
-        for command in commands {
-            let ctx = Context {
-                db: self.db.clone(),
-                matrix_client: &self.client,
-                room: RoomContext::new_with_name(&room, &room_name),
-                username: &sender_username,
-                message_body: &command,
-            };
-
-            let cmd_result = execute_command(&ctx).await;
-            results.push((&command, cmd_result));
-        }
+                    let cmd_result = execute_command(&ctx).await;
+                    (command, cmd_result)
+                })
+                .collect()
+                .await
+        } else {
+            vec![("", Err(ExecutionError(BotError::MessageTooLarge)))]
+        };
 
         if results.len() >= 1 {
             if results.len() == 1 {

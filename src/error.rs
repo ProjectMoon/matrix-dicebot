@@ -69,6 +69,9 @@ pub enum BotError {
 
     #[error("database error")]
     DatabaseErrror(#[from] sled::Error),
+
+    #[error("too many commands or message was too large")]
+    MessageTooLarge,
 }
 
 #[derive(Error, Debug)]
