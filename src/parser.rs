@@ -2,10 +2,8 @@ use combine::parser::char::{digit, letter, spaces};
 use combine::{many, many1, one_of, Parser};
 use thiserror::Error;
 
-//******************************
-//New hotness
-//******************************
-#[derive(Debug, Clone, Copy, PartialEq, Error)]
+/// Errors for dice parsing.
+#[derive(Debug, Clone, PartialEq, Copy, Error)]
 pub enum DiceParsingError {
     #[error("invalid amount")]
     InvalidAmount,
@@ -18,8 +16,21 @@ pub enum DiceParsingError {
 
     #[error("{0}")]
     InternalParseError(#[from] combine::error::StringStreamError),
+
+    #[error("number conversion error")]
+    ConversionError,
 }
 
+impl From<std::num::ParseIntError> for DiceParsingError {
+    fn from(_error: std::num::ParseIntError) -> Self {
+        DiceParsingError::ConversionError
+    }
+}
+
+type ParseResult<T> = Result<T, DiceParsingError>;
+
+/// A parsed operator for a number. Whether to add or remove it from
+/// the total amount of dice rolled.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Operator {
     Plus,
@@ -27,6 +38,8 @@ pub enum Operator {
 }
 
 impl Operator {
+    /// Calculate multiplier for how to convert the number. Returns 1
+    /// for positive, and -1 for negative.
     pub fn mult(&self) -> i32 {
         match self {
             Operator::Plus => 1,
@@ -35,16 +48,78 @@ impl Operator {
     }
 }
 
+/// One part of the dice amount in an expression. Can be a number or a
+/// variable name.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Element {
+    /// This element in the expression is a variable, which will be
+    /// resolved to a number by consulting the dtaabase.
     Variable(String),
+
+    /// This element is a simple number, and will be added or
+    /// subtracted from the total dice amount depending on its
+    /// corresponding Operator.
     Number(i32),
 }
 
+/// One part of the parsed dice rolling expression. Combines an
+/// operator and an element into one struct. Examples of Amounts would
+/// be "+4" or "- myvariable", which translate to Operator::Plus and
+/// Element::Number(4), and Operator::Minus and
+/// Element::Variable("myvariable"), respectively.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Amount {
     pub operator: Operator,
     pub element: Element,
+}
+
+/// Converts "+" or" -" into an Operator. No sign at all is an implied
+/// Plus. Part of the parser.
+fn map_operator(sign: char) -> Operator {
+    match sign {
+        '+' => Operator::Plus,
+        '-' => Operator::Minus,
+        _ => Operator::Plus,
+    }
+}
+
+/// Attempt to convert the text at the start of the expression,
+/// extracted by the Combine parser, into an Amount instance. Part of
+/// the parser.
+fn map_first_amount(value: String) -> ParseResult<Amount> {
+    if value.chars().all(char::is_numeric) {
+        let num = value.parse::<i32>()?;
+        Ok(Amount {
+            operator: Operator::Plus,
+            element: Element::Number(num),
+        })
+    } else {
+        Ok(Amount {
+            operator: Operator::Plus,
+            element: Element::Variable(value),
+        })
+    }
+}
+
+/// Attempt to convert some text in the middle or end of the string,
+/// extracted by the Combine parser, into an Element. Part of the
+/// parser.
+fn map_element(value: String) -> ParseResult<Element> {
+    if value.chars().all(char::is_numeric) {
+        let num = value.parse::<i32>()?;
+        Ok(Element::Number(num))
+    } else {
+        Ok(Element::Variable(value))
+    }
+}
+
+/// Collect an Operator and Element into an Amount, but only if the
+/// Element was successfully parsed. Part of the parser.
+fn map_amount((operator, element_result): (Operator, ParseResult<Element>)) -> ParseResult<Amount> {
+    match element_result {
+        Ok(element) => Ok(Amount { operator, element }),
+        Err(e) => Err(e),
+    }
 }
 
 /// Parse an expression of numbers and/or variables into elements
@@ -57,55 +132,36 @@ pub struct Amount {
 /// utilzing this function should layer their own checks on top of
 /// this; perhaps they do not want more than one expression, or some
 /// other rules.
-pub fn parse_amounts(input: &str) -> Result<Vec<Amount>, DiceParsingError> {
+pub fn parse_amounts(input: &str) -> ParseResult<Vec<Amount>> {
     let input = input.trim();
 
-    let plus_or_minus = one_of("+-".chars());
-    let maybe_sign = plus_or_minus.map(|sign: char| match sign {
-        '+' => Operator::Plus,
-        '-' => Operator::Minus,
-        _ => Operator::Plus,
-    });
-
-    //TODO make this a macro or something
-    let first = many1(letter())
+    // Single sub-parser for the first amount expression, because it's
+    // easier. Wraps into ParseResult.
+    let first_amount = many1(letter())
         .or(many1(digit()))
         .skip(spaces().silent()) //Consume any space after first amount
-        .map(|value: String| match value.parse::<i32>() {
-            Ok(num) => Amount {
-                operator: Operator::Plus,
-                element: Element::Number(num),
-            },
-            _ => Amount {
-                operator: Operator::Plus,
-                element: Element::Variable(value),
-            },
-        });
+        .map(map_first_amount);
 
-    let variable_or_number =
-        many1(letter())
-            .or(many1(digit()))
-            .map(|value: String| match value.parse::<i32>() {
-                Ok(num) => Element::Number(num),
-                _ => Element::Variable(value),
-            });
+    // All of this, down to amount_parser, will convert expressions
+    // after the first into Amounts (wrapped in a ParseResult).
+    let plus_or_minus = one_of("+-".chars());
+    let maybe_sign = plus_or_minus.map(map_operator);
 
-    let sign_and_word = maybe_sign
+    let variable_or_number = many1(letter()).or(many1(digit())).map(map_element);
+
+    let element_parser = maybe_sign
         .skip(spaces().silent())
         .and(variable_or_number)
-        .skip(spaces().silent())
-        .map(|parsed: (Operator, Element)| Amount {
-            operator: parsed.0,
-            element: parsed.1,
-        });
+        .skip(spaces().silent());
 
-    let rest = many(sign_and_word).map(|expr: Vec<_>| expr);
+    let amount_parser = element_parser.map(map_amount);
+    let remaining_amounts = many(amount_parser).map(|amounts: Vec<ParseResult<Amount>>| amounts);
 
-    let mut parser = first.and(rest);
+    let mut parser = first_amount.and(remaining_amounts);
 
-    //Maps the found expression into a Vec of Amount instances,
-    //tacking the first one on.
-    type ParsedAmountExpr = (Amount, Vec<Amount>);
+    // Collapses first amount + remaining amounts into a single Vec,
+    // while collecting extraneous input.
+    type ParsedAmountExpr = (ParseResult<Amount>, Vec<ParseResult<Amount>>);
     let (results, rest) = parser
         .parse(input)
         .map(|mut results: (ParsedAmountExpr, &str)| {
@@ -115,7 +171,8 @@ pub fn parse_amounts(input: &str) -> Result<Vec<Amount>, DiceParsingError> {
         })?;
 
     if rest.len() == 0 {
-        Ok(results)
+        // Any ParseResult errors will short-circuit the collect.
+        results.into_iter().collect()
     } else {
         Err(DiceParsingError::UnconsumedInput)
     }
@@ -147,6 +204,15 @@ mod tests {
                 element: Element::Number(10)
             }]
         );
+    }
+
+    #[test]
+    fn parsing_huge_number_should_error() {
+        // A number outside the bounds of i32 should not be a valid
+        // parse.
+        let result = parse_amounts("159875294375198734982379875392");
+        assert!(result.is_err());
+        assert!(result.unwrap_err() == DiceParsingError::ConversionError);
     }
 
     #[test]
