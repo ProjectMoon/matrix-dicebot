@@ -19,7 +19,7 @@ ADD . ./
 RUN cargo build --release
 
 # Final image
-FROM bougyman/voidlinux:glibc
+FROM bougyman/voidlinux:glibc-tiny
 RUN xbps-install -Sy ca-certificates libstdc++
 COPY --from=builder \
     /root/src/target/release/dicebot \
