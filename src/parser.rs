@@ -19,7 +19,7 @@ pub enum DiceParsingError {
     #[error("{0}")]
     InternalParseError(#[from] combine::error::StringStreamError),
 
-    #[error("number conversion error")]
+    #[error("number parsing error (too large?)")]
     ConversionError,
 }
 

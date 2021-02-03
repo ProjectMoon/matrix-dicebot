@@ -68,7 +68,7 @@ pub enum BotError {
     VariablesNotSupported,
 
     #[error("database error")]
-    DatabaseErrror(#[from] sled::Error),
+    DatabaseError(#[from] sled::Error),
 
     #[error("too many commands or message was too large")]
     MessageTooLarge,
