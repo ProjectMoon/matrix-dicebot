@@ -1,4 +1,6 @@
+use combine::error::ParseError;
 use combine::parser::char::{digit, letter, spaces};
+use combine::stream::Stream;
 use combine::{many, many1, one_of, Parser};
 use thiserror::Error;
 
@@ -73,53 +75,71 @@ pub struct Amount {
     pub element: Element,
 }
 
-/// Converts "+" or" -" into an Operator. No sign at all is an implied
-/// Plus. Part of the parser.
-fn map_operator(sign: char) -> Operator {
-    match sign {
+/// Parser that attempt to convert the text at the start of the dice
+/// parsing into an Amount instance.
+fn first_amount_parser<Input>() -> impl Parser<Input, Output = ParseResult<Amount>>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    let map_first_amount = |value: String| {
+        if value.chars().all(char::is_numeric) {
+            let num = value.parse::<i32>()?;
+            Ok(Amount {
+                operator: Operator::Plus,
+                element: Element::Number(num),
+            })
+        } else {
+            Ok(Amount {
+                operator: Operator::Plus,
+                element: Element::Variable(value),
+            })
+        }
+    };
+
+    many1(letter())
+        .or(many1(digit()))
+        .skip(spaces().silent()) //Consume any space after first amount
+        .map(map_first_amount)
+}
+
+/// Attempt to convert some text in the middle or end of the dice roll
+/// string into an Amount.
+fn amount_parser<Input>() -> impl Parser<Input, Output = ParseResult<Amount>>
+where
+    Input: Stream<Token = char>,
+    Input::Error: ParseError<Input::Token, Input::Range, Input::Position>,
+{
+    let plus_or_minus = one_of("+-".chars());
+    let parse_operator = plus_or_minus.map(|sign: char| match sign {
         '+' => Operator::Plus,
         '-' => Operator::Minus,
         _ => Operator::Plus,
-    }
-}
+    });
 
-/// Attempt to convert the text at the start of the expression,
-/// extracted by the Combine parser, into an Amount instance. Part of
-/// the parser.
-fn map_first_amount(value: String) -> ParseResult<Amount> {
-    if value.chars().all(char::is_numeric) {
-        let num = value.parse::<i32>()?;
-        Ok(Amount {
-            operator: Operator::Plus,
-            element: Element::Number(num),
-        })
-    } else {
-        Ok(Amount {
-            operator: Operator::Plus,
-            element: Element::Variable(value),
-        })
-    }
-}
+    // Element must either be a proper i32, or a variable name.
+    let map_element = |value: String| -> ParseResult<Element> {
+        if value.chars().all(char::is_numeric) {
+            let num = value.parse::<i32>()?;
+            Ok(Element::Number(num))
+        } else {
+            Ok(Element::Variable(value))
+        }
+    };
 
-/// Attempt to convert some text in the middle or end of the string,
-/// extracted by the Combine parser, into an Element. Part of the
-/// parser.
-fn map_element(value: String) -> ParseResult<Element> {
-    if value.chars().all(char::is_numeric) {
-        let num = value.parse::<i32>()?;
-        Ok(Element::Number(num))
-    } else {
-        Ok(Element::Variable(value))
-    }
-}
+    let parse_element = many1(letter()).or(many1(digit())).map(map_element);
 
-/// Collect an Operator and Element into an Amount, but only if the
-/// Element was successfully parsed. Part of the parser.
-fn map_amount((operator, element_result): (Operator, ParseResult<Element>)) -> ParseResult<Amount> {
-    match element_result {
+    let element_parser = parse_operator
+        .skip(spaces().silent())
+        .and(parse_element)
+        .skip(spaces().silent());
+
+    let convert_to_amount = |(operator, element_result)| match element_result {
         Ok(element) => Ok(Amount { operator, element }),
         Err(e) => Err(e),
-    }
+    };
+
+    element_parser.map(convert_to_amount)
 }
 
 /// Parse an expression of numbers and/or variables into elements
@@ -135,29 +155,8 @@ fn map_amount((operator, element_result): (Operator, ParseResult<Element>)) -> P
 pub fn parse_amounts(input: &str) -> ParseResult<Vec<Amount>> {
     let input = input.trim();
 
-    // Single sub-parser for the first amount expression, because it's
-    // easier. Wraps into ParseResult.
-    let first_amount = many1(letter())
-        .or(many1(digit()))
-        .skip(spaces().silent()) //Consume any space after first amount
-        .map(map_first_amount);
-
-    // All of this, down to amount_parser, will convert expressions
-    // after the first into Amounts (wrapped in a ParseResult).
-    let plus_or_minus = one_of("+-".chars());
-    let maybe_sign = plus_or_minus.map(map_operator);
-
-    let variable_or_number = many1(letter()).or(many1(digit())).map(map_element);
-
-    let element_parser = maybe_sign
-        .skip(spaces().silent())
-        .and(variable_or_number)
-        .skip(spaces().silent());
-
-    let amount_parser = element_parser.map(map_amount);
-    let remaining_amounts = many(amount_parser).map(|amounts: Vec<ParseResult<Amount>>| amounts);
-
-    let mut parser = first_amount.and(remaining_amounts);
+    let remaining_amounts = many(amount_parser()).map(|amounts: Vec<ParseResult<Amount>>| amounts);
+    let mut parser = first_amount_parser().and(remaining_amounts);
 
     // Collapses first amount + remaining amounts into a single Vec,
     // while collecting extraneous input.
