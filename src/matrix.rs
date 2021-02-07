@@ -8,9 +8,12 @@ use matrix_sdk::{identifiers::RoomId, Client};
 
 /// Extracts more detailed error messages out of a matrix SDK error.
 fn extract_error_message(error: MatrixError) -> String {
-    use matrix_sdk::Error::RumaResponse;
+    use matrix_sdk::{Error::Http, HttpError};
     match error {
-        RumaResponse(ruma_error) => ruma_error.to_string(),
+        Http(http_err) => match http_err {
+            HttpError::FromHttpResponse(ruma_err) => ruma_err.to_string(),
+            _ => http_err.to_string(),
+        },
         _ => error.to_string(),
     }
 }
