@@ -1,4 +1,4 @@
-use crate::commands::{execute_command, CommandResult, ExecutionError, ResponseExtractor};
+use crate::commands::{execute_command, ExecutionError, ExecutionResult, ResponseExtractor};
 use crate::config::*;
 use crate::context::{Context, RoomContext};
 use crate::db::Database;
@@ -56,7 +56,7 @@ fn create_client(config: &Config) -> Result<Client, BotError> {
 /// out the full result of that command.
 async fn handle_single_result(
     client: &Client,
-    cmd_result: &CommandResult,
+    cmd_result: &ExecutionResult,
     respond_to: &str,
     room_id: &RoomId,
 ) {
@@ -68,7 +68,7 @@ async fn handle_single_result(
 /// out how many commands succeeded and failed (if any failed).
 async fn handle_multiple_results(
     client: &Client,
-    results: &[(&str, CommandResult)],
+    results: &[(&str, ExecutionResult)],
     respond_to: &str,
     room_id: &RoomId,
 ) {
@@ -186,7 +186,7 @@ impl DiceBot {
             .collect();
 
         //Up to 50 commands allowed, otherwise we send back an error.
-        let results: Vec<(&str, CommandResult)> = if commands.len() < MAX_COMMANDS_PER_MESSAGE {
+        let results: Vec<(&str, ExecutionResult)> = if commands.len() < MAX_COMMANDS_PER_MESSAGE {
             stream::iter(commands)
                 .then(|command| async move {
                     let ctx = Context {

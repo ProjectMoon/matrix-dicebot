@@ -1,4 +1,4 @@
-use super::{Command, CommandResult, Execution};
+use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
 use crate::logic::record_room_information;
 use async_trait::async_trait;
@@ -12,7 +12,7 @@ impl Command for ResyncCommand {
         "resync room information"
     }
 
-    async fn execute(&self, ctx: &Context<'_>) -> CommandResult {
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let our_username: Option<UserId> = ctx.matrix_client.user_id().await;
         let our_username: &str = our_username.as_ref().map_or("", UserId::as_str);
 
@@ -26,6 +26,6 @@ impl Command for ResyncCommand {
         .await?;
 
         let message = "Room information resynced.".to_string();
-        Execution::new(message)
+        Execution::success(message)
     }
 }

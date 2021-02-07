@@ -1,4 +1,4 @@
-use super::{Command, CommandResult, Execution};
+use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
 use crate::db::errors::DataError;
 use crate::db::variables::UserAndRoom;
@@ -12,7 +12,7 @@ impl Command for GetAllVariablesCommand {
         "get all variables"
     }
 
-    async fn execute(&self, ctx: &Context<'_>) -> CommandResult {
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let key = UserAndRoom(&ctx.username, &ctx.room.id.as_str());
         let variables = ctx.db.variables.get_user_variables(&key)?;
 
@@ -28,7 +28,8 @@ impl Command for GetAllVariablesCommand {
             "<strong>Variables:</strong><br/>{}",
             value.replace("\n", "<br/>")
         );
-        Execution::new(html)
+
+        Execution::success(html)
     }
 }
 
@@ -40,7 +41,7 @@ impl Command for GetVariableCommand {
         "retrieve variable value"
     }
 
-    async fn execute(&self, ctx: &Context<'_>) -> CommandResult {
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let name = &self.0;
         let key = UserAndRoom(&ctx.username, &ctx.room.id.as_str());
         let result = ctx.db.variables.get_user_variable(&key, name);
@@ -52,7 +53,7 @@ impl Command for GetVariableCommand {
         };
 
         let html = format!("<strong>Variable:</strong> {}", value);
-        Execution::new(html)
+        Execution::success(html)
     }
 }
 
@@ -64,7 +65,7 @@ impl Command for SetVariableCommand {
         "set variable value"
     }
 
-    async fn execute(&self, ctx: &Context<'_>) -> CommandResult {
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let name = &self.0;
         let value = self.1;
         let key = UserAndRoom(&ctx.username, ctx.room.id.as_str());
@@ -73,7 +74,7 @@ impl Command for SetVariableCommand {
 
         let content = format!("{} = {}", name, value);
         let html = format!("<strong>Set Variable:</strong> {}", content);
-        Execution::new(html)
+        Execution::success(html)
     }
 }
 
@@ -85,7 +86,7 @@ impl Command for DeleteVariableCommand {
         "delete variable"
     }
 
-    async fn execute(&self, ctx: &Context<'_>) -> CommandResult {
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let name = &self.0;
         let key = UserAndRoom(&ctx.username, ctx.room.id.as_str());
         let result = ctx.db.variables.delete_user_variable(&key, name);
@@ -97,6 +98,6 @@ impl Command for DeleteVariableCommand {
         };
 
         let html = format!("<strong>Remove Variable:</strong> {}", value);
-        Execution::new(html)
+        Execution::success(html)
     }
 }

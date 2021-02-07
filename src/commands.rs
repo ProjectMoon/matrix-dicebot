@@ -31,7 +31,7 @@ pub struct Execution {
 }
 
 impl Execution {
-    pub fn new(html: String) -> CommandResult {
+    pub fn success(html: String) -> ExecutionResult {
         Ok(Execution { html })
     }
 
@@ -63,7 +63,7 @@ impl ExecutionError {
 
 /// Wraps either a successful command execution response, or an error
 /// that occurred.
-pub type CommandResult = Result<Execution, ExecutionError>;
+pub type ExecutionResult = Result<Execution, ExecutionError>;
 
 /// Extract response messages out of a type, whether it is success or
 /// failure.
@@ -73,7 +73,7 @@ pub trait ResponseExtractor {
     fn message_html(&self, username: &str) -> String;
 }
 
-impl ResponseExtractor for CommandResult {
+impl ResponseExtractor for ExecutionResult {
     /// Error message in bolded HTML.
     fn message_html(&self, username: &str) -> String {
         //TODO use user display name too
@@ -91,7 +91,7 @@ impl ResponseExtractor for CommandResult {
 /// The trait that any command that can be executed must implement.
 #[async_trait]
 pub trait Command: Send + Sync {
-    async fn execute(&self, ctx: &Context<'_>) -> CommandResult;
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult;
     fn name(&self) -> &'static str;
 }
 
@@ -99,7 +99,7 @@ pub trait Command: Send + Sync {
 /// go back to Matrix, if the command was executed (successfully or
 /// not). If a command is determined to be ignored, this function will
 /// return None, signifying that we should not send a response.
-pub async fn execute_command(ctx: &Context<'_>) -> CommandResult {
+pub async fn execute_command(ctx: &Context<'_>) -> ExecutionResult {
     let cmd = parser::parse_command(&ctx.message_body)?;
     cmd.execute(ctx).await
 }
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn command_result_extractor_creates_bubble() {
-        let result = Execution::new("test".to_string());
+        let result = Execution::success("test".to_string());
         let message = result.message_html("@myuser:example.com");
         assert!(message.contains(
             "<a href=\"https://matrix.to/#/@myuser:example.com\">@myuser:example.com</a>"
