@@ -29,8 +29,11 @@ pub enum DataError {
     #[error("unexpected or corruptd data bytes")]
     InvalidValue,
 
+    #[error("expected string ref, but utf8 schema was violated: {0}")]
+    Utf8RefSchemaViolation(#[from] std::str::Utf8Error),
+
     #[error("expected string, but utf8 schema was violated: {0}")]
-    Utf8chemaViolation(#[from] std::str::Utf8Error),
+    Utf8SchemaViolation(#[from] std::string::FromUtf8Error),
 
     #[error("internal database error: {0}")]
     InternalError(#[from] sled::Error),

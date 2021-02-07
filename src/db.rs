@@ -1,6 +1,7 @@
 use crate::db::errors::{DataError, MigrationError};
 use crate::db::migrations::{get_migration_version, Migrations};
 use crate::db::rooms::Rooms;
+use crate::db::state::DbState;
 use crate::db::variables::Variables;
 use log::info;
 use sled::{Config, Db};
@@ -11,6 +12,7 @@ pub mod errors;
 pub mod migrations;
 pub mod rooms;
 pub mod schema;
+pub mod state;
 pub mod variables;
 
 #[derive(Clone)]
@@ -19,6 +21,7 @@ pub struct Database {
     pub(crate) variables: Variables,
     pub(crate) migrations: Migrations,
     pub(crate) rooms: Rooms,
+    pub(crate) state: DbState,
 }
 
 impl Database {
@@ -30,6 +33,7 @@ impl Database {
             variables: Variables::new(&db)?,
             migrations: Migrations(migrations),
             rooms: Rooms::new(&db)?,
+            state: DbState::new(&db)?,
         };
 
         //Start any event handlers.

@@ -12,6 +12,9 @@ pub enum BotError {
     #[error("the sync token could not be retrieved")]
     SyncTokenRequired,
 
+    #[error("could not retrieve device id")]
+    NoDeviceIdFound,
+
     #[error("command error: {0}")]
     CommandError(#[from] CommandError),
 
