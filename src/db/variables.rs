@@ -21,7 +21,7 @@ pub struct Variables {
     pub(in crate::db) room_user_variable_count: Tree,
 }
 
-/// Request soemthing by a username and room ID.
+/// Request something by a username and room ID.
 pub struct UserAndRoom<'a>(pub &'a str, pub &'a str);
 
 fn to_vec(value: &UserAndRoom<'_>) -> Vec<u8> {
@@ -83,7 +83,7 @@ impl Variables {
         prefix.push(0xff);
         let prefix_len: usize = prefix.len();
 
-        let variables: Result<Vec<_>, DataError> = self
+        let variables: Result<Vec<(String, i32)>, DataError> = self
             .room_user_variables
             .scan_prefix(prefix)
             .map(|entry| match entry {
@@ -96,7 +96,8 @@ impl Variables {
             })
             .collect();
 
-        //Convert I32 to hash map. collect() inferred via return type.
+        // Convert tuples to hash map with collect(), inferred via
+        // return type.
         variables.map(|entries| entries.into_iter().collect())
     }
 
@@ -168,8 +169,7 @@ impl Variables {
                 key.push(0xff);
                 key.extend_from_slice(variable_name.as_bytes());
 
-                //TODO why does tx.remove require moving the key?
-                if let Some(_) = tx_vars.remove(key.clone())? {
+                if let Some(_) = tx_vars.remove(key)? {
                     if let Err(e) = alter_room_variable_count(&tx_counts, user_and_room, -1) {
                         return abort(e);
                     }
