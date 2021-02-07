@@ -83,18 +83,17 @@ async fn handle_multiple_results(
     let message = if errors.len() == 0 {
         format!("{}: Executed {} commands", respond_to, results.len())
     } else {
-        let failures: String = errors
+        let failures: Vec<String> = errors
             .iter()
             .map(|&(cmd, err)| format!("<strong>{}:</strong> {}", cmd, err))
-            .collect::<Vec<_>>()
-            .join("\n");
+            .collect();
 
         format!(
             "{}: Executed {} commands ({} failed)\n\nFailures:\n{}",
             respond_to,
             results.len(),
             errors.len(),
-            failures
+            failures.join("\n")
         )
         .replace("\n", "<br/>")
     };
