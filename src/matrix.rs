@@ -1,40 +1,38 @@
 use log::error;
-use matrix_sdk::events::{
-    room::message::{MessageEventContent::Notice, NoticeMessageEventContent},
-    AnyMessageEventContent::RoomMessage,
-};
 use matrix_sdk::Error as MatrixError;
+use matrix_sdk::{
+    events::{
+        room::message::{MessageEventContent::Notice, NoticeMessageEventContent},
+        AnyMessageEventContent::RoomMessage,
+    },
+    RoomMember,
+};
 use matrix_sdk::{identifiers::RoomId, Client};
 
 /// Extracts more detailed error messages out of a matrix SDK error.
 fn extract_error_message(error: MatrixError) -> String {
     use matrix_sdk::{Error::Http, HttpError};
-    match error {
-        Http(http_err) => match http_err {
-            HttpError::FromHttpResponse(ruma_err) => ruma_err.to_string(),
-            _ => http_err.to_string(),
-        },
-        _ => error.to_string(),
+    if let Http(HttpError::FromHttpResponse(ruma_err)) = error {
+        ruma_err.to_string()
+    } else {
+        error.to_string()
     }
 }
 
 /// Retrieve a list of users in a given room.
 pub async fn get_users_in_room(client: &Client, room_id: &RoomId) -> Vec<String> {
     if let Some(joined_room) = client.get_joined_room(room_id) {
-        joined_room
-            .joined_members()
-            .await
-            .ok()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|member| {
-                format!(
-                    "@{}:{}",
-                    member.user_id().localpart(),
-                    member.user_id().server_name()
-                )
-            })
-            .collect()
+        let members: Vec<RoomMember> = joined_room.joined_members().await.ok().unwrap_or_default();
+
+        let to_username = |member: RoomMember| {
+            format!(
+                "@{}:{}",
+                member.user_id().localpart(),
+                member.user_id().server_name()
+            )
+        };
+
+        members.into_iter().map(to_username).collect()
     } else {
         vec![]
     }
