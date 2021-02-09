@@ -236,7 +236,7 @@ struct RngDieRoller<R: rand::Rng>(R);
 
 impl<R: rand::Rng> DieRoller for RngDieRoller<R> {
     fn roll_number(&mut self, sides: i32) -> i32 {
-        self.0.gen_range(1, sides + 1)
+        self.0.gen_range(1..=sides)
     }
 }
 

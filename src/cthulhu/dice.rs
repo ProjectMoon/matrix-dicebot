@@ -230,7 +230,7 @@ struct RngDieRoller<R: rand::Rng>(R);
 
 impl<R: rand::Rng> DieRoller for RngDieRoller<R> {
     fn roll(&mut self) -> u32 {
-        self.0.gen_range(0, 10)
+        self.0.gen_range(0..=9)
     }
 }
 

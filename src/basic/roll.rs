@@ -54,7 +54,7 @@ impl Roll for dice::Dice {
     fn roll(&self) -> DiceRoll {
         let mut rng = rand::thread_rng();
         let rolls: Vec<_> = (0..self.count)
-            .map(|_| rng.gen_range(1, self.sides + 1))
+            .map(|_| rng.gen_range(1..=self.sides))
             .collect();
 
         DiceRoll(rolls)
