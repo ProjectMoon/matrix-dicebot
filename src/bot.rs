@@ -157,6 +157,7 @@ impl DiceBot {
         // Initial sync without event handler prevents responding to
         // messages received while bot was offline. TODO: selectively
         // respond to old messages? e.g. comands missed while offline.
+        info!("Performing intial sync (no commands will be responded to)");
         self.client.sync_once(SyncSettings::default()).await?;
 
         client.add_event_emitter(Box::new(self)).await;
