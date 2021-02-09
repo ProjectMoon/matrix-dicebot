@@ -1,5 +1,9 @@
 use log::error;
-use matrix_sdk::Error as MatrixError;
+use matrix_sdk::{
+    events::room::message::{InReplyTo, Relation},
+    identifiers::EventId,
+    Error as MatrixError,
+};
 use matrix_sdk::{
     events::{
         room::message::{MessageEventContent::Notice, NoticeMessageEventContent},
@@ -38,12 +42,20 @@ pub async fn get_users_in_room(client: &Client, room_id: &RoomId) -> Vec<String>
     }
 }
 
-pub async fn send_message(client: &Client, room_id: &RoomId, message: &str) {
+pub async fn send_message(
+    client: &Client,
+    room_id: &RoomId,
+    message: &str,
+    reply_to: Option<EventId>,
+) {
     let plain = html2text::from_read(message.as_bytes(), message.len());
-    let response = RoomMessage(Notice(NoticeMessageEventContent::html(
-        plain.trim(),
-        message,
-    )));
+    let mut content = NoticeMessageEventContent::html(plain.trim(), message);
+
+    content.relates_to = reply_to.map(|event_id| Relation::Reply {
+        in_reply_to: InReplyTo { event_id },
+    });
+
+    let response = RoomMessage(Notice(content));
 
     let result = client.room_send(&room_id, response, None).await;
     if let Err(e) = result {

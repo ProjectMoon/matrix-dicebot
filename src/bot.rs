@@ -8,7 +8,11 @@ use crate::state::DiceBotState;
 use dirs;
 use futures::stream::{self, StreamExt};
 use log::info;
-use matrix_sdk::{self, identifiers::RoomId, Client, ClientConfig, JoinedRoom, SyncSettings};
+use matrix_sdk::{
+    self,
+    identifiers::{EventId, RoomId},
+    Client, ClientConfig, JoinedRoom, SyncSettings,
+};
 use std::clone::Clone;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -59,9 +63,10 @@ async fn handle_single_result(
     cmd_result: &ExecutionResult,
     respond_to: &str,
     room_id: &RoomId,
+    event_id: EventId,
 ) {
     let html = cmd_result.message_html(respond_to);
-    matrix::send_message(client, room_id, &html).await;
+    matrix::send_message(client, room_id, &html, Some(event_id)).await;
 }
 
 /// Handle responding to multiple commands being executed. Will print
@@ -98,7 +103,7 @@ async fn handle_multiple_results(
         .replace("\n", "<br/>")
     };
 
-    matrix::send_message(client, room_id, &message).await;
+    matrix::send_message(client, room_id, &message, None).await;
 }
 
 impl DiceBot {
@@ -176,7 +181,13 @@ impl DiceBot {
         Ok(())
     }
 
-    async fn execute_commands(&self, room: &JoinedRoom, sender_username: &str, msg_body: &str) {
+    async fn execute_commands(
+        &self,
+        room: &JoinedRoom,
+        sender_username: &str,
+        msg_body: &str,
+        event_id: EventId,
+    ) {
         let room_name: &str = &room.display_name().await.ok().unwrap_or_default();
         let room_id = room.room_id().clone();
 
@@ -208,7 +219,14 @@ impl DiceBot {
 
         if results.len() >= 1 {
             if results.len() == 1 {
-                handle_single_result(&self.client, &results[0].1, sender_username, &room_id).await;
+                handle_single_result(
+                    &self.client,
+                    &results[0].1,
+                    sender_username,
+                    &room_id,
+                    event_id,
+                )
+                .await;
             } else if results.len() > 1 {
                 handle_multiple_results(&self.client, &results, sender_username, &room_id).await;
             }

@@ -211,7 +211,7 @@ impl EventEmitter for DiceBot {
                 return;
             };
 
-            self.execute_commands(&room, &sender_username, &msg_body)
+            self.execute_commands(&room, &sender_username, &msg_body, event.event_id.clone())
                 .await;
         }
     }
