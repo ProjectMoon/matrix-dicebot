@@ -27,7 +27,7 @@ fn check_message_age(
     oldest_message_age: u64,
 ) -> bool {
     let sending_time = event.origin_server_ts;
-    let oldest_timestamp = SystemTime::now().sub(Duration::new(oldest_message_age, 0));
+    let oldest_timestamp = SystemTime::now().sub(Duration::from_secs(oldest_message_age));
 
     if sending_time > oldest_timestamp {
         true
