@@ -28,15 +28,10 @@ pub async fn get_users_in_room(client: &Client, room_id: &RoomId) -> Vec<String>
     if let Some(joined_room) = client.get_joined_room(room_id) {
         let members: Vec<RoomMember> = joined_room.joined_members().await.ok().unwrap_or_default();
 
-        let to_username = |member: RoomMember| {
-            format!(
-                "@{}:{}",
-                member.user_id().localpart(),
-                member.user_id().server_name()
-            )
-        };
-
-        members.into_iter().map(to_username).collect()
+        members
+            .into_iter()
+            .map(|member| member.user_id().to_string())
+            .collect()
     } else {
         vec![]
     }
