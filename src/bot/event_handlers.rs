@@ -8,11 +8,12 @@ use matrix_sdk::{
     self,
     events::{
         room::member::{MemberEventContent, MembershipChange},
-        room::message::{MessageEventContent, TextMessageEventContent},
+        room::message::{MessageEventContent, MessageType, TextMessageEventContent},
         StrippedStateEvent, SyncMessageEvent, SyncStateEvent,
     },
     identifiers::RoomId,
-    EventEmitter, RoomState,
+    room::{Common, Invited, Joined},
+    EventHandler, Room,
 };
 use std::clone::Clone;
 use std::ops::Sub;
@@ -65,7 +66,11 @@ async fn should_process_message<'a>(
     }
 
     let (msg_body, sender_username) = if let SyncMessageEvent {
-        content: MessageEventContent::Text(TextMessageEventContent { body, .. }),
+        content:
+            MessageEventContent {
+                msgtype: MessageType::Text(TextMessageEventContent { body, .. }),
+                ..
+            },
         sender,
         ..
     } = event
@@ -93,30 +98,14 @@ fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
         })
 }
 
-/// Convert room state object to the room ID and display name, if
-/// possible. We only care about the room if it is a joined or left
-/// room.
-async fn convert_room_state(state: &RoomState) -> Option<(&RoomId, String)> {
-    match state {
-        RoomState::Joined(room) => Some((
-            room.room_id(),
-            room.display_name().await.ok().unwrap_or_default(),
-        )),
-        RoomState::Left(room) => Some((
-            room.room_id(),
-            room.display_name().await.ok().unwrap_or_default(),
-        )),
-        _ => None,
-    }
-}
-
 /// This event emitter listens for messages with dice rolling commands.
 /// Originally adapted from the matrix-rust-sdk examples.
 #[async_trait]
-impl EventEmitter for DiceBot {
-    async fn on_room_member(&self, state: RoomState, event: &SyncStateEvent<MemberEventContent>) {
-        let (room_id, room_display_name) = match convert_room_state(&state).await {
-            Some((room_id, room_display_name)) => (room_id, room_display_name),
+impl EventHandler for DiceBot {
+    async fn on_room_member(&self, room: Room, event: &SyncStateEvent<MemberEventContent>) {
+        let room = Common::new(self.client.clone(), room);
+        let (room_id, room_display_name) = match room.display_name().await {
+            Ok(display_name) => (room.room_id(), display_name),
             _ => return,
         };
 
@@ -173,46 +162,54 @@ impl EventEmitter for DiceBot {
 
     async fn on_stripped_state_member(
         &self,
-        state: RoomState,
+        room: Room,
         event: &StrippedStateEvent<MemberEventContent>,
         _: Option<MemberEventContent>,
     ) {
-        if let RoomState::Invited(room) = state {
-            if let Some(user_id) = self.client.user_id().await {
-                if event.state_key != user_id {
-                    return;
-                }
-            }
+        let room = match Invited::new(self.client.clone(), room) {
+            Some(invited_room) => invited_room,
+            _ => return,
+        };
 
-            info!("Autojoining room {}", room.display_name().await);
+        if room.own_user_id().as_str() != event.state_key {
+            return;
+        }
 
-            if let Err(e) = self.client.join_room_by_id(&room.room_id()).await {
-                warn!("Could not join room: {}", e.to_string())
-            }
+        // if let Some(user_id) = self.client.user_id().await {
+        //     if event.state_key != user_id {
+        //         return;
+        //     }
+        // }
+
+        info!(
+            "Autojoining room {}",
+            room.display_name().await.ok().unwrap_or_default()
+        );
+
+        if let Err(e) = self.client.join_room_by_id(&room.room_id()).await {
+            warn!("Could not join room: {}", e.to_string())
         }
     }
 
-    async fn on_room_message(
-        &self,
-        state: RoomState,
-        event: &SyncMessageEvent<MessageEventContent>,
-    ) {
-        if let RoomState::Joined(room) = state {
-            let room_id = room.room_id().as_str();
-            if !should_process_event(&self.db, room_id, event.event_id.as_str()) {
-                return;
-            }
+    async fn on_room_message(&self, room: Room, event: &SyncMessageEvent<MessageEventContent>) {
+        let room = match Joined::new(self.client.clone(), room) {
+            Some(joined_room) => joined_room,
+            _ => return,
+        };
 
-            let (msg_body, sender_username) = if let Ok((msg_body, sender_username)) =
-                should_process_message(self, &event).await
-            {
+        let room_id = room.room_id().as_str();
+        if !should_process_event(&self.db, room_id, event.event_id.as_str()) {
+            return;
+        }
+
+        let (msg_body, sender_username) =
+            if let Ok((msg_body, sender_username)) = should_process_message(self, &event).await {
                 (msg_body, sender_username)
             } else {
                 return;
             };
 
-            self.execute_commands(&room, &sender_username, &msg_body, event.event_id.clone())
-                .await;
-        }
+        self.execute_commands(&room, &sender_username, &msg_body, event.event_id.clone())
+            .await;
     }
 }

@@ -1,7 +1,7 @@
 use crate::db::Database;
 use matrix_sdk::identifiers::RoomId;
+use matrix_sdk::room::Joined;
 use matrix_sdk::Client;
-use matrix_sdk::JoinedRoom;
 
 /// A context carried through the system providing access to things
 /// like the database.
@@ -14,6 +14,12 @@ pub struct Context<'a> {
     pub message_body: &'a str,
 }
 
+impl Context<'_> {
+    pub fn room_id(&self) -> &RoomId {
+        self.room.id
+    }
+}
+
 #[derive(Clone)]
 pub struct RoomContext<'a> {
     pub id: &'a RoomId,
@@ -21,7 +27,7 @@ pub struct RoomContext<'a> {
 }
 
 impl RoomContext<'_> {
-    pub fn new_with_name<'a>(room: &'a JoinedRoom, display_name: &'a str) -> RoomContext<'a> {
+    pub fn new_with_name<'a>(room: &'a Joined, display_name: &'a str) -> RoomContext<'a> {
         RoomContext {
             id: room.room_id(),
             display_name,

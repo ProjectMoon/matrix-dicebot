@@ -8,11 +8,7 @@ use crate::state::DiceBotState;
 use dirs;
 use futures::stream::{self, StreamExt};
 use log::info;
-use matrix_sdk::{
-    self,
-    identifiers::{EventId, RoomId},
-    Client, ClientConfig, JoinedRoom, SyncSettings,
-};
+use matrix_sdk::{self, identifiers::EventId, room::Joined, Client, ClientConfig, SyncSettings};
 use std::clone::Clone;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -62,11 +58,11 @@ async fn handle_single_result(
     client: &Client,
     cmd_result: &ExecutionResult,
     respond_to: &str,
-    room_id: &RoomId,
+    room: &Joined,
     event_id: EventId,
 ) {
     let html = cmd_result.message_html(respond_to);
-    matrix::send_message(client, room_id, &html, Some(event_id)).await;
+    matrix::send_message(client, room.room_id(), &html, Some(event_id)).await;
 }
 
 /// Handle responding to multiple commands being executed. Will print
@@ -75,7 +71,7 @@ async fn handle_multiple_results(
     client: &Client,
     results: &[(&str, ExecutionResult)],
     respond_to: &str,
-    room_id: &RoomId,
+    room: &Joined,
 ) {
     let errors: Vec<(&str, &ExecutionError)> = results
         .into_iter()
@@ -103,7 +99,7 @@ async fn handle_multiple_results(
         .replace("\n", "<br/>")
     };
 
-    matrix::send_message(client, room_id, &message, None).await;
+    matrix::send_message(client, room.room_id(), &message, None).await;
 }
 
 impl DiceBot {
@@ -165,7 +161,7 @@ impl DiceBot {
         info!("Performing intial sync (no commands will be responded to)");
         self.client.sync_once(SyncSettings::default()).await?;
 
-        client.add_event_emitter(Box::new(self)).await;
+        client.set_event_handler(Box::new(self)).await;
         info!("Listening for commands");
 
         let token = client
@@ -183,13 +179,12 @@ impl DiceBot {
 
     async fn execute_commands(
         &self,
-        room: &JoinedRoom,
+        room: &Joined,
         sender_username: &str,
         msg_body: &str,
         event_id: EventId,
     ) {
         let room_name: &str = &room.display_name().await.ok().unwrap_or_default();
-        let room_id = room.room_id().clone();
 
         let commands: Vec<&str> = msg_body
             .lines()
@@ -223,12 +218,12 @@ impl DiceBot {
                     &self.client,
                     &results[0].1,
                     sender_username,
-                    &room_id,
+                    &room,
                     event_id,
                 )
                 .await;
             } else if results.len() > 1 {
-                handle_multiple_results(&self.client, &results, sender_username, &room_id).await;
+                handle_multiple_results(&self.client, &results, sender_username, &room).await;
             }
 
             info!("[{}] {} executed: {}", room_name, sender_username, msg_body);

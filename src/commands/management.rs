@@ -19,7 +19,7 @@ impl Command for ResyncCommand {
         record_room_information(
             ctx.matrix_client,
             &ctx.db,
-            ctx.room.id,
+            ctx.room_id(),
             &ctx.room.display_name,
             our_username,
         )

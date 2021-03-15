@@ -11,7 +11,7 @@ use futures::stream::{self, StreamExt, TryStreamExt};
 /// it cannot find a variable defined, or if the database errors.
 pub async fn calculate_dice_amount(amounts: &[Amount], ctx: &Context<'_>) -> Result<i32, BotError> {
     let stream = stream::iter(amounts);
-    let key = UserAndRoom(&ctx.username, ctx.room.id.as_str());
+    let key = UserAndRoom(&ctx.username, ctx.room_id().as_str());
     let variables = &ctx.db.variables.get_user_variables(&key)?;
 
     use DiceRollingError::VariableNotFound;
