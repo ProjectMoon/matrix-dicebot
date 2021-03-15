@@ -1,6 +1,9 @@
 use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
-use crate::cthulhu::dice::{regular_roll, AdvancementRoll, DiceRoll, DiceRollWithContext};
+use crate::cthulhu::dice::{
+    advancement_roll, regular_roll, AdvancementRoll, AdvancementRollWithContext, DiceRoll,
+    DiceRollWithContext,
+};
 use async_trait::async_trait;
 
 pub struct CthRoll(pub DiceRoll);
@@ -32,12 +35,13 @@ impl Command for CthAdvanceRoll {
         "roll percentile pool"
     }
 
-    async fn execute(&self, _ctx: &Context<'_>) -> ExecutionResult {
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         //TODO this will be converted to a result when supporting variables.
-        let roll = self.0.roll();
+        let roll_with_ctx = AdvancementRollWithContext(&self.0, ctx);
+        let executed_roll = advancement_roll(&roll_with_ctx).await?;
         let html = format!(
             "<p><strong>Roll:</strong> {}</p><p><strong>Result</strong>: {}</p>",
-            self.0, roll
+            executed_roll, executed_roll.roll
         );
 
         Execution::success(html)

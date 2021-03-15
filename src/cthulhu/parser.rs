@@ -33,23 +33,16 @@ pub fn parse_regular_roll(input: &str) -> Result<DiceRoll, DiceParsingError> {
     let modifier = parse_modifier(modifiers_str)?;
     let amounts = crate::parser::parse_amounts(amounts_str)?;
 
-    Ok(DiceRoll {
-        amounts: amounts,
-        modifier: modifier,
-    })
+    Ok(DiceRoll { modifier, amounts })
 }
 
 pub fn parse_advancement_roll(input: &str) -> Result<AdvancementRoll, DiceParsingError> {
     let input = input.trim();
-    let target: u32 = input.parse().map_err(|_| DiceParsingError::InvalidAmount)?;
+    let amounts = crate::parser::parse_amounts(input)?;
 
-    if target <= 100 {
-        Ok(AdvancementRoll {
-            existing_skill: target,
-        })
-    } else {
-        Err(DiceParsingError::InvalidAmount)
-    }
+    Ok(AdvancementRoll {
+        existing_skill: amounts,
+    })
 }
 
 #[cfg(test)]
@@ -172,16 +165,63 @@ mod tests {
     fn advancement_roll_accepts_single_number() {
         let result = parse_advancement_roll("60");
         assert!(result.is_ok());
-        assert_eq!(AdvancementRoll { existing_skill: 60 }, result.unwrap());
+        assert_eq!(
+            AdvancementRoll {
+                existing_skill: vec![Amount {
+                    operator: Operator::Plus,
+                    element: Element::Number(60)
+                }]
+            },
+            result.unwrap()
+        );
     }
 
     #[test]
-    fn advancement_roll_rejects_big_numbers() {
-        assert!(parse_advancement_roll("3000").is_err());
+    fn advancement_roll_allows_big_numbers() {
+        assert!(parse_advancement_roll("3000").is_ok());
     }
 
     #[test]
-    fn advancement_roll_rejects_invalid_input() {
-        assert!(parse_advancement_roll("abc").is_err());
+    fn advancement_roll_allows_variables() {
+        let result = parse_advancement_roll("abc");
+        assert!(result.is_ok());
+        assert_eq!(
+            AdvancementRoll {
+                existing_skill: vec![Amount {
+                    operator: Operator::Plus,
+                    element: Element::Variable(String::from("abc"))
+                }]
+            },
+            result.unwrap()
+        );
+    }
+
+    #[test]
+    fn advancement_roll_allows_complex_expressions() {
+        let result = parse_advancement_roll("3 + abc + bob - 4");
+        assert!(result.is_ok());
+        assert_eq!(
+            AdvancementRoll {
+                existing_skill: vec![
+                    Amount {
+                        operator: Operator::Plus,
+                        element: Element::Number(3)
+                    },
+                    Amount {
+                        operator: Operator::Plus,
+                        element: Element::Variable(String::from("abc"))
+                    },
+                    Amount {
+                        operator: Operator::Plus,
+                        element: Element::Variable(String::from("bob"))
+                    },
+                    Amount {
+                        operator: Operator::Minus,
+                        element: Element::Number(4)
+                    }
+                ]
+            },
+            result.unwrap()
+        );
     }
 }
