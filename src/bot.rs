@@ -189,6 +189,7 @@ impl DiceBot {
         let commands: Vec<&str> = msg_body
             .lines()
             .filter(|line| line.starts_with("!"))
+            .take(MAX_COMMANDS_PER_MESSAGE + 1)
             .collect();
 
         //Up to 50 commands allowed, otherwise we send back an error.
