@@ -69,14 +69,14 @@ async fn handle_single_result(
 /// out how many commands succeeded and failed (if any failed).
 async fn handle_multiple_results(
     client: &Client,
-    results: &[(&str, ExecutionResult)],
+    results: &[(String, ExecutionResult)],
     respond_to: &str,
     room: &Joined,
 ) {
     let errors: Vec<(&str, &ExecutionError)> = results
         .into_iter()
         .filter_map(|(cmd, result)| match result {
-            Err(e) => Some((*cmd, e)),
+            Err(e) => Some((cmd.as_ref(), e)),
             _ => None,
         })
         .collect();
@@ -182,8 +182,7 @@ impl DiceBot {
         room: &Joined,
         sender_username: &str,
         msg_body: &str,
-        event_id: EventId,
-    ) {
+    ) -> Vec<(String, ExecutionResult)> {
         let room_name: &str = &room.display_name().await.ok().unwrap_or_default();
 
         let commands: Vec<&str> = msg_body
@@ -193,7 +192,7 @@ impl DiceBot {
             .collect();
 
         //Up to 50 commands allowed, otherwise we send back an error.
-        let results: Vec<(&str, ExecutionResult)> = if commands.len() < MAX_COMMANDS_PER_MESSAGE {
+        let results: Vec<(String, ExecutionResult)> = if commands.len() < MAX_COMMANDS_PER_MESSAGE {
             stream::iter(commands)
                 .then(|command| async move {
                     let ctx = Context {
@@ -205,14 +204,28 @@ impl DiceBot {
                     };
 
                     let cmd_result = execute_command(&ctx).await;
-                    (command, cmd_result)
+                    info!("[{}] {} executed: {}", room_name, sender_username, command);
+                    (command.to_owned(), cmd_result)
                 })
                 .collect()
                 .await
         } else {
-            vec![("", Err(ExecutionError(BotError::MessageTooLarge)))]
+            vec![(
+                "".to_owned(),
+                Err(ExecutionError(BotError::MessageTooLarge)),
+            )]
         };
 
+        results
+    }
+
+    pub async fn handle_results(
+        &self,
+        room: &Joined,
+        sender_username: &str,
+        event_id: EventId,
+        results: Vec<(String, ExecutionResult)>,
+    ) {
         if results.len() >= 1 {
             if results.len() == 1 {
                 handle_single_result(
@@ -226,8 +239,6 @@ impl DiceBot {
             } else if results.len() > 1 {
                 handle_multiple_results(&self.client, &results, sender_username, &room).await;
             }
-
-            info!("[{}] {} executed: {}", room_name, sender_username, msg_body);
         }
     }
 }

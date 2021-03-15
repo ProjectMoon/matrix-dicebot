@@ -11,7 +11,6 @@ use matrix_sdk::{
         room::message::{MessageEventContent, MessageType, TextMessageEventContent},
         StrippedStateEvent, SyncMessageEvent, SyncStateEvent,
     },
-    identifiers::RoomId,
     room::{Common, Invited, Joined},
     EventHandler, Room,
 };
@@ -209,7 +208,11 @@ impl EventHandler for DiceBot {
                 return;
             };
 
-        self.execute_commands(&room, &sender_username, &msg_body, event.event_id.clone())
+        let results = self
+            .execute_commands(&room, &sender_username, &msg_body)
+            .await;
+
+        self.handle_results(&room, &sender_username, event.event_id.clone(), results)
             .await;
     }
 }
