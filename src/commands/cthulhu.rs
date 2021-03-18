@@ -11,7 +11,7 @@ pub struct CthRoll(pub DiceRoll);
 #[async_trait]
 impl Command for CthRoll {
     fn name(&self) -> &'static str {
-        "roll percentile pool"
+        "roll percentile dice"
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
@@ -32,11 +32,10 @@ pub struct CthAdvanceRoll(pub AdvancementRoll);
 #[async_trait]
 impl Command for CthAdvanceRoll {
     fn name(&self) -> &'static str {
-        "roll percentile pool"
+        "roll skill advancement dice"
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
-        //TODO this will be converted to a result when supporting variables.
         let roll_with_ctx = AdvancementRollWithContext(&self.0, ctx);
         let executed_roll = advancement_roll(&roll_with_ctx).await?;
         let html = format!(
