@@ -1,4 +1,5 @@
 use crate::context::Context;
+use crate::dice::calculate_dice_amount;
 use crate::error::{BotError, DiceRollingError};
 use crate::parser::Amount;
 use std::convert::TryFrom;
@@ -89,6 +90,10 @@ impl fmt::Display for RollResult {
     }
 }
 
+/// A struct wrapping the target and the actual dice roll result. This
+/// is done for formatting purposes, so we can display the target
+/// number (calculated from resolving variables) separately from the
+/// result.
 pub struct ExecutedDiceRoll {
     /// The number we must meet for the roll to be considered a
     /// success.
@@ -104,6 +109,27 @@ pub struct ExecutedDiceRoll {
 impl fmt::Display for ExecutedDiceRoll {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = format!("target: {}, with {}", self.target, self.modifier);
+        write!(f, "{}", message)?;
+        Ok(())
+    }
+}
+
+/// A struct wrapping the target and the actual advancement roll
+/// result. This is done for formatting purposes, so we can display
+/// the target number (calculated from resolving variables) separately
+/// from the result.
+pub struct ExecutedAdvancementRoll {
+    /// The number we must exceed for the roll to be considered a
+    /// success.
+    pub target: u32,
+
+    /// The actual roll result.
+    pub roll: RolledAdvancement,
+}
+
+impl fmt::Display for ExecutedAdvancementRoll {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = format!("target: {}", self.target);
         write!(f, "{}", message)?;
         Ok(())
     }
@@ -158,20 +184,24 @@ impl fmt::Display for RolledDice {
 
 /// A planned advancement roll, where the target number is the
 /// existing skill amount.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AdvancementRoll {
     /// The amount (0 to 100) of the existing skill. We must beat this
     /// target number to advance the skill, or roll above a 95.
-    pub existing_skill: u32,
+    pub existing_skill: Vec<Amount>,
 }
 
 impl fmt::Display for AdvancementRoll {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let message = format!("advancement for skill of {}", self.existing_skill);
+        let message = format!("advancement for skill of {:?}", self.existing_skill);
         write!(f, "{}", message)?;
         Ok(())
     }
 }
+
+/// A struct holding an advancement roll and the context, so we can
+/// translate variables to numbers.
+pub struct AdvancementRollWithContext<'a>(pub &'a AdvancementRoll, pub &'a Context<'a>);
 
 /// A completed advancement roll.
 pub struct RolledAdvancement {
@@ -281,24 +311,21 @@ fn roll_regular_dice<R: DieRoller>(
     }
 }
 
-fn roll_advancement_dice<R: DieRoller>(
-    roll: &AdvancementRoll,
-    roller: &mut R,
-) -> RolledAdvancement {
+fn roll_advancement_dice<R: DieRoller>(target: u32, roller: &mut R) -> RolledAdvancement {
     let unit_roll = roller.roll();
     let percentile_roll = roll_percentile_dice(roller, unit_roll);
 
-    if percentile_roll > roll.existing_skill || percentile_roll > 95 {
+    if percentile_roll > target || percentile_roll > 95 {
         RolledAdvancement {
             num_rolled: percentile_roll,
-            existing_skill: roll.existing_skill,
+            existing_skill: target,
             advancement: roller.roll() + 1,
             successful: true,
         }
     } else {
         RolledAdvancement {
             num_rolled: percentile_roll,
-            existing_skill: roll.existing_skill,
+            existing_skill: target,
             advancement: 0,
             successful: false,
         }
@@ -316,10 +343,9 @@ fn roll_advancement_dice<R: DieRoller>(
 pub async fn regular_roll(
     roll_with_ctx: &DiceRollWithContext<'_>,
 ) -> Result<ExecutedDiceRoll, BotError> {
-    let target =
-        crate::dice::calculate_dice_amount(&roll_with_ctx.0.amounts, roll_with_ctx.1).await?;
-
+    let target = calculate_dice_amount(&roll_with_ctx.0.amounts, roll_with_ctx.1).await?;
     let target = u32::try_from(target).map_err(|_| DiceRollingError::InvalidAmount)?;
+
     let mut roller = RngDieRoller(rand::thread_rng());
     let rolled_dice = roll_regular_dice(&roll_with_ctx.0.modifier, target, &mut roller);
 
@@ -330,11 +356,19 @@ pub async fn regular_roll(
     })
 }
 
-impl AdvancementRoll {
-    pub fn roll(&self) -> RolledAdvancement {
-        let mut roller = RngDieRoller(rand::thread_rng());
-        roll_advancement_dice(self, &mut roller)
+pub async fn advancement_roll(
+    roll_with_ctx: &AdvancementRollWithContext<'_>,
+) -> Result<ExecutedAdvancementRoll, BotError> {
+    let target = calculate_dice_amount(&roll_with_ctx.0.existing_skill, roll_with_ctx.1).await?;
+    let target = u32::try_from(target).map_err(|_| DiceRollingError::InvalidAmount)?;
+
+    if target > 100 {
+        return Err(DiceRollingError::InvalidAmount.into());
     }
+
+    let mut roller = RngDieRoller(rand::thread_rng());
+    let roll = roll_advancement_dice(target, &mut roller);
+    Ok(ExecutedAdvancementRoll { target, roll })
 }
 
 #[cfg(test)]
@@ -364,7 +398,7 @@ mod tests {
     impl SequentialDieRoller {
         fn new(results: Vec<u32>) -> SequentialDieRoller {
             SequentialDieRoller {
-                results: results,
+                results,
                 position: 0,
             }
         }
@@ -379,7 +413,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn regular_roll_converts_u32_safely() {
+    async fn regular_roll_rejects_negative_numbers() {
         let roll = DiceRoll {
             amounts: vec![Amount {
                 operator: Operator::Plus,
@@ -399,6 +433,60 @@ mod tests {
 
         let roll_with_ctx = DiceRollWithContext(&roll, &ctx);
         let result = regular_roll(&roll_with_ctx).await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(BotError::DiceRollingError(DiceRollingError::InvalidAmount))
+        ));
+    }
+
+    #[tokio::test]
+    async fn advancement_roll_rejects_negative_numbers() {
+        let roll = AdvancementRoll {
+            existing_skill: vec![Amount {
+                operator: Operator::Plus,
+                element: Element::Number(-10),
+            }],
+        };
+
+        let db = Database::new_temp().unwrap();
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new("https://example.com").unwrap(),
+            room: dummy_room!(),
+            username: "username",
+            message_body: "message",
+        };
+
+        let roll_with_ctx = AdvancementRollWithContext(&roll, &ctx);
+        let result = advancement_roll(&roll_with_ctx).await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(BotError::DiceRollingError(DiceRollingError::InvalidAmount))
+        ));
+    }
+
+    #[tokio::test]
+    async fn advancement_roll_rejects_big_numbers() {
+        let roll = AdvancementRoll {
+            existing_skill: vec![Amount {
+                operator: Operator::Plus,
+                element: Element::Number(3000),
+            }],
+        };
+
+        let db = Database::new_temp().unwrap();
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new("https://example.com").unwrap(),
+            room: dummy_room!(),
+            username: "username",
+            message_body: "message",
+        };
+
+        let roll_with_ctx = AdvancementRollWithContext(&roll, &ctx);
+        let result = advancement_roll(&roll_with_ctx).await;
         assert!(result.is_err());
         assert!(matches!(
             result,
@@ -525,11 +613,10 @@ mod tests {
 
     #[test]
     fn advancement_succeeds_on_above_skill() {
-        let roll = AdvancementRoll { existing_skill: 30 };
-
         //Roll 52, then advance skill by 5. (advancement adds +1 to 0-9 roll)
         let mut roller = SequentialDieRoller::new(vec![2, 5, 4]);
-        let rolled = roll_advancement_dice(&roll, &mut roller);
+
+        let rolled = roll_advancement_dice(30, &mut roller);
         assert!(rolled.successful());
         assert_eq!(5, rolled.advancement());
         assert_eq!(35, rolled.new_skill_amount());
@@ -537,11 +624,10 @@ mod tests {
 
     #[test]
     fn advancement_succeeds_on_above_95() {
-        let roll = AdvancementRoll { existing_skill: 97 };
-
         //Roll 96, then advance skill by 1. (advancement adds +1 to 0-9 roll)
         let mut roller = SequentialDieRoller::new(vec![6, 9, 0]);
-        let rolled = roll_advancement_dice(&roll, &mut roller);
+
+        let rolled = roll_advancement_dice(97, &mut roller);
         assert!(rolled.successful());
         assert_eq!(1, rolled.advancement());
         assert_eq!(98, rolled.new_skill_amount());
@@ -549,11 +635,10 @@ mod tests {
 
     #[test]
     fn advancement_fails_on_below_skill() {
-        let roll = AdvancementRoll { existing_skill: 30 };
-
         //Roll 25, failing.
         let mut roller = SequentialDieRoller::new(vec![5, 2]);
-        let rolled = roll_advancement_dice(&roll, &mut roller);
+
+        let rolled = roll_advancement_dice(30, &mut roller);
         assert!(!rolled.successful());
         assert_eq!(0, rolled.advancement());
     }
