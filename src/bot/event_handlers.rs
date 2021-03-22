@@ -11,8 +11,8 @@ use matrix_sdk::{
         room::message::{MessageEventContent, MessageType, TextMessageEventContent},
         StrippedStateEvent, SyncMessageEvent, SyncStateEvent,
     },
-    room::{Common, Invited, Joined},
-    EventHandler, Room,
+    room::Room,
+    EventHandler,
 };
 use std::clone::Clone;
 use std::ops::Sub;
@@ -102,7 +102,7 @@ fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
 #[async_trait]
 impl EventHandler for DiceBot {
     async fn on_room_member(&self, room: Room, event: &SyncStateEvent<MemberEventContent>) {
-        let room = Common::new(self.client.clone(), room);
+        //let room = Common::new(self.client.clone(), room);
         let (room_id, room_display_name) = match room.display_name().await {
             Ok(display_name) => (room.room_id(), display_name),
             _ => return,
@@ -165,20 +165,14 @@ impl EventHandler for DiceBot {
         event: &StrippedStateEvent<MemberEventContent>,
         _: Option<MemberEventContent>,
     ) {
-        let room = match Invited::new(self.client.clone(), room) {
-            Some(invited_room) => invited_room,
+        let room = match room {
+            Room::Invited(invited_room) => invited_room,
             _ => return,
         };
 
         if room.own_user_id().as_str() != event.state_key {
             return;
         }
-
-        // if let Some(user_id) = self.client.user_id().await {
-        //     if event.state_key != user_id {
-        //         return;
-        //     }
-        // }
 
         info!(
             "Autojoining room {}",
@@ -191,8 +185,8 @@ impl EventHandler for DiceBot {
     }
 
     async fn on_room_message(&self, room: Room, event: &SyncMessageEvent<MessageEventContent>) {
-        let room = match Joined::new(self.client.clone(), room) {
-            Some(joined_room) => joined_room,
+        let room = match room {
+            Room::Joined(joined_room) => joined_room,
             _ => return,
         };
 
