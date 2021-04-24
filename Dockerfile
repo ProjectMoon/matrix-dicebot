@@ -1,8 +1,9 @@
 # Builder image with development dependencies.
 FROM bougyman/voidlinux:glibc as builder
 RUN xbps-install -Syu
-RUN xbps-install -Sy base-devel rust cargo cmake wget gnupg
+RUN xbps-install -Sy base-devel rustup cargo cmake wget gnupg
 RUN xbps-install -Sy openssl-devel libstdc++-devel
+RUN rustup-init -qy
 
 # Install tini for signal processing and zombie killing
 ENV TINI_VERSION v0.19.0
@@ -16,7 +17,7 @@ RUN chmod +x /usr/local/bin/tini
 RUN mkdir -p /root/src
 WORKDIR /root/src
 ADD . ./
-RUN cargo build --release
+RUN . /root/.cargo/env && cargo build --release
 
 # Final image
 FROM bougyman/voidlinux:tiny

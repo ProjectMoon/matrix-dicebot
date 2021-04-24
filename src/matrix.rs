@@ -1,5 +1,5 @@
 use log::error;
-use matrix_sdk::{events::room::message::NoticeMessageEventContent, RoomMember};
+use matrix_sdk::events::room::message::NoticeMessageEventContent;
 use matrix_sdk::{
     events::room::message::{InReplyTo, Relation},
     events::room::message::{MessageEventContent, MessageType},
@@ -22,7 +22,7 @@ fn extract_error_message(error: MatrixError) -> String {
 /// Retrieve a list of users in a given room.
 pub async fn get_users_in_room(client: &Client, room_id: &RoomId) -> Vec<String> {
     if let Some(joined_room) = client.get_joined_room(room_id) {
-        let members: Vec<RoomMember> = joined_room.joined_members().await.ok().unwrap_or_default();
+        let members = joined_room.joined_members().await.ok().unwrap_or_default();
 
         members
             .into_iter()
