@@ -1,5 +1,5 @@
 use crate::context::Context;
-use crate::dice::calculate_dice_amount;
+use crate::dice::calculate_single_die_amount;
 use crate::error::{BotError, DiceRollingError};
 use crate::parser::Amount;
 use std::convert::TryFrom;
@@ -8,7 +8,7 @@ use std::fmt;
 /// A planned dice roll.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DiceRoll {
-    pub amounts: Vec<Amount>,
+    pub amount: Amount,
     pub modifier: DiceRollModifier,
 }
 
@@ -188,7 +188,7 @@ impl fmt::Display for RolledDice {
 pub struct AdvancementRoll {
     /// The amount (0 to 100) of the existing skill. We must beat this
     /// target number to advance the skill, or roll above a 95.
-    pub existing_skill: Vec<Amount>,
+    pub existing_skill: Amount,
 }
 
 impl fmt::Display for AdvancementRoll {
@@ -343,14 +343,14 @@ fn roll_advancement_dice<R: DieRoller>(target: u32, roller: &mut R) -> RolledAdv
 pub async fn regular_roll(
     roll_with_ctx: &DiceRollWithContext<'_>,
 ) -> Result<ExecutedDiceRoll, BotError> {
-    let target = calculate_dice_amount(&roll_with_ctx.0.amounts, roll_with_ctx.1).await?;
+    let target = calculate_single_die_amount(&roll_with_ctx.0.amount, roll_with_ctx.1).await?;
     let target = u32::try_from(target).map_err(|_| DiceRollingError::InvalidAmount)?;
 
     let mut roller = RngDieRoller(rand::thread_rng());
     let rolled_dice = roll_regular_dice(&roll_with_ctx.0.modifier, target, &mut roller);
 
     Ok(ExecutedDiceRoll {
-        target: target,
+        target,
         modifier: roll_with_ctx.0.modifier,
         roll: rolled_dice,
     })
@@ -359,7 +359,9 @@ pub async fn regular_roll(
 pub async fn advancement_roll(
     roll_with_ctx: &AdvancementRollWithContext<'_>,
 ) -> Result<ExecutedAdvancementRoll, BotError> {
-    let target = calculate_dice_amount(&roll_with_ctx.0.existing_skill, roll_with_ctx.1).await?;
+    let target =
+        calculate_single_die_amount(&roll_with_ctx.0.existing_skill, roll_with_ctx.1).await?;
+
     let target = u32::try_from(target).map_err(|_| DiceRollingError::InvalidAmount)?;
 
     if target > 100 {
@@ -416,10 +418,10 @@ mod tests {
     #[tokio::test]
     async fn regular_roll_rejects_negative_numbers() {
         let roll = DiceRoll {
-            amounts: vec![Amount {
+            amount: Amount {
                 operator: Operator::Plus,
                 element: Element::Number(-10),
-            }],
+            },
             modifier: DiceRollModifier::Normal,
         };
 
@@ -445,10 +447,10 @@ mod tests {
     #[tokio::test]
     async fn advancement_roll_rejects_negative_numbers() {
         let roll = AdvancementRoll {
-            existing_skill: vec![Amount {
+            existing_skill: Amount {
                 operator: Operator::Plus,
                 element: Element::Number(-10),
-            }],
+            },
         };
 
         let db = Database::new_temp().unwrap();
@@ -473,10 +475,10 @@ mod tests {
     #[tokio::test]
     async fn advancement_roll_rejects_big_numbers() {
         let roll = AdvancementRoll {
-            existing_skill: vec![Amount {
+            existing_skill: Amount {
                 operator: Operator::Plus,
                 element: Element::Number(3000),
-            }],
+            },
         };
 
         let db = Database::new_temp().unwrap();

@@ -5,6 +5,17 @@ use crate::error::DiceRollingError;
 use crate::parser::Amount;
 use crate::parser::Element as NewElement;
 use futures::stream::{self, StreamExt, TryStreamExt};
+use std::slice;
+
+/// Calculate the amount of dice to roll by consulting the database
+/// and replacing variables with corresponding the amount. Errors out
+/// if it cannot find a variable defined, or if the database errors.
+pub async fn calculate_single_die_amount(
+    amount: &Amount,
+    ctx: &Context<'_>,
+) -> Result<i32, BotError> {
+    calculate_dice_amount(slice::from_ref(amount), ctx).await
+}
 
 /// Calculate the amount of dice to roll by consulting the database
 /// and replacing variables with corresponding amounts. Errors out if

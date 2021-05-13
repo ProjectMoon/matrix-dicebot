@@ -20,7 +20,6 @@ fn parse_modifier(input: &str) -> Result<DiceRollModifier, DiceParsingError> {
 //Make diceroll take a vec of Amounts
 //Split based on :, send first part to parse_modifier.
 //Send second part to parse_amounts
-
 pub fn parse_regular_roll(input: &str) -> Result<DiceRoll, DiceParsingError> {
     let input: Vec<&str> = input.trim().split(":").collect();
 
@@ -31,14 +30,13 @@ pub fn parse_regular_roll(input: &str) -> Result<DiceRoll, DiceParsingError> {
     }?;
 
     let modifier = parse_modifier(modifiers_str)?;
-    let amounts = crate::parser::parse_amounts(amounts_str)?;
-
-    Ok(DiceRoll { modifier, amounts })
+    let amount = crate::parser::parse_single_amount(amounts_str)?;
+    Ok(DiceRoll { modifier, amount })
 }
 
 pub fn parse_advancement_roll(input: &str) -> Result<AdvancementRoll, DiceParsingError> {
     let input = input.trim();
-    let amounts = crate::parser::parse_amounts(input)?;
+    let amounts = crate::parser::parse_single_amount(input)?;
 
     Ok(AdvancementRoll {
         existing_skill: amounts,
@@ -57,14 +55,20 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             DiceRoll {
-                amounts: vec![Amount {
+                amount: Amount {
                     operator: Operator::Plus,
                     element: Element::Number(60)
-                }],
+                },
                 modifier: DiceRollModifier::Normal
             },
             result.unwrap()
         );
+    }
+
+    #[test]
+    fn regular_roll_rejects_complex_expressions() {
+        let result = parse_regular_roll("3 + abc + bob - 4");
+        assert!(result.is_err());
     }
 
     #[test]
@@ -73,10 +77,10 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             DiceRoll {
-                amounts: vec![Amount {
+                amount: Amount {
                     operator: Operator::Plus,
                     element: Element::Number(60)
-                }],
+                },
                 modifier: DiceRollModifier::TwoBonus
             },
             result.unwrap()
@@ -89,10 +93,10 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             DiceRoll {
-                amounts: vec![Amount {
+                amount: Amount {
                     operator: Operator::Plus,
                     element: Element::Number(60)
-                }],
+                },
                 modifier: DiceRollModifier::OneBonus
             },
             result.unwrap()
@@ -105,10 +109,10 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             DiceRoll {
-                amounts: vec![Amount {
+                amount: Amount {
                     operator: Operator::Plus,
                     element: Element::Number(60)
-                }],
+                },
                 modifier: DiceRollModifier::TwoPenalty
             },
             result.unwrap()
@@ -121,10 +125,10 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             DiceRoll {
-                amounts: vec![Amount {
+                amount: Amount {
                     operator: Operator::Plus,
                     element: Element::Number(60)
-                }],
+                },
                 modifier: DiceRollModifier::OnePenalty
             },
             result.unwrap()
@@ -132,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    fn regular_roll_accepts_whitespacen() {
+    fn regular_roll_accepts_whitespace() {
         assert!(parse_regular_roll("60     ").is_ok());
         assert!(parse_regular_roll("   60").is_ok());
         assert!(parse_regular_roll("   60    ").is_ok());
@@ -167,10 +171,10 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             AdvancementRoll {
-                existing_skill: vec![Amount {
+                existing_skill: Amount {
                     operator: Operator::Plus,
                     element: Element::Number(60)
-                }]
+                }
             },
             result.unwrap()
         );
@@ -187,41 +191,18 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(
             AdvancementRoll {
-                existing_skill: vec![Amount {
+                existing_skill: Amount {
                     operator: Operator::Plus,
                     element: Element::Variable(String::from("abc"))
-                }]
+                }
             },
             result.unwrap()
         );
     }
 
     #[test]
-    fn advancement_roll_allows_complex_expressions() {
+    fn advancement_roll_rejects_complex_expressions() {
         let result = parse_advancement_roll("3 + abc + bob - 4");
-        assert!(result.is_ok());
-        assert_eq!(
-            AdvancementRoll {
-                existing_skill: vec![
-                    Amount {
-                        operator: Operator::Plus,
-                        element: Element::Number(3)
-                    },
-                    Amount {
-                        operator: Operator::Plus,
-                        element: Element::Variable(String::from("abc"))
-                    },
-                    Amount {
-                        operator: Operator::Plus,
-                        element: Element::Variable(String::from("bob"))
-                    },
-                    Amount {
-                        operator: Operator::Minus,
-                        element: Element::Number(4)
-                    }
-                ]
-            },
-            result.unwrap()
-        );
+        assert!(result.is_err());
     }
 }

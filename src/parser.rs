@@ -33,7 +33,7 @@ type ParseResult<T> = Result<T, DiceParsingError>;
 
 /// A parsed operator for a number. Whether to add or remove it from
 /// the total amount of dice rolled.
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Operator {
     Plus,
     Minus,
