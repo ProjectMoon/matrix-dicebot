@@ -1,7 +1,7 @@
-use crate::context::Context;
-use crate::dice::calculate_single_die_amount;
 use crate::error::{BotError, DiceRollingError};
-use crate::parser::Amount;
+use crate::parser::{Amount, Element};
+use crate::{context::Context, db::variables::UserAndRoom};
+use crate::{dice::calculate_single_die_amount, parser::DiceParsingError};
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -251,8 +251,23 @@ impl fmt::Display for RolledAdvancement {
     }
 }
 
+/// This is a trait so we can inject controlled dice rolls in unit
+/// tests.
 trait DieRoller {
     fn roll(&mut self) -> u32;
+}
+
+/// Macro to determine if an Amount is a variable.
+macro_rules! is_variable {
+    ($existing_skill:ident) => {
+        matches!(
+            $existing_skill,
+            Amount {
+                element: Element::Variable(_),
+                ..
+            }
+        );
+    };
 }
 
 ///A version of DieRoller that uses a rand::Rng to roll numbers.
@@ -356,11 +371,25 @@ pub async fn regular_roll(
     })
 }
 
+fn update_skill(ctx: &Context, variable: &str, value: u32) -> Result<(), BotError> {
+    use std::convert::TryInto;
+    let value: i32 = value.try_into()?;
+    let key = UserAndRoom(ctx.username, ctx.room_id().as_str());
+    ctx.db.variables.set_user_variable(&key, variable, value)?;
+    Ok(())
+}
+
+fn extract_variable(amount: &Amount) -> Result<&str, DiceParsingError> {
+    match amount.element {
+        Element::Variable(ref varname) => Ok(&varname[..]),
+        _ => Err(DiceParsingError::WrongElementType),
+    }
+}
 pub async fn advancement_roll(
     roll_with_ctx: &AdvancementRollWithContext<'_>,
 ) -> Result<ExecutedAdvancementRoll, BotError> {
-    let target =
-        calculate_single_die_amount(&roll_with_ctx.0.existing_skill, roll_with_ctx.1).await?;
+    let existing_skill = &roll_with_ctx.0.existing_skill;
+    let target = calculate_single_die_amount(existing_skill, roll_with_ctx.1).await?;
 
     let target = u32::try_from(target).map_err(|_| DiceRollingError::InvalidAmount)?;
 
@@ -370,6 +399,12 @@ pub async fn advancement_roll(
 
     let mut roller = RngDieRoller(rand::thread_rng());
     let roll = roll_advancement_dice(target, &mut roller);
+
+    if roll.successful && is_variable!(existing_skill) {
+        let variable_name: &str = extract_variable(existing_skill)?;
+        update_skill(roll_with_ctx.1, variable_name, roll.new_skill_amount())?;
+    }
+
     Ok(ExecutedAdvancementRoll { target, roll })
 }
 
@@ -413,6 +448,30 @@ mod tests {
             self.position += 1;
             roll
         }
+    }
+
+    #[test]
+    fn extract_variable_gets_variable_name() {
+        let amount = Amount {
+            operator: Operator::Plus,
+            element: Element::Variable("abc".to_string()),
+        };
+
+        let result = extract_variable(&amount);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "abc");
+    }
+
+    #[test]
+    fn extract_variable_fails_on_number() {
+        let result = extract_variable(&Amount {
+            operator: Operator::Plus,
+            element: Element::Number(1),
+        });
+
+        assert!(result.is_err());
+        assert!(matches!(result, Err(DiceParsingError::WrongElementType)));
     }
 
     #[tokio::test]
@@ -498,6 +557,26 @@ mod tests {
             result,
             Err(BotError::DiceRollingError(DiceRollingError::InvalidAmount))
         ));
+    }
+
+    #[test]
+    fn is_variable_macro_succeds_on_variable() {
+        let amount = Amount {
+            operator: Operator::Plus,
+            element: Element::Variable("abc".to_string()),
+        };
+
+        assert_eq!(is_variable!(amount), true);
+    }
+
+    #[test]
+    fn is_variable_macro_fails_on_number() {
+        let amount = Amount {
+            operator: Operator::Plus,
+            element: Element::Number(1),
+        };
+
+        assert_eq!(is_variable!(amount), false);
     }
 
     #[test]

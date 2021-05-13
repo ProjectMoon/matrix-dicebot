@@ -75,6 +75,9 @@ pub enum BotError {
 
     #[error("too many commands or message was too large")]
     MessageTooLarge,
+
+    #[error("could not convert to proper integer type")]
+    TryFromIntError(#[from] std::num::TryFromIntError),
 }
 
 #[derive(Error, Debug)]

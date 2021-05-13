@@ -21,6 +21,9 @@ pub enum DiceParsingError {
 
     #[error("number parsing error (too large?)")]
     ConversionError,
+
+    #[error("unexpected element in expression")]
+    WrongElementType,
 }
 
 impl From<std::num::ParseIntError> for DiceParsingError {
