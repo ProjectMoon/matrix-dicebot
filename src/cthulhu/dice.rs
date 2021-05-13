@@ -376,6 +376,7 @@ mod tests {
     use super::*;
     use crate::db::Database;
     use crate::parser::{Amount, Element, Operator};
+    use url::Url;
 
     macro_rules! dummy_room {
         () => {
@@ -423,9 +424,10 @@ mod tests {
         };
 
         let db = Database::new_temp().unwrap();
+        let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,
-            matrix_client: &matrix_sdk::Client::new("https://example.com").unwrap(),
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),
             username: "username",
             message_body: "message",
@@ -450,9 +452,10 @@ mod tests {
         };
 
         let db = Database::new_temp().unwrap();
+        let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,
-            matrix_client: &matrix_sdk::Client::new("https://example.com").unwrap(),
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),
             username: "username",
             message_body: "message",
@@ -477,9 +480,10 @@ mod tests {
         };
 
         let db = Database::new_temp().unwrap();
+        let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,
-            matrix_client: &matrix_sdk::Client::new("https://example.com").unwrap(),
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),
             username: "username",
             message_body: "message",

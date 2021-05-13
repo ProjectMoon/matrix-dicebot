@@ -4,6 +4,7 @@ use chronicle_dicebot::context::{Context, RoomContext};
 use chronicle_dicebot::db::Database;
 use chronicle_dicebot::error::BotError;
 use matrix_sdk::identifiers::room_id;
+use url::Url;
 
 #[tokio::main]
 async fn main() -> Result<(), BotError> {
@@ -13,9 +14,11 @@ async fn main() -> Result<(), BotError> {
         Err(e) => return Err(e),
     };
 
+    let homeserver = Url::parse("http://example.com")?;
+
     let context = Context {
         db: Database::new_temp()?,
-        matrix_client: &matrix_sdk::Client::new("http://example.com")
+        matrix_client: &matrix_sdk::Client::new(homeserver)
             .expect("Could not create matrix client"),
         room: RoomContext {
             id: &room_id!("!fakeroomid:example.com"),

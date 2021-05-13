@@ -12,7 +12,7 @@ use matrix_sdk::{identifiers::RoomId, Client};
 /// Extracts more detailed error messages out of a matrix SDK error.
 fn extract_error_message(error: MatrixError) -> String {
     use matrix_sdk::{Error::Http, HttpError};
-    if let Http(HttpError::FromHttpResponse(ruma_err)) = error {
+    if let Http(HttpError::Api(ruma_err)) = error {
         ruma_err.to_string()
     } else {
         error.to_string()

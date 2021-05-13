@@ -107,6 +107,7 @@ pub async fn execute_command(ctx: &Context<'_>) -> ExecutionResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use url::Url;
 
     macro_rules! dummy_room {
         () => {
@@ -129,9 +130,10 @@ mod tests {
     #[tokio::test]
     async fn unrecognized_command() {
         let db = crate::db::Database::new_temp().unwrap();
+        let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,
-            matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),
             username: "myusername",
             message_body: "!notacommand",

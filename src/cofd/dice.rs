@@ -326,6 +326,7 @@ pub async fn roll_pool(pool: &DicePoolWithContext<'_>) -> Result<RolledDicePool,
 mod tests {
     use super::*;
     use crate::db::Database;
+    use url::Url;
 
     macro_rules! dummy_room {
         () => {
@@ -473,10 +474,11 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_large_expression_test() {
+        let homeserver = Url::parse("http://example.com").unwrap();
         let db = Database::new_temp().unwrap();
         let ctx = Context {
             db: db,
-            matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),
             username: "username",
             message_body: "message",
@@ -505,9 +507,10 @@ mod tests {
     #[tokio::test]
     async fn converts_to_chance_die_test() {
         let db = Database::new_temp().unwrap();
+        let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,
-            matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),
             username: "username",
             message_body: "message",
@@ -535,9 +538,10 @@ mod tests {
         use crate::db::variables::UserAndRoom;
 
         let db = Database::new_temp().unwrap();
+        let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db.clone(),
-            matrix_client: &matrix_sdk::Client::new("http://example.com").unwrap(),
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),
             username: "username",
             message_body: "message",
