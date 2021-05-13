@@ -15,7 +15,7 @@ impl Command for RollCommand {
     async fn execute(&self, _ctx: &Context<'_>) -> ExecutionResult {
         let roll = self.0.roll();
         let html = format!(
-            "<p><strong>Dice:</strong> {}</p><p><strong>Result</strong>: {}</p>",
+            "<strong>Dice:</strong> {}</p><p><strong>Result</strong>: {}",
             self.0, roll
         );
 

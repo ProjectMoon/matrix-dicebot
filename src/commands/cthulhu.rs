@@ -19,7 +19,7 @@ impl Command for CthRoll {
         let executed_roll = regular_roll(&roll_with_ctx).await?;
 
         let html = format!(
-            "<p><strong>Roll:</strong> {}</p><p><strong>Result</strong>: {}</p>",
+            "<strong>Roll:</strong> {}</p><p><strong>Result</strong>: {}",
             executed_roll, executed_roll.roll
         );
 
@@ -39,7 +39,7 @@ impl Command for CthAdvanceRoll {
         let roll_with_ctx = AdvancementRollWithContext(&self.0, ctx);
         let executed_roll = advancement_roll(&roll_with_ctx).await?;
         let html = format!(
-            "<p><strong>Roll:</strong> {}</p><p><strong>Result</strong>: {}</p>",
+            "<strong>Roll:</strong> {}</p><p><strong>Result</strong>: {}",
             executed_roll, executed_roll.roll
         );
 

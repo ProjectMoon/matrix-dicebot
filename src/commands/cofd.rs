@@ -16,7 +16,7 @@ impl Command for PoolRollCommand {
         let rolled_pool = roll_pool(&pool_with_ctx).await?;
 
         let html = format!(
-            "<p><strong>Pool:</strong> {}</p><p><strong>Result</strong>: {}</p>",
+            "<strong>Pool:</strong> {}</p><p><strong>Result</strong>: {}",
             rolled_pool, rolled_pool.roll
         );
 
