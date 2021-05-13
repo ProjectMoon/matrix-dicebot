@@ -73,6 +73,11 @@ async fn handle_multiple_results(
     respond_to: &str,
     room: &Joined,
 ) {
+    let respond_to = format!(
+        "<a href=\"https://matrix.to/#/{}\">{}</a>",
+        respond_to, respond_to
+    );
+
     let errors: Vec<(&str, &ExecutionError)> = results
         .into_iter()
         .filter_map(|(cmd, result)| match result {

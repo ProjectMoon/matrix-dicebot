@@ -76,11 +76,13 @@ pub trait ResponseExtractor {
 impl ResponseExtractor for ExecutionResult {
     /// Error message in bolded HTML.
     fn message_html(&self, username: &str) -> String {
-        //TODO use user display name too
+        // TODO use user display name too (element seems to render this
+        // without display name)
         let username = format!(
             "<a href=\"https://matrix.to/#/{}\">{}</a>",
             username, username
         );
+
         match self {
             Ok(resp) => format!("<p>{}</p><p>{}</p>", username, resp.html).replace("\n", "<br/>"),
             Err(e) => format!("<p>{}</p><p>{}</p>", username, e.html()).replace("\n", "<br/>"),
