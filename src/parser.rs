@@ -148,10 +148,7 @@ where
 /// should not have an operator, but every one after that should.
 /// Accepts expressions like "8", "10 + variablename", "variablename -
 /// 3", etc. This function is currently common to systems that don't
-/// deal with XdY rolls. Support for that will be added later. Parsers
-/// utilzing this function should layer their own checks on top of
-/// this; perhaps they do not want more than one expression, or some
-/// other rules.
+/// deal with XdY rolls. Support for that will be added later.
 pub fn parse_amounts(input: &str) -> ParseResult<Vec<Amount>> {
     let input = input.trim();
 
@@ -177,9 +174,84 @@ pub fn parse_amounts(input: &str) -> ParseResult<Vec<Amount>> {
     }
 }
 
-#[cfg(test)]
-mod tests {
+/// Parse an expression that expects a single number or variable. No
+/// operators are allowed. This function is common to systems that
+/// don't deal with XdY rolls. Currently. this function does not
+/// support parsing negative numbers.
+pub fn parse_single_amount(input: &str) -> ParseResult<Amount> {
+    // TODO add support for negative numbers, as technically they
+    // should be allowed.
+    let input = input.trim();
+    let mut parser = first_amount_parser().map(|amount: ParseResult<Amount>| amount);
 
+    let (result, rest) = parser.parse(input)?;
+
+    if rest.len() == 0 {
+        result
+    } else {
+        Err(DiceParsingError::UnconsumedInput)
+    }
+}
+
+#[cfg(test)]
+mod parse_single_amount_tests {
+    use super::*;
+
+    #[test]
+    fn parse_single_variable_test() {
+        let result = parse_single_amount("abc");
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Amount {
+                operator: Operator::Plus,
+                element: Element::Variable("abc".to_string())
+            }
+        )
+    }
+
+    // TODO add support for negative numbers in parse_single_amount
+    // #[test]
+    // fn parse_single_negative_number_test() {
+    //     let result = parse_single_amount("-1");
+    //     assert!(result.is_ok());
+    //     assert_eq!(
+    //         result.unwrap(),
+    //         Amount {
+    //             operator: Operator::Minus,
+    //             element: Element::Number(1)
+    //         }
+    //     )
+    // }
+
+    #[test]
+    fn parse_single_number_test() {
+        let result = parse_single_amount("1");
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            Amount {
+                operator: Operator::Plus,
+                element: Element::Number(1)
+            }
+        )
+    }
+
+    #[test]
+    fn parse_multiple_elements_test() {
+        let result = parse_single_amount("1+abc");
+        assert!(result.is_err());
+
+        let result = parse_single_amount("abc+1");
+        assert!(result.is_err());
+
+        let result = parse_single_amount("-1-abc");
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod parse_many_amounts_tests {
     use super::*;
 
     #[test]
