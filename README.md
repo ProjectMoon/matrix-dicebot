@@ -145,8 +145,11 @@ Examples:
 !get myvar //will print 5
 ```
 
-Variables can be referenced in dice pool rolling expressions, for
-example `!pool myvar` or `!pool myvar+3`.
+Variables can be referenced in dice pool and Call of Cthulhu rolling
+expressions, for example `!pool myvar` or `!pool myvar+3` or `!cthroll
+myvar`. The Call of Cthulhu advancement roll also accepts variables,
+and if a variable is used, and the roll is successful, it will update
+the variable with the new skill.
 
 ## Running the Bot
 
