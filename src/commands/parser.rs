@@ -133,7 +133,9 @@ pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
             "r" | "roll" => parse_roll(&cmd_input),
             "rp" | "pool" => parse_pool_roll(&cmd_input),
             "cthroll" | "cthRoll" => parse_cth_roll(&cmd_input),
-            "cthadv" | "cthARoll" => parse_cth_advancement_roll(&cmd_input),
+            "cthadv" | "ctharoll" | "cthAroll" | "cthARoll" => {
+                parse_cth_advancement_roll(&cmd_input)
+            }
             "chance" => chance_die(),
             "help" => help(&cmd_input),
             _ => Err(CommandParsingError::UnrecognizedCommand(cmd).into()),
