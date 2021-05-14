@@ -279,9 +279,9 @@ checksum = "ea221b5284a47e40033bf9b66f35f984ec0ea2931eb03505246cd27a963f981b"
 
 [[package]]
 name = "cpufeatures"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f508f5ff4df34cfd12172af9f98f5c307db8b36ceb0c63264eccb43be5ed635"
+checksum = "281f563b2c3a0e535ab12d81d3c5859045795256ad269afa7c19542585b68f93"
 dependencies = [
  "libc",
 ]
@@ -966,7 +966,7 @@ checksum = "7ffc5c5338469d4d3ea17d269fa8ea3512ad247247c30bd2df69e68309ed0a08"
 [[package]]
 name = "matrix-sdk"
 version = "0.2.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#6b600d7e6db8fb2b8fa28e476b47dae8fb411221"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#0bdcc0fbf90286b7555fda48403151f02dde6717"
 dependencies = [
  "backoff",
  "bytes",
@@ -990,7 +990,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-base"
 version = "0.2.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#6b600d7e6db8fb2b8fa28e476b47dae8fb411221"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#0bdcc0fbf90286b7555fda48403151f02dde6717"
 dependencies = [
  "chacha20poly1305",
  "dashmap",
@@ -1013,7 +1013,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-common"
 version = "0.2.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#6b600d7e6db8fb2b8fa28e476b47dae8fb411221"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#0bdcc0fbf90286b7555fda48403151f02dde6717"
 dependencies = [
  "async-trait",
  "futures",
@@ -1029,7 +1029,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-crypto"
 version = "0.2.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#6b600d7e6db8fb2b8fa28e476b47dae8fb411221"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#0bdcc0fbf90286b7555fda48403151f02dde6717"
 dependencies = [
  "aes-ctr",
  "aes-gcm",
@@ -2231,9 +2231,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.5.0"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83f0c8e7c0addab50b663055baf787d0af7f413a46e6e7fb9559a4e4db7137a5"
+checksum = "bd3076b5c8cc18138b8f8814895c11eb4de37114a5d127bafdc5e55798ceef37"
 dependencies = [
  "autocfg",
  "bytes",
@@ -2251,9 +2251,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "caf7b11a536f46a809a8a9f0bb4237020f70ecbf115b842360afb127ea2fda57"
+checksum = "c49e3df43841dafb86046472506755d8501c5615673955f6aa17181125d13c37"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2272,9 +2272,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.6.6"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "940a12c99365c31ea8dd9ba04ec1be183ffe4920102bb7122c2f515437601e8e"
+checksum = "1caa0b0c8d94a049db56b5acf8cba99dc0623aab1b26d5b5f5e2d945846b3592"
 dependencies = [
  "bytes",
  "futures-core",
@@ -2599,9 +2599,9 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab9379fdcbd16727ce6f7f098154c35d303f092ba4c8e20719f584ad29b8aa47"
+checksum = "5e59ec1d2457bd6c0dd89b50e7d9d6b0b647809bf3f0a59ac85557046950b7b2"
 dependencies = [
  "byteorder",
  "zerocopy-derive",
@@ -2609,9 +2609,9 @@ dependencies = [
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d498dbd1fd7beb83c86709ae1c33ca50942889473473d287d56ce4770a18edfb"
+checksum = "0af017aca1fa6181f5dd7a802456fe6f7666ecdcc18d0910431f0fc89d474e51"
 dependencies = [
  "proc-macro2",
  "syn",
