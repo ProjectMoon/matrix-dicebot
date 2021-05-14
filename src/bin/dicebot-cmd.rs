@@ -1,9 +1,9 @@
-use chronicle_dicebot::commands;
-use chronicle_dicebot::commands::ResponseExtractor;
-use chronicle_dicebot::context::{Context, RoomContext};
-use chronicle_dicebot::db::Database;
-use chronicle_dicebot::error::BotError;
 use matrix_sdk::identifiers::room_id;
+use tenebrous_dicebot::commands;
+use tenebrous_dicebot::commands::ResponseExtractor;
+use tenebrous_dicebot::context::{Context, RoomContext};
+use tenebrous_dicebot::db::Database;
+use tenebrous_dicebot::error::BotError;
 use url::Url;
 
 #[tokio::main]

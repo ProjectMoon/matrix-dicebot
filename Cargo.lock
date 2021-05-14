@@ -228,35 +228,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "chronicle-dicebot"
-version = "0.9.0"
-dependencies = [
- "async-trait",
- "bincode",
- "byteorder",
- "combine",
- "dirs",
- "env_logger",
- "futures",
- "html2text",
- "indoc",
- "itertools",
- "log",
- "matrix-sdk",
- "memmem",
- "nom",
- "phf",
- "rand 0.8.3",
- "serde",
- "sled",
- "thiserror",
- "tokio",
- "toml",
- "url",
- "zerocopy",
-]
-
-[[package]]
 name = "cipher"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2135,6 +2106,35 @@ dependencies = [
  "futf",
  "mac",
  "utf-8",
+]
+
+[[package]]
+name = "tenebrous-dicebot"
+version = "0.9.0"
+dependencies = [
+ "async-trait",
+ "bincode",
+ "byteorder",
+ "combine",
+ "dirs",
+ "env_logger",
+ "futures",
+ "html2text",
+ "indoc",
+ "itertools",
+ "log",
+ "matrix-sdk",
+ "memmem",
+ "nom",
+ "phf",
+ "rand 0.8.3",
+ "serde",
+ "sled",
+ "thiserror",
+ "tokio",
+ "toml",
+ "url",
+ "zerocopy",
 ]
 
 [[package]]
