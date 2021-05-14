@@ -1,3 +1,8 @@
+/**
+ * In addition to the terms of the AGPL, portions of this file
+ * are governed by the terms of the MIT license, from the Rust Matrix
+ * SDK example code.
+ */
 use super::DiceBot;
 use crate::db::Database;
 use crate::error::BotError;

@@ -1,3 +1,8 @@
+/**
+ * In addition to the terms of the AGPL, portions of this file are
+ * governed by the terms of the MIT license, from the original
+ * axfive-matrix-dicebot project.
+ */
 use crate::basic::parser::parse_element_expression;
 use crate::cofd::parser::{create_chance_die, parse_dice_pool};
 use crate::commands::{

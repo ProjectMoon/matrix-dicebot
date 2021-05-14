@@ -1,3 +1,8 @@
+/**
+ * In addition to the terms of the AGPL, this file is governed by the
+ * terms of the MIT license, from the original axfive-matrix-dicebot
+ * project.
+ */
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 

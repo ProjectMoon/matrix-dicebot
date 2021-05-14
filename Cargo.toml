@@ -1,12 +1,12 @@
 [package]
-name = "chronicle-dicebot"
+name = "tenebrous-dicebot"
 version = "0.9.0"
 authors = ["Taylor C. Richberger <taywee@gmx.com>", "projectmoon <projectmoon@agnos.is>"]
 edition = "2018"
-license = 'MIT'
-description = 'A simple async Matrix dicebot'
+license = 'AGPL-3.0-or-later'
+description = 'An async Matrix dice bot for role-playing games'
 readme = 'README.md'
-repository = 'https://github.com/ProjectMoon/matrix-dicebot'
+repository = 'https://git.agnos.is/projectmoon/matrix-dicebot'
 keywords = ["games", "dice", "matrix", "bot"]
 categories = ["games"]
 
