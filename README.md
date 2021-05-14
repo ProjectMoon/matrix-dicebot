@@ -1,4 +1,4 @@
-# matrix-dicebot
+# Tenebrous Dicebot
 
 [![Build Status](https://drone.agnos.is/api/badges/projectmoon/tenebrous-dicebot/status.svg)](https://drone.agnos.is/projectmoon/tenebrous-dicebot)
 
@@ -13,8 +13,9 @@ character sheet management.
 
 ## Features
 
-`matrix-dicebot` is a basic dice rolling bot. It currently has the
-following features:
+`tenebrous-dicebot` is a dice rolling bot for facilitating
+role-playing games over Matrix (and anything that Matrix can bridge
+to, like Discord). It currently has the following features:
 
 * Rolling arbitrary dice expressions (e.g. 1d4, 1d20+5, 1d8+1d6, etc).
 * Rolling dice pools for the Chronicles of Darkness 2E Storytelling
@@ -250,6 +251,6 @@ support added for Chronicles of Darkness and Call of Cthulhu.
 [config-file]: #Configuration-File
 [docker-image]: https://github.com/users/ProjectMoon/packages/container/package/chronicle-dicebot
 [dirs]: https://docs.rs/dirs/2.0.2/dirs/
-[main-repo]: https://git.agnos.is/projectmoon/matrix-dicebot
+[main-repo]: https://git.agnos.is/projectmoon/tenebrous-dicebot
 [github-repo]: https://github.com/ProjectMoon/matrix-dicebot
-[roadmap]: https://git.agnos.is/projectmoon/matrix-dicebot/wiki/Roadmap
+[roadmap]: https://git.agnos.is/projectmoon/tenebrous-dicebot/wiki/Roadmap
