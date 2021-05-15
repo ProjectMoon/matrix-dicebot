@@ -1,12 +1,14 @@
-use crate::db::errors::DataError;
+use crate::db::sqlite::errors::DataError;
+use crate::db::sqlite::Rooms;
 use crate::matrix;
 use crate::models::RoomInfo;
+use futures::stream::{self, StreamExt, TryStreamExt};
 use matrix_sdk::{self, identifiers::RoomId, Client};
 
 /// Record the information about a room, including users in it.
 pub async fn record_room_information(
     client: &Client,
-    db: &crate::db::Database,
+    db: &crate::db::sqlite::Database,
     room_id: &RoomId,
     room_display_name: &str,
     our_username: &str,
@@ -21,11 +23,19 @@ pub async fn record_room_information(
 
     // TODO this and the username adding should be one whole
     // transaction in the db.
-    db.rooms.insert_room_info(&info)?;
+    db.insert_room_info(&info).await?;
 
-    usernames
+    let filtered_usernames = usernames
         .into_iter()
-        .filter(|username| username != our_username)
-        .map(|username| db.rooms.add_user_to_room(&username, room_id_str))
-        .collect() //Make use of collect impl on Result.
+        .filter(|username| username != our_username);
+
+    // Async collect into vec of results, then use into_iter of result
+    // to go to from Result<Vec<()>> to just Result<()>. Easier than
+    // attempting to async-collect our way to a single Result<()>.
+    stream::iter(filtered_usernames)
+        .then(|username| async move { db.add_user_to_room(&username, &room_id_str).await })
+        .collect::<Vec<Result<(), DataError>>>()
+        .await
+        .into_iter()
+        .collect()
 }

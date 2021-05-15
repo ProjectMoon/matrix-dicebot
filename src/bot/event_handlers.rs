@@ -4,7 +4,8 @@
  * SDK example code.
  */
 use super::DiceBot;
-use crate::db::Database;
+use crate::db::sqlite::Database;
+use crate::db::sqlite::Rooms;
 use crate::error::BotError;
 use crate::logic::record_room_information;
 use async_trait::async_trait;
@@ -90,9 +91,9 @@ async fn should_process_message<'a>(
     Ok((msg_body, sender_username))
 }
 
-fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
-    db.rooms
-        .should_process(room_id, event_id)
+async fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> bool {
+    db.should_process(room_id, event_id)
+        .await
         .unwrap_or_else(|e| {
             error!(
                 "Database error when checking if we should process an event: {}",
@@ -116,7 +117,7 @@ impl EventHandler for DiceBot {
         let room_id_str = room_id.as_str();
         let username = &event.state_key;
 
-        if !should_process_event(&self.db, room_id_str, event.event_id.as_str()) {
+        if !should_process_event(&self.db, room_id_str, event.event_id.as_str()).await {
             return;
         }
 
@@ -135,7 +136,7 @@ impl EventHandler for DiceBot {
 
         let result = if event_affects_us && !adding_user {
             info!("Clearing all information for room ID {}", room_id);
-            self.db.rooms.clear_info(room_id_str)
+            self.db.clear_info(room_id_str).await
         } else if event_affects_us && adding_user {
             info!("Joined room {}; recording room information", room_id);
             record_room_information(
@@ -148,10 +149,10 @@ impl EventHandler for DiceBot {
             .await
         } else if !event_affects_us && adding_user {
             info!("Adding user {} to room ID {}", username, room_id);
-            self.db.rooms.add_user_to_room(username, room_id_str)
+            self.db.add_user_to_room(username, room_id_str).await
         } else if !event_affects_us && !adding_user {
             info!("Removing user {} from room ID {}", username, room_id);
-            self.db.rooms.remove_user_from_room(username, room_id_str)
+            self.db.remove_user_from_room(username, room_id_str).await
         } else {
             debug!("Ignoring a room member event: {:#?}", event);
             Ok(())
@@ -196,7 +197,7 @@ impl EventHandler for DiceBot {
         };
 
         let room_id = room.room_id().as_str();
-        if !should_process_event(&self.db, room_id, event.event_id.as_str()) {
+        if !should_process_event(&self.db, room_id, event.event_id.as_str()).await {
             return;
         }
 

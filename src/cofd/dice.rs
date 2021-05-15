@@ -325,7 +325,8 @@ pub async fn roll_pool(pool: &DicePoolWithContext<'_>) -> Result<RolledDicePool,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::Database;
+    use crate::db::sqlite::Database;
+    use crate::db::sqlite::Variables;
     use url::Url;
 
     macro_rules! dummy_room {
@@ -463,8 +464,8 @@ mod tests {
         assert_eq!(vec![10], roll);
     }
 
-    #[tokio::test]
-    async fn number_of_dice_equality_test() {
+    #[test]
+    fn number_of_dice_equality_test() {
         let num_dice = 5;
         let rolls = vec![1, 2, 3, 4, 5];
         let pool = DicePool::easy_pool(5, DicePoolQuality::TenAgain);
@@ -472,10 +473,10 @@ mod tests {
         assert_eq!(5, rolled_pool.num_dice);
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn rejects_large_expression_test() {
         let homeserver = Url::parse("http://example.com").unwrap();
-        let db = Database::new_temp().unwrap();
+        let db = Database::new_temp().await.unwrap();
         let ctx = Context {
             db: db,
             matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
@@ -504,9 +505,17 @@ mod tests {
         ));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn converts_to_chance_die_test() {
-        let db = Database::new_temp().unwrap();
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        crate::migrator::migrate(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        let db = Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,
@@ -533,11 +542,17 @@ mod tests {
         assert_eq!(1, roll.num_dice);
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn can_resolve_variables_test() {
-        use crate::db::variables::UserAndRoom;
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        crate::migrator::migrate(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
 
-        let db = Database::new_temp().unwrap();
+        let db = Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db.clone(),
@@ -547,10 +562,8 @@ mod tests {
             message_body: "message",
         };
 
-        let user_and_room = UserAndRoom(&ctx.username, &ctx.room.id.as_str());
-
-        db.variables
-            .set_user_variable(&user_and_room, "myvariable", 10)
+        db.set_user_variable(&ctx.username, &ctx.room.id.as_str(), "myvariable", 10)
+            .await
             .expect("could not set myvariable to 10");
 
         let amounts = vec![Amount {

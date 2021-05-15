@@ -21,6 +21,9 @@ pub enum BotError {
     #[error("database error: {0}")]
     DataError(#[from] DataError),
 
+    #[error("sqlite database error: {0}")]
+    SqliteDataError(#[from] crate::db::sqlite::errors::DataError),
+
     #[error("the message should not be processed because it failed validation")]
     ShouldNotProcessError,
 

@@ -1,6 +1,7 @@
 use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
-use crate::db::errors::DataError;
+use crate::db::sqlite::errors::DataError;
+use crate::db::sqlite::Variables;
 use crate::db::variables::UserAndRoom;
 use async_trait::async_trait;
 
@@ -13,8 +14,10 @@ impl Command for GetAllVariablesCommand {
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
-        let key = UserAndRoom(&ctx.username, &ctx.room_id().as_str());
-        let variables = ctx.db.variables.get_user_variables(&key)?;
+        let variables = ctx
+            .db
+            .get_user_variables(&ctx.username, ctx.room_id().as_str())
+            .await?;
 
         let mut variable_list: Vec<String> = variables
             .into_iter()
@@ -43,8 +46,10 @@ impl Command for GetVariableCommand {
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let name = &self.0;
-        let key = UserAndRoom(&ctx.username, &ctx.room_id().as_str());
-        let result = ctx.db.variables.get_user_variable(&key, name);
+        let result = ctx
+            .db
+            .get_user_variable(&ctx.username, ctx.room_id().as_str(), name)
+            .await;
 
         let value = match result {
             Ok(num) => format!("{} = {}", name, num),
@@ -68,9 +73,10 @@ impl Command for SetVariableCommand {
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let name = &self.0;
         let value = self.1;
-        let key = UserAndRoom(&ctx.username, ctx.room_id().as_str());
 
-        ctx.db.variables.set_user_variable(&key, name, value)?;
+        ctx.db
+            .set_user_variable(&ctx.username, ctx.room_id().as_str(), name, value)
+            .await?;
 
         let content = format!("{} = {}", name, value);
         let html = format!("<strong>Set Variable:</strong> {}", content);
@@ -88,8 +94,10 @@ impl Command for DeleteVariableCommand {
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let name = &self.0;
-        let key = UserAndRoom(&ctx.username, ctx.room_id().as_str());
-        let result = ctx.db.variables.delete_user_variable(&key, name);
+        let result = ctx
+            .db
+            .delete_user_variable(&ctx.username, ctx.room_id().as_str(), name)
+            .await;
 
         let value = match result {
             Ok(()) => format!("{} now unset", name),

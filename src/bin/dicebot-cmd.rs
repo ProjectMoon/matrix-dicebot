@@ -2,7 +2,7 @@ use matrix_sdk::identifiers::room_id;
 use tenebrous_dicebot::commands;
 use tenebrous_dicebot::commands::ResponseExtractor;
 use tenebrous_dicebot::context::{Context, RoomContext};
-use tenebrous_dicebot::db::Database;
+use tenebrous_dicebot::db::sqlite::Database;
 use tenebrous_dicebot::error::BotError;
 use url::Url;
 
@@ -17,7 +17,7 @@ async fn main() -> Result<(), BotError> {
     let homeserver = Url::parse("http://example.com")?;
 
     let context = Context {
-        db: Database::new_temp()?,
+        db: Database::new_temp().await?,
         matrix_client: &matrix_sdk::Client::new(homeserver)
             .expect("Could not create matrix client"),
         room: RoomContext {

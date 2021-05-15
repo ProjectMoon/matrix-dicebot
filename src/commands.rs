@@ -2,6 +2,7 @@ use crate::context::Context;
 use crate::error::BotError;
 use async_trait::async_trait;
 use thiserror::Error;
+use BotError::{DataError, SqliteDataError};
 
 pub mod basic_rolling;
 pub mod cofd;
@@ -50,7 +51,13 @@ pub struct ExecutionError(#[from] pub BotError);
 
 impl From<crate::db::errors::DataError> for ExecutionError {
     fn from(error: crate::db::errors::DataError) -> Self {
-        Self(BotError::DataError(error))
+        Self(DataError(error))
+    }
+}
+
+impl From<crate::db::sqlite::errors::DataError> for ExecutionError {
+    fn from(error: crate::db::sqlite::errors::DataError) -> Self {
+        Self(SqliteDataError(error))
     }
 }
 
@@ -129,9 +136,9 @@ mod tests {
         ));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn unrecognized_command() {
-        let db = crate::db::Database::new_temp().unwrap();
+        let db = crate::db::sqlite::Database::new_temp().await.unwrap();
         let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,

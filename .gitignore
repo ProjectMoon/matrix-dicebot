@@ -11,3 +11,4 @@ bot-db*
 bigboy
 .#*
 *.sqlite
+.tmp*

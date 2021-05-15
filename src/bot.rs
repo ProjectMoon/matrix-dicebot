@@ -1,7 +1,8 @@
 use crate::commands::{execute_command, ExecutionError, ExecutionResult, ResponseExtractor};
 use crate::config::*;
 use crate::context::{Context, RoomContext};
-use crate::db::Database;
+use crate::db::sqlite::Database;
+use crate::db::sqlite::DbState;
 use crate::error::BotError;
 use crate::matrix;
 use crate::state::DiceBotState;
@@ -134,7 +135,7 @@ impl DiceBot {
 
         // Pull device ID from database, if it exists. Then write it
         // to DB if the library generated one for us.
-        let device_id: Option<String> = self.db.state.get_device_id()?;
+        let device_id: Option<String> = self.db.get_device_id().await?;
         let device_id: Option<&str> = device_id.as_deref();
 
         client
@@ -143,7 +144,7 @@ impl DiceBot {
 
         if device_id.is_none() {
             let device_id = client.device_id().await.ok_or(BotError::NoDeviceIdFound)?;
-            self.db.state.set_device_id(device_id.as_str())?;
+            self.db.set_device_id(device_id.as_str()).await?;
             info!("Recorded new device ID: {}", device_id.as_str());
         } else {
             info!("Using existing device ID: {}", device_id.unwrap());

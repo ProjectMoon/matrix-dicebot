@@ -1,4 +1,4 @@
-use crate::db::Database;
+use crate::db::sqlite::Database;
 use matrix_sdk::identifiers::RoomId;
 use matrix_sdk::room::Joined;
 use matrix_sdk::Client;

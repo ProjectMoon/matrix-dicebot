@@ -1,7 +1,11 @@
+use crate::db::sqlite::Variables;
 use crate::error::{BotError, DiceRollingError};
 use crate::parser::{Amount, Element};
 use crate::{context::Context, db::variables::UserAndRoom};
 use crate::{dice::calculate_single_die_amount, parser::DiceParsingError};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -270,10 +274,11 @@ macro_rules! is_variable {
     };
 }
 
-///A version of DieRoller that uses a rand::Rng to roll numbers.
-struct RngDieRoller<R: rand::Rng>(R);
+/// A die roller than can have an RNG implementation injected, but
+/// must be thread-safe. Required for the async dice rolling code.
+struct RngDieRoller<R: Rng + ?Sized + Send>(R);
 
-impl<R: rand::Rng> DieRoller for RngDieRoller<R> {
+impl<R: Rng + ?Sized + Send> DieRoller for RngDieRoller<R> {
     fn roll(&mut self) -> u32 {
         self.0.gen_range(0..=9)
     }
@@ -361,7 +366,7 @@ pub async fn regular_roll(
     let target = calculate_single_die_amount(&roll_with_ctx.0.amount, roll_with_ctx.1).await?;
     let target = u32::try_from(target).map_err(|_| DiceRollingError::InvalidAmount)?;
 
-    let mut roller = RngDieRoller(rand::thread_rng());
+    let mut roller = RngDieRoller::<StdRng>(SeedableRng::from_entropy());
     let rolled_dice = roll_regular_dice(&roll_with_ctx.0.modifier, target, &mut roller);
 
     Ok(ExecutedDiceRoll {
@@ -371,11 +376,12 @@ pub async fn regular_roll(
     })
 }
 
-fn update_skill(ctx: &Context, variable: &str, value: u32) -> Result<(), BotError> {
+async fn update_skill(ctx: &Context<'_>, variable: &str, value: u32) -> Result<(), BotError> {
     use std::convert::TryInto;
     let value: i32 = value.try_into()?;
-    let key = UserAndRoom(ctx.username, ctx.room_id().as_str());
-    ctx.db.variables.set_user_variable(&key, variable, value)?;
+    ctx.db
+        .set_user_variable(&ctx.username, &ctx.room_id().as_str(), variable, value)
+        .await?;
     Ok(())
 }
 
@@ -397,12 +403,14 @@ pub async fn advancement_roll(
         return Err(DiceRollingError::InvalidAmount.into());
     }
 
-    let mut roller = RngDieRoller(rand::thread_rng());
+    let mut roller = RngDieRoller::<StdRng>(SeedableRng::from_entropy());
     let roll = roll_advancement_dice(target, &mut roller);
+
+    drop(roller);
 
     if roll.successful && is_variable!(existing_skill) {
         let variable_name: &str = extract_variable(existing_skill)?;
-        update_skill(roll_with_ctx.1, variable_name, roll.new_skill_amount())?;
+        update_skill(roll_with_ctx.1, variable_name, roll.new_skill_amount()).await?;
     }
 
     Ok(ExecutedAdvancementRoll { target, roll })
@@ -411,7 +419,7 @@ pub async fn advancement_roll(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::Database;
+    use crate::db::sqlite::Database;
     use crate::parser::{Amount, Element, Operator};
     use url::Url;
 
@@ -474,7 +482,7 @@ mod tests {
         assert!(matches!(result, Err(DiceParsingError::WrongElementType)));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn regular_roll_rejects_negative_numbers() {
         let roll = DiceRoll {
             amount: Amount {
@@ -484,7 +492,15 @@ mod tests {
             modifier: DiceRollModifier::Normal,
         };
 
-        let db = Database::new_temp().unwrap();
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        crate::migrator::migrate(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        let db = Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,
@@ -503,7 +519,7 @@ mod tests {
         ));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn advancement_roll_rejects_negative_numbers() {
         let roll = AdvancementRoll {
             existing_skill: Amount {
@@ -512,7 +528,15 @@ mod tests {
             },
         };
 
-        let db = Database::new_temp().unwrap();
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        crate::migrator::migrate(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        let db = Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,
@@ -531,7 +555,7 @@ mod tests {
         ));
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn advancement_roll_rejects_big_numbers() {
         let roll = AdvancementRoll {
             existing_skill: Amount {
@@ -540,7 +564,15 @@ mod tests {
             },
         };
 
-        let db = Database::new_temp().unwrap();
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        crate::migrator::migrate(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        let db = Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
             db: db,

@@ -58,7 +58,7 @@ impl Variables for Database {
     ) -> Result<(), DataError> {
         sqlx::query(
             "INSERT INTO user_variables
-                    (user_id, room_id, variable_name, value)
+                    (user_id, room_id, key, value)
                     values (?, ?, ?, ?)",
         )
         .bind(user)
