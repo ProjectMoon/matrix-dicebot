@@ -12,6 +12,7 @@ pub mod errors;
 pub mod migrations;
 pub mod rooms;
 pub mod schema;
+pub mod sqlite;
 pub mod state;
 pub mod variables;
 

@@ -1,0 +1,45 @@
+{
+  "db": "SQLite",
+  "636b1b868eaf04cd234fbf17747d94a66e81f7bc1b060ba14151dbfaf40eeefc": {
+    "query": "SELECT value as \"value: i32\" FROM user_variables\n               WHERE user_id = ? AND room_id = ? AND key = ?",
+    "describe": {
+      "columns": [
+        {
+          "name": "value: i32",
+          "ordinal": 0,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 3
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "d6558668b7395b95ded8da71c80963ddde957abdcc3c68b03431f8e904e0d21f": {
+    "query": "SELECT key, value as \"value: i32\" FROM user_variables\n               WHERE room_id = ?",
+    "describe": {
+      "columns": [
+        {
+          "name": "key",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "value: i32",
+          "ordinal": 1,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  }
+}

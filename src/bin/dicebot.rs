@@ -7,6 +7,7 @@ use tenebrous_dicebot::bot::DiceBot;
 use tenebrous_dicebot::config::*;
 use tenebrous_dicebot::db::Database;
 use tenebrous_dicebot::error::BotError;
+use tenebrous_dicebot::migrator;
 use tenebrous_dicebot::state::DiceBotState;
 
 #[tokio::main]
@@ -32,6 +33,9 @@ async fn run() -> Result<(), BotError> {
     let state = Arc::new(RwLock::new(DiceBotState::new(&cfg)));
 
     db.migrate(cfg.migration_version())?;
+
+    let sqlite_path = format!("{}/dicebot.sqlite", cfg.database_path());
+    migrator::migrate(&sqlite_path).await?;
 
     match DiceBot::new(&cfg, &state, &db) {
         Ok(bot) => bot.run().await?,

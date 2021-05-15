@@ -10,6 +10,10 @@ repository = 'https://git.agnos.is/projectmoon/matrix-dicebot'
 keywords = ["games", "dice", "matrix", "bot"]
 categories = ["games"]
 
+[[bin]]
+name = "dicebot-migrate"
+path = "src/migrate_cli.rs"
+
 [dependencies]
 log = "0.4"
 env_logger = "0.8"
@@ -32,6 +36,12 @@ bincode = "1.3"
 html2text = "0.2"
 phf = { version = "0.8", features = ["macros"] }
 matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", branch = "master" }
+refinery = { version = "0.5", features = ["rusqlite"]}
+barrel = { version = "0.6", features = ["sqlite3"] }
+
+[dependencies.sqlx]
+version = "0.5"
+features = [ "offline", "sqlite", "runtime-tokio-native-tls" ]
 
 [dependencies.serde]
 version = "1"

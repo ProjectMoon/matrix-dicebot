@@ -1,6 +1,6 @@
-use crate::commands::CommandError;
 use crate::config::ConfigError;
 use crate::db::errors::DataError;
+use crate::{commands::CommandError, migrator::migrations};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -72,6 +72,9 @@ pub enum BotError {
 
     #[error("database error")]
     DatabaseError(#[from] sled::Error),
+
+    #[error("database migration error: {0}")]
+    SqliteError(#[from] crate::migrator::MigrationError),
 
     #[error("too many commands or message was too large")]
     MessageTooLarge,
