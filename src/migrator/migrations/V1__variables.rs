@@ -7,7 +7,6 @@ pub fn migration() -> String {
     info!("Applying migration: {}", file!());
 
     m.create_table("user_variables", |t| {
-        t.add_column("id", types::primary());
         t.add_column("room_id", types::text());
         t.add_column("user_id", types::text());
         t.add_column("key", types::text());

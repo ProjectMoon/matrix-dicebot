@@ -20,16 +20,19 @@ fn extract_error_message(error: MatrixError) -> String {
 }
 
 /// Retrieve a list of users in a given room.
-pub async fn get_users_in_room(client: &Client, room_id: &RoomId) -> Vec<String> {
+pub async fn get_users_in_room(
+    client: &Client,
+    room_id: &RoomId,
+) -> Result<Vec<String>, MatrixError> {
     if let Some(joined_room) = client.get_joined_room(room_id) {
-        let members = joined_room.joined_members().await.ok().unwrap_or_default();
+        let members = joined_room.joined_members().await?;
 
-        members
+        Ok(members
             .into_iter()
             .map(|member| member.user_id().to_string())
-            .collect()
+            .collect())
     } else {
-        vec![]
+        Ok(vec![])
     }
 }
 

@@ -136,7 +136,7 @@ impl EventHandler for DiceBot {
 
         let result = if event_affects_us && !adding_user {
             info!("Clearing all information for room ID {}", room_id);
-            self.db.clear_info(room_id_str).await
+            self.db.clear_info(room_id_str).await.map_err(|e| e.into())
         } else if event_affects_us && adding_user {
             info!("Joined room {}; recording room information", room_id);
             record_room_information(
@@ -149,10 +149,16 @@ impl EventHandler for DiceBot {
             .await
         } else if !event_affects_us && adding_user {
             info!("Adding user {} to room ID {}", username, room_id);
-            self.db.add_user_to_room(username, room_id_str).await
+            self.db
+                .add_user_to_room(username, room_id_str)
+                .await
+                .map_err(|e| e.into())
         } else if !event_affects_us && !adding_user {
             info!("Removing user {} from room ID {}", username, room_id);
-            self.db.remove_user_from_room(username, room_id_str).await
+            self.db
+                .remove_user_from_room(username, room_id_str)
+                .await
+                .map_err(|e| e.into())
         } else {
             debug!("Ignoring a room member event: {:#?}", event);
             Ok(())

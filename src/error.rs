@@ -36,10 +36,10 @@ pub enum BotError {
     #[error("error in matrix state store: {0}")]
     MatrixStateStoreError(#[from] matrix_sdk::StoreError),
 
-    #[error("uncategorized matrix SDK error")]
+    #[error("uncategorized matrix SDK error: {0}")]
     MatrixError(#[from] matrix_sdk::Error),
 
-    #[error("uncategorized matrix SDK base error")]
+    #[error("uncategorized matrix SDK base error: {0}")]
     MatrixBaseError(#[from] matrix_sdk::BaseError),
 
     #[error("future canceled")]
