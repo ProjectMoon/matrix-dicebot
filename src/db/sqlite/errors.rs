@@ -1,3 +1,5 @@
+use std::num::TryFromIntError;
+
 use sled::transaction::{TransactionError, UnabortableTransactionError};
 use thiserror::Error;
 
@@ -52,6 +54,9 @@ pub enum DataError {
 
     #[error("sqlx error: {0}")]
     SqlxError(#[from] sqlx::Error),
+
+    #[error("numeric conversion error")]
+    NumericConversionError(#[from] TryFromIntError),
 }
 
 /// This From implementation is necessary to deal with the recursive

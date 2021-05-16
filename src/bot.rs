@@ -161,12 +161,6 @@ impl DiceBot {
         let client = self.client.clone();
         self.login(&client).await?;
 
-        // Initial sync without event handler prevents responding to
-        // messages received while bot was offline. TODO: selectively
-        // respond to old messages? e.g. comands missed while offline.
-        info!("Performing intial sync (no commands will be responded to)");
-        self.client.sync_once(SyncSettings::default()).await?;
-
         client.set_event_handler(Box::new(self)).await;
         info!("Listening for commands");
 
