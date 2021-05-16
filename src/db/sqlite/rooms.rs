@@ -6,7 +6,7 @@ use sqlx::SqlitePool;
 use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-async fn record_event(conn: &SqlitePool, event_id: &str, room_id: &str) -> Result<(), DataError> {
+async fn record_event(conn: &SqlitePool, room_id: &str, event_id: &str) -> Result<(), DataError> {
     use std::convert::TryFrom;
     let now: i64 = i64::try_from(
         SystemTime::now()
@@ -122,17 +122,14 @@ impl Rooms for Database {
     }
 
     async fn clear_info(&self, room_id: &str) -> Result<(), DataError> {
+        // We do not clear event history here, because if we rejoin a
+        // room, we would re-process events we've already seen.
         sqlx::query("DELETE FROM room_info where room_id = ?")
             .bind(room_id)
             .execute(&self.conn)
             .await?;
 
         sqlx::query("DELETE FROM room_users where room_id = ?")
-            .bind(room_id)
-            .execute(&self.conn)
-            .await?;
-
-        sqlx::query("DELETE FROM room_events where room_id = ?")
             .bind(room_id)
             .execute(&self.conn)
             .await?;

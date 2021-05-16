@@ -20,9 +20,9 @@ use matrix_sdk::{
     room::Room,
     EventHandler,
 };
-use std::clone::Clone;
 use std::ops::Sub;
 use std::time::{Duration, SystemTime};
+use std::{clone::Clone, time::UNIX_EPOCH};
 
 /// Check if a message is recent enough to actually process. If the
 /// message is within "oldest_message_age" seconds, this function
@@ -32,7 +32,11 @@ fn check_message_age(
     event: &SyncMessageEvent<MessageEventContent>,
     oldest_message_age: u64,
 ) -> bool {
-    let sending_time = event.origin_server_ts;
+    let sending_time = event
+        .origin_server_ts
+        .to_system_time()
+        .unwrap_or(UNIX_EPOCH);
+
     let oldest_timestamp = SystemTime::now().sub(Duration::from_secs(oldest_message_age));
 
     if sending_time > oldest_timestamp {
@@ -127,17 +131,20 @@ impl EventHandler for DiceBot {
             false
         };
 
+        // user_joing is true if a user is joining this room, and
+        // false if they have left for some reason. This user may be
+        // us, or another user in the room.
         use MembershipChange::*;
-        let adding_user = match event.membership_change() {
+        let user_joining = match event.membership_change() {
             Joined => true,
             Banned | Left | Kicked | KickedAndBanned => false,
             _ => return,
         };
 
-        let result = if event_affects_us && !adding_user {
+        let result = if event_affects_us && !user_joining {
             info!("Clearing all information for room ID {}", room_id);
             self.db.clear_info(room_id_str).await.map_err(|e| e.into())
-        } else if event_affects_us && adding_user {
+        } else if event_affects_us && user_joining {
             info!("Joined room {}; recording room information", room_id);
             record_room_information(
                 &self.client,
@@ -147,13 +154,13 @@ impl EventHandler for DiceBot {
                 &event.state_key,
             )
             .await
-        } else if !event_affects_us && adding_user {
+        } else if !event_affects_us && user_joining {
             info!("Adding user {} to room ID {}", username, room_id);
             self.db
                 .add_user_to_room(username, room_id_str)
                 .await
                 .map_err(|e| e.into())
-        } else if !event_affects_us && !adding_user {
+        } else if !event_affects_us && !user_joining {
             info!("Removing user {} from room ID {}", username, room_id);
             self.db
                 .remove_user_from_room(username, room_id_str)
