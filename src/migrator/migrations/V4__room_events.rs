@@ -1,21 +1,7 @@
 use barrel::backend::Sqlite;
 use barrel::{types, types::Type, Migration};
-use log::info;
-
-fn primary_uuid() -> Type {
-    types::text().unique(true).nullable(false)
-}
-
-fn autoincrement_int() -> Type {
-    types::integer()
-        .increments(true)
-        .unique(true)
-        .primary(false)
-}
-
 pub fn migration() -> String {
     let mut m = Migration::new();
-    info!("Applying migration: {}", file!());
 
     //Table of room ID, event ID, event timestamp
     m.create_table("room_events", move |t| {
@@ -32,7 +18,5 @@ pub fn migration() -> String {
         res.pop();
     }
 
-    let x = format!("{}, PRIMARY KEY (room_id, event_id));", res);
-    println!("{}", x);
-    x
+    format!("{}, PRIMARY KEY (room_id, event_id));", res)
 }

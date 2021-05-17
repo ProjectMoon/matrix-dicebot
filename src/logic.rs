@@ -33,8 +33,6 @@ pub async fn record_room_information(
         .into_iter()
         .filter(|username| username != our_username);
 
-    println!("Users to add to room: {:?}", filtered_usernames);
-
     // Async collect into vec of results, then use into_iter of result
     // to go to from Result<Vec<()>> to just Result<()>. Easier than
     // attempting to async-collect our way to a single Result<()>.

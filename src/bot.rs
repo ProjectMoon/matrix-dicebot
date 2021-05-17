@@ -8,7 +8,7 @@ use crate::matrix;
 use crate::state::DiceBotState;
 use dirs;
 use futures::stream::{self, StreamExt};
-use log::info;
+use log::{error, info};
 use matrix_sdk::{self, identifiers::EventId, room::Joined, Client, ClientConfig, SyncSettings};
 use std::clone::Clone;
 use std::path::PathBuf;
@@ -62,6 +62,13 @@ async fn handle_single_result(
     room: &Joined,
     event_id: EventId,
 ) {
+    if cmd_result.is_err() {
+        error!(
+            "Command execution error: {}",
+            cmd_result.as_ref().err().unwrap()
+        );
+    }
+
     let html = cmd_result.message_html(respond_to);
     matrix::send_message(client, room.room_id(), &html, Some(event_id)).await;
 }
@@ -86,6 +93,10 @@ async fn handle_multiple_results(
             _ => None,
         })
         .collect();
+
+    for result in errors.iter() {
+        error!("Command execution error: '{}' - {}", result.0, result.1);
+    }
 
     let message = if errors.len() == 0 {
         format!("{}: Executed {} commands", respond_to, results.len())

@@ -53,7 +53,7 @@ pub async fn send_message(
     ));
 
     content.relates_to = reply_to.map(|event_id| Relation::Reply {
-        in_reply_to: InReplyTo { event_id },
+        in_reply_to: InReplyTo::new(event_id),
     });
 
     let content = AnyMessageEventContent::RoomMessage(content);

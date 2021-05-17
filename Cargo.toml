@@ -16,7 +16,7 @@ path = "src/migrate_cli.rs"
 
 [dependencies]
 log = "0.4"
-env_logger = "0.8"
+tracing-subscriber = "0.2"
 toml = "0.5"
 nom = "5"
 rand = "0.8"
