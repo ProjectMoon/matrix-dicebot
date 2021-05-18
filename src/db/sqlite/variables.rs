@@ -53,14 +53,11 @@ impl Variables for Database {
             room_id,
             variable_name
         )
-        .fetch_one(&self.conn)
+        .fetch_optional(&self.conn)
         .await?;
-        // .map_err(|e| match e {
-        //     sqlx::Error::RowNotFound => Err(DataError::KeyDoesNotExist(variable_name.clone())),
-        //     _ => Err(e.into()),
-        // })?;
 
-        Ok(row.value)
+        row.map(|r| r.value)
+            .ok_or_else(|| DataError::KeyDoesNotExist(variable_name.to_string()))
     }
 
     async fn set_user_variable(
@@ -144,8 +141,11 @@ mod tests {
 
         let value = db.get_user_variable("myuser", "myroom", "myvariable").await;
 
-        println!("{:?}", value);
         assert!(value.is_err());
+        assert!(matches!(
+            value.err().unwrap(),
+            DataError::KeyDoesNotExist(_)
+        ));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -161,7 +161,10 @@ mod tests {
             .get_user_variable("myuser2", "myroom", "myvariable")
             .await;
 
-        println!("{:?}", value);
         assert!(value.is_err());
+        assert!(matches!(
+            value.err().unwrap(),
+            DataError::KeyDoesNotExist(_)
+        ));
     }
 }
