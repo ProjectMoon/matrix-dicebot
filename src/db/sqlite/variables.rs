@@ -55,6 +55,10 @@ impl Variables for Database {
         )
         .fetch_one(&self.conn)
         .await?;
+        // .map_err(|e| match e {
+        //     sqlx::Error::RowNotFound => Err(DataError::KeyDoesNotExist(variable_name.clone())),
+        //     _ => Err(e.into()),
+        // })?;
 
         Ok(row.value)
     }
@@ -98,5 +102,66 @@ impl Variables for Database {
         .await?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn create_db() -> Database {
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn set_and_get_variable_test() {
+        use super::super::Variables;
+        let db = create_db().await;
+
+        db.set_user_variable("myuser", "myroom", "myvariable", 1)
+            .await
+            .expect("Could not set variable");
+
+        let value = db
+            .get_user_variable("myuser", "myroom", "myvariable")
+            .await
+            .expect("Could not get variable");
+
+        assert_eq!(value, 1);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn get_missing_variable_test() {
+        use super::super::Variables;
+        let db = create_db().await;
+
+        let value = db.get_user_variable("myuser", "myroom", "myvariable").await;
+
+        println!("{:?}", value);
+        assert!(value.is_err());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn get_other_user_variable_test() {
+        use super::super::Variables;
+        let db = create_db().await;
+
+        db.set_user_variable("myuser1", "myroom", "myvariable", 1)
+            .await
+            .expect("Could not set variable");
+
+        let value = db
+            .get_user_variable("myuser2", "myroom", "myvariable")
+            .await;
+
+        println!("{:?}", value);
+        assert!(value.is_err());
     }
 }
