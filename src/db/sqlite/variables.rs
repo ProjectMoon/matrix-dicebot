@@ -90,7 +90,7 @@ impl Variables for Database {
     ) -> Result<(), DataError> {
         sqlx::query(
             "DELETE FROM user_variables
-             WHERE user_id = ? AND room_id = ? AND variable_name = ?",
+             WHERE user_id = ? AND room_id = ? AND key = ?",
         )
         .bind(user)
         .bind(room_id)
@@ -104,6 +104,7 @@ impl Variables for Database {
 
 #[cfg(test)]
 mod tests {
+    use super::super::Variables;
     use super::*;
 
     async fn create_db() -> Database {
@@ -166,5 +167,85 @@ mod tests {
             value.err().unwrap(),
             DataError::KeyDoesNotExist(_)
         ));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn count_variables_test() {
+        let db = create_db().await;
+
+        for variable_name in &["var1", "var2", "var3"] {
+            db.set_user_variable("myuser", "myroom", variable_name, 1)
+                .await
+                .expect("Could not set variable");
+        }
+
+        let count = db
+            .get_variable_count("myuser", "myroom")
+            .await
+            .expect("Could not get count.");
+
+        assert_eq!(count, 3);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn count_variables_respects_user_id() {
+        let db = create_db().await;
+
+        for variable_name in &["var1", "var2", "var3"] {
+            db.set_user_variable("different-user", "myroom", variable_name, 1)
+                .await
+                .expect("Could not set variable");
+        }
+
+        let count = db
+            .get_variable_count("myuser", "myroom")
+            .await
+            .expect("Could not get count.");
+
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn count_variables_respects_room_id() {
+        let db = create_db().await;
+
+        for variable_name in &["var1", "var2", "var3"] {
+            db.set_user_variable("myuser", "different-room", variable_name, 1)
+                .await
+                .expect("Could not set variable");
+        }
+
+        let count = db
+            .get_variable_count("myuser", "myroom")
+            .await
+            .expect("Could not get count.");
+
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn delete_variable_test() {
+        let db = create_db().await;
+
+        for variable_name in &["var1", "var2", "var3"] {
+            db.set_user_variable("myuser", "myroom", variable_name, 1)
+                .await
+                .expect("Could not set variable");
+        }
+
+        db.delete_user_variable("myuser", "myroom", "var1")
+            .await
+            .expect("Could not delete variable.");
+
+        let count = db
+            .get_variable_count("myuser", "myroom")
+            .await
+            .expect("Could not get count");
+
+        assert_eq!(count, 2);
+
+        let var1 = db.get_user_variable("myuser", "myroom", "var1").await;
+        assert!(var1.is_err());
+        assert!(matches!(var1.err().unwrap(), DataError::KeyDoesNotExist(_)));
     }
 }
