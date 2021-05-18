@@ -100,6 +100,9 @@ impl Rooms for Database {
     }
 
     async fn add_user_to_room(&self, username: &str, room_id: &str) -> Result<(), DataError> {
+        // This is here because it is possible to process a bunch of
+        // user join/leave events at once, and we don't want to cause
+        // constraint violation errors.
         self.remove_user_from_room(username, room_id).await.ok();
 
         sqlx::query("INSERT INTO room_users (room_id, username) VALUES (?, ?)")
@@ -135,5 +138,187 @@ impl Rooms for Database {
             .await?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::Rooms;
+    use super::*;
+
+    async fn create_db() -> Database {
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn should_process_test() {
+        let db = create_db().await;
+
+        let first_check = db
+            .should_process("myroom", "myeventid")
+            .await
+            .expect("should_process failed in first insert");
+
+        assert_eq!(first_check, true);
+
+        let second_check = db
+            .should_process("myroom", "myeventid")
+            .await
+            .expect("should_process failed in first insert");
+
+        assert_eq!(second_check, false);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn insert_and_get_room_info_test() {
+        let db = create_db().await;
+
+        let info = RoomInfo {
+            room_id: "myroomid".to_string(),
+            room_name: "myroomname".to_string(),
+        };
+
+        db.insert_room_info(&info)
+            .await
+            .expect("Could not insert room info.");
+
+        let retrieved_info = db
+            .get_room_info("myroomid")
+            .await
+            .expect("Could not retrieve room info.");
+
+        assert!(retrieved_info.is_some());
+        assert_eq!(info, retrieved_info.unwrap());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn get_room_info_constraint_test() {
+        let db = create_db().await;
+
+        let info = RoomInfo {
+            room_id: "myroomid".to_string(),
+            room_name: "myroomname".to_string(),
+        };
+
+        db.insert_room_info(&info)
+            .await
+            .expect("Could not insert room info.");
+
+        let second_attempt = db.insert_room_info(&info).await;
+
+        assert!(second_attempt.is_err());
+        assert!(matches!(
+            second_attempt.err().unwrap(),
+            DataError::SqlxError(sqlx::Error::Database(_))
+        ));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn add_user_to_room_test() {
+        let db = create_db().await;
+
+        db.add_user_to_room("myuser", "myroom")
+            .await
+            .expect("Could not add user to room.");
+
+        let users_in_room = db
+            .get_users_in_room("myroom")
+            .await
+            .expect("Could not get users in room.");
+
+        assert_eq!(users_in_room.len(), 1);
+        assert!(users_in_room.contains("myuser"));
+
+        let rooms_for_user = db
+            .get_rooms_for_user("myuser")
+            .await
+            .expect("Could not get rooms for user");
+
+        assert_eq!(rooms_for_user.len(), 1);
+        assert!(rooms_for_user.contains("myroom"));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn add_user_to_room_does_not_have_constraint_violation() {
+        let db = create_db().await;
+
+        db.add_user_to_room("myuser", "myroom")
+            .await
+            .expect("Could not add user to room.");
+
+        let second_attempt = db.add_user_to_room("myuser", "myroom").await;
+
+        assert!(second_attempt.is_ok());
+
+        let users_in_room = db
+            .get_users_in_room("myroom")
+            .await
+            .expect("Could not get users in room.");
+
+        assert_eq!(users_in_room.len(), 1);
+        assert!(users_in_room.contains("myuser"));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn remove_user_from_room_test() {
+        let db = create_db().await;
+
+        db.add_user_to_room("myuser", "myroom")
+            .await
+            .expect("Could not add user to room.");
+
+        let remove_attempt = db.remove_user_from_room("myuser", "myroom").await;
+
+        assert!(remove_attempt.is_ok());
+
+        let users_in_room = db
+            .get_users_in_room("myroom")
+            .await
+            .expect("Could not get users in room.");
+
+        assert_eq!(users_in_room.len(), 0);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn clear_info_test() {
+        let db = create_db().await;
+
+        let info = RoomInfo {
+            room_id: "myroomid".to_string(),
+            room_name: "myroomname".to_string(),
+        };
+
+        db.insert_room_info(&info)
+            .await
+            .expect("Could not insert room info.");
+
+        db.add_user_to_room("myuser", "myroom")
+            .await
+            .expect("Could not add user to room.");
+
+        db.clear_info("myroom")
+            .await
+            .expect("Could not clear room info");
+
+        let users_in_room = db
+            .get_users_in_room("myroom")
+            .await
+            .expect("Could not get users in room.");
+
+        assert_eq!(users_in_room.len(), 0);
+
+        let room_info = db
+            .get_room_info("myroom")
+            .await
+            .expect("Could not get room info.");
+
+        assert!(room_info.is_none());
     }
 }
