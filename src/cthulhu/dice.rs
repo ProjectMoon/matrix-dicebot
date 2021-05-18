@@ -493,7 +493,7 @@ mod tests {
         };
 
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
-        crate::migrator::migrate(db_path.path().to_str().unwrap())
+        crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
             .await
             .unwrap();
 
@@ -529,7 +529,7 @@ mod tests {
         };
 
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
-        crate::migrator::migrate(db_path.path().to_str().unwrap())
+        crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
             .await
             .unwrap();
 
@@ -565,7 +565,7 @@ mod tests {
         };
 
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
-        crate::migrator::migrate(db_path.path().to_str().unwrap())
+        crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
             .await
             .unwrap();
 

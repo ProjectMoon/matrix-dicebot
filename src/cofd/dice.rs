@@ -475,8 +475,12 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn rejects_large_expression_test() {
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
         let homeserver = Url::parse("http://example.com").unwrap();
-        let db = Database::new_temp().await.unwrap();
+        let db = Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         let ctx = Context {
             db: db,
             matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
@@ -508,7 +512,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn converts_to_chance_die_test() {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
-        crate::migrator::migrate(db_path.path().to_str().unwrap())
+        crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
             .await
             .unwrap();
 
@@ -545,7 +549,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn can_resolve_variables_test() {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
-        crate::migrator::migrate(db_path.path().to_str().unwrap())
+        crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
             .await
             .unwrap();
 

@@ -7,7 +7,6 @@ use tenebrous_dicebot::bot::DiceBot;
 use tenebrous_dicebot::config::*;
 use tenebrous_dicebot::db::sqlite::Database;
 use tenebrous_dicebot::error::BotError;
-use tenebrous_dicebot::migrator;
 use tenebrous_dicebot::state::DiceBotState;
 use tracing_subscriber::filter::EnvFilter;
 
@@ -37,8 +36,6 @@ async fn run() -> Result<(), BotError> {
     let sqlite_path = format!("{}/dicebot.sqlite", cfg.database_path());
     let db = Database::new(&sqlite_path).await?;
     let state = Arc::new(RwLock::new(DiceBotState::new(&cfg)));
-
-    migrator::migrate(&sqlite_path).await?;
 
     match DiceBot::new(&cfg, &state, &db) {
         Ok(bot) => bot.run().await?,

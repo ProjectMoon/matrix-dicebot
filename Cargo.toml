@@ -38,6 +38,7 @@ phf = { version = "0.8", features = ["macros"] }
 matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", branch = "master" }
 refinery = { version = "0.5", features = ["rusqlite"]}
 barrel = { version = "0.6", features = ["sqlite3"] }
+tempfile = "3"
 
 [dependencies.sqlx]
 version = "0.5"
@@ -50,6 +51,3 @@ features = ['derive']
 [dependencies.tokio]
 version = "1"
 features = [ "full" ]
-
-[dev-dependencies]
-tempfile = "3"

@@ -15,9 +15,17 @@ async fn main() -> Result<(), BotError> {
     };
 
     let homeserver = Url::parse("http://example.com")?;
+    let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+    let db = Database::new(
+        db_path
+            .path()
+            .to_str()
+            .expect("Could not get path to temporary db"),
+    )
+    .await?;
 
     let context = Context {
-        db: Database::new_temp().await?,
+        db: db,
         matrix_client: &matrix_sdk::Client::new(homeserver)
             .expect("Could not create matrix client"),
         room: RoomContext {

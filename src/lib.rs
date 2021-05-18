@@ -11,7 +11,6 @@ pub mod error;
 mod help;
 pub mod logic;
 pub mod matrix;
-pub mod migrator;
 pub mod models;
 mod parser;
 pub mod state;

@@ -9,6 +9,7 @@ use std::str::FromStr;
 use crate::models::RoomInfo;
 
 pub mod errors;
+pub mod migrator;
 pub mod rooms;
 pub mod state;
 pub mod variables;
@@ -93,6 +94,9 @@ impl Database {
 
         drop(conn);
 
+        //Migrate database.
+        migrator::migrate(&path).await?;
+
         //Return actual conncetion pool.
         let conn = SqlitePoolOptions::new()
             .max_connections(5)
@@ -100,10 +104,6 @@ impl Database {
             .await?;
 
         Self::new_db(conn)
-    }
-
-    pub async fn new_temp() -> Result<Database, DataError> {
-        Self::new("sqlite::memory:").await
     }
 }
 

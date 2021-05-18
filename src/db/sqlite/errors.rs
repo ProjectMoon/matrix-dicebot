@@ -4,20 +4,6 @@ use sled::transaction::{TransactionError, UnabortableTransactionError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum MigrationError {
-    #[error("cannot downgrade to an older database version")]
-    CannotDowngrade,
-
-    #[error("migration for version {0} not defined")]
-    MigrationNotFound(u32),
-
-    #[error("migration failed: {0}")]
-    MigrationFailed(String),
-}
-
-//TODO better combining of key and value in certain errors (namely
-//I32SchemaViolation).
-#[derive(Error, Debug)]
 pub enum DataError {
     #[error("value does not exist for key: {0}")]
     KeyDoesNotExist(String),
@@ -47,7 +33,7 @@ pub enum DataError {
     UnabortableTransactionError(#[from] UnabortableTransactionError),
 
     #[error("data migration error: {0}")]
-    MigrationError(#[from] MigrationError),
+    MigrationError(#[from] super::migrator::MigrationError),
 
     #[error("deserialization error: {0}")]
     DeserializationError(#[from] bincode::Error),

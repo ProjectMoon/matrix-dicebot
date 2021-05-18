@@ -138,8 +138,13 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn unrecognized_command() {
-        let db = crate::db::sqlite::Database::new_temp().await.unwrap();
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        let db = crate::db::sqlite::Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
         let homeserver = Url::parse("http://example.com").unwrap();
+
         let ctx = Context {
             db: db,
             matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),

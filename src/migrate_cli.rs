@@ -1,6 +1,5 @@
 use std::env;
-
-pub mod migrator;
+use tenebrous_dicebot::db::sqlite::migrator;
 
 #[tokio::main]
 async fn main() -> Result<(), migrator::MigrationError> {
