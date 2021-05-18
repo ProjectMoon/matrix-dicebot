@@ -17,8 +17,9 @@ impl Variables for Database {
     ) -> Result<HashMap<String, i32>, DataError> {
         let rows = sqlx::query!(
             r#"SELECT key, value as "value: i32" FROM user_variables
-               WHERE room_id = ?"#,
+               WHERE room_id = ? AND user_id = ?"#,
             room_id,
+            user
         )
         .fetch_all(&self.conn)
         .await?;
@@ -27,7 +28,16 @@ impl Variables for Database {
     }
 
     async fn get_variable_count(&self, user: &str, room_id: &str) -> Result<i32, DataError> {
-        Ok(1)
+        let row = sqlx::query!(
+            r#"SELECT count(*) as "count: i32" FROM user_variables
+               WHERE room_id = ? and user_id = ?"#,
+            room_id,
+            user
+        )
+        .fetch_optional(&self.conn)
+        .await?;
+
+        Ok(row.map(|r| r.count).unwrap_or(0))
     }
 
     async fn get_user_variable(
