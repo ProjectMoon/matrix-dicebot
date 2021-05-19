@@ -1,29 +1,5 @@
 {
   "db": "SQLite",
-  "0ccdb5669e5819628096b8d2f81fef361f73dbcbc27428208a1a4e315a8c7880": {
-    "query": "SELECT room_id, room_name FROM room_info\n                        WHERE room_id = ?",
-    "describe": {
-      "columns": [
-        {
-          "name": "room_id",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "room_name",
-          "ordinal": 1,
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        false,
-        false
-      ]
-    }
-  },
   "19d89370cac05c1bc4de0eb3508712da9ca133b1cf9445b5407d238f89c3ab0c": {
     "query": "SELECT device_id FROM bot_state limit 1",
     "describe": {
@@ -102,8 +78,8 @@
       ]
     }
   },
-  "ad52bc29fc1eef2bbff8b5f7316047f81ea31b1f910d0e0226125fea89530aa2": {
-    "query": "SELECT room_id FROM room_users\n                        WHERE username = ?",
+  "7248c8ae30bbe4bc5866e80cc277312c7f8cb9af5a8801fd8eaf178fd99eae18": {
+    "query": "SELECT room_id FROM room_users\n               WHERE username = ?",
     "describe": {
       "columns": [
         {
@@ -116,6 +92,30 @@
         "Right": 1
       },
       "nullable": [
+        false
+      ]
+    }
+  },
+  "97f5d58f62baca51efd8c295ca6737d1240923c69c973621cd0a718ac9eed99f": {
+    "query": "SELECT room_id, room_name FROM room_info\n               WHERE room_id = ?",
+    "describe": {
+      "columns": [
+        {
+          "name": "room_id",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "room_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
         false
       ]
     }
