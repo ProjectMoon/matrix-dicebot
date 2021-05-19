@@ -51,6 +51,13 @@ impl Rooms for Database {
     }
 
     async fn insert_room_info(&self, info: &RoomInfo) -> Result<(), DataError> {
+        //Clear out old info first, because we want this to be an "upsert."
+        sqlx::query("DELETE FROM room_info where room_id = ?")
+            .bind(&info.room_id)
+            .execute(&self.conn)
+            .await
+            .ok();
+
         sqlx::query(r#"INSERT INTO room_info (room_id, room_name) VALUES (?, ?)"#)
             .bind(&info.room_id)
             .bind(&info.room_name)
@@ -199,25 +206,37 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn get_room_info_constraint_test() {
+    async fn insert_room_info_updates_existing() {
         let db = create_db().await;
 
-        let info = RoomInfo {
+        let info1 = RoomInfo {
             room_id: "myroomid".to_string(),
             room_name: "myroomname".to_string(),
         };
 
-        db.insert_room_info(&info)
+        db.insert_room_info(&info1)
             .await
-            .expect("Could not insert room info.");
+            .expect("Could not insert room info1.");
 
-        let second_attempt = db.insert_room_info(&info).await;
+        let info2 = RoomInfo {
+            room_id: "myroomid".to_string(),
+            room_name: "myroomname2".to_string(),
+        };
 
-        assert!(second_attempt.is_err());
-        assert!(matches!(
-            second_attempt.err().unwrap(),
-            DataError::SqlxError(sqlx::Error::Database(_))
-        ));
+        db.insert_room_info(&info2)
+            .await
+            .expect("Could not update room info after first insert");
+
+        let retrieved_info = db
+            .get_room_info("myroomid")
+            .await
+            .expect("Could not get room info");
+
+        assert!(retrieved_info.is_some());
+        let retrieved_info = retrieved_info.unwrap();
+
+        assert_eq!(retrieved_info.room_id, "myroomid");
+        assert_eq!(retrieved_info.room_name, "myroomname2");
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -287,6 +306,44 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn clear_info_does_not_delete_other_rooms() {
+        let db = create_db().await;
+
+        let info1 = RoomInfo {
+            room_id: "myroomid".to_string(),
+            room_name: "myroomname".to_string(),
+        };
+
+        let info2 = RoomInfo {
+            room_id: "myroomid2".to_string(),
+            room_name: "myroomname2".to_string(),
+        };
+
+        db.insert_room_info(&info1)
+            .await
+            .expect("Could not insert room info1.");
+
+        db.insert_room_info(&info2)
+            .await
+            .expect("Could not insert room info2.");
+
+        db.add_user_to_room("myuser", &info1.room_id)
+            .await
+            .expect("Could not add user to room.");
+
+        db.clear_info(&info1.room_id)
+            .await
+            .expect("Could not clear room info1");
+
+        let room_info2 = db
+            .get_room_info(&info2.room_id)
+            .await
+            .expect("Could not get room info2.");
+
+        assert!(room_info2.is_some());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn clear_info_test() {
         let db = create_db().await;
 
@@ -299,23 +356,23 @@ mod tests {
             .await
             .expect("Could not insert room info.");
 
-        db.add_user_to_room("myuser", "myroom")
+        db.add_user_to_room("myuser", &info.room_id)
             .await
             .expect("Could not add user to room.");
 
-        db.clear_info("myroom")
+        db.clear_info(&info.room_id)
             .await
             .expect("Could not clear room info");
 
         let users_in_room = db
-            .get_users_in_room("myroom")
+            .get_users_in_room(&info.room_id)
             .await
             .expect("Could not get users in room.");
 
         assert_eq!(users_in_room.len(), 0);
 
         let room_info = db
-            .get_room_info("myroom")
+            .get_room_info(&info.room_id)
             .await
             .expect("Could not get room info.");
 
