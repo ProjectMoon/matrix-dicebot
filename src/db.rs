@@ -19,7 +19,7 @@ pub mod variables;
 #[derive(Clone)]
 pub struct Database {
     db: Db,
-    pub(crate) variables: Variables,
+    pub variables: Variables,
     pub(crate) migrations: Migrations,
     pub(crate) rooms: Rooms,
     pub(crate) state: DbState,

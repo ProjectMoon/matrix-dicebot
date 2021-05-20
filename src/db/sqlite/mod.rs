@@ -43,7 +43,7 @@ pub(crate) trait Rooms {
 // TODO move this up to the top once we delete sled. Traits will be the
 // main API, then we can have different impls for different DBs.
 #[async_trait]
-pub(crate) trait Variables {
+pub trait Variables {
     async fn get_user_variables(
         &self,
         user: &str,

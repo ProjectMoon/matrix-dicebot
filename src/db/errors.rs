@@ -26,6 +26,9 @@ pub enum DataError {
     #[error("expected i32, but i32 schema was violated")]
     I32SchemaViolation,
 
+    #[error("parse error")]
+    ParseError(#[from] std::num::ParseIntError),
+
     #[error("unexpected or corruptd data bytes")]
     InvalidValue,
 

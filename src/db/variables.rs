@@ -10,6 +10,8 @@ use std::str;
 use zerocopy::byteorder::I32;
 use zerocopy::AsBytes;
 
+use super::errors;
+
 pub(super) mod migrations;
 
 #[derive(Clone)]
@@ -67,12 +69,49 @@ fn alter_room_variable_count(
     Ok(new_count)
 }
 
+/// Room ID, Username, Variable Name
+pub type AllVariablesKey = (String, String, String);
+
 impl Variables {
     pub(in crate::db) fn new(db: &sled::Db) -> Result<Variables, sled::Error> {
         Ok(Variables {
             room_user_variables: db.open_tree("variables")?,
             room_user_variable_count: db.open_tree("room_user_variable_count")?,
         })
+    }
+
+    pub fn get_all_variables(&self) -> Result<HashMap<AllVariablesKey, i32>, DataError> {
+        use std::convert::TryFrom;
+        let variables: Result<Vec<(AllVariablesKey, i32)>, DataError> = self
+            .room_user_variables
+            .scan_prefix("")
+            .map(|entry| match entry {
+                Ok((key, raw_value)) => {
+                    let keys: Vec<_> = key
+                        .split(|&b| b == 0xfe || b == 0xff)
+                        .map(|b| str::from_utf8(b))
+                        .collect();
+
+                    if let &[Ok(room_id), Ok(username), Ok(variable_name), ..] = keys.as_slice() {
+                        Ok((
+                            (
+                                room_id.to_owned(),
+                                username.to_owned(),
+                                variable_name.to_owned(),
+                            ),
+                            convert_i32(&raw_value)?,
+                        ))
+                    } else {
+                        Err(errors::DataError::InvalidValue)
+                    }
+                }
+                Err(e) => Err(e.into()),
+            })
+            .collect();
+
+        // Convert tuples to hash map with collect(), inferred via
+        // return type.
+        variables.map(|entries| entries.into_iter().collect())
     }
 
     pub fn get_user_variables(
