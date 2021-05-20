@@ -78,7 +78,7 @@ version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "796540673305a66d127804eef19ad696f1f204b8c1025aaca4958c17eab32877"
 dependencies = [
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
  "once_cell",
  "version_check",
 ]
@@ -155,7 +155,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fe17f59a06fe8b87a6fc8bf53bb70b3aba76d7685f432487a68cd5552853625"
 dependencies = [
  "futures-core",
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
  "instant",
  "pin-project",
  "rand 0.8.3",
@@ -318,9 +318,9 @@ dependencies = [
 
 [[package]]
 name = "const_fn"
-version = "0.4.7"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "402da840495de3f976eaefc3485b7f5eb5b0bf9761f9a47be27fe975b3b8c2ec"
+checksum = "f92cfa0fd5690b3cf8c1ef2cabbd9b7ef22fa53cf5e1f92b05103f6d5d1cf6e7"
 
 [[package]]
 name = "core-foundation"
@@ -717,9 +717,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9495705279e7140bf035dde1f6e750c162df8b625267cd52cc44e0b156732c8"
+checksum = "7fcd999463524c52659517fe2cea98493cfe485d10565e7b0fb07dbba7ad2753"
 dependencies = [
  "cfg-if",
  "js-sys",
@@ -1111,7 +1111,7 @@ checksum = "7ffc5c5338469d4d3ea17d269fa8ea3512ad247247c30bd2df69e68309ed0a08"
 [[package]]
 name = "matrix-sdk"
 version = "0.2.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#cd77441d1bf8318ecf4cc9e1886696558ea6ed7b"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#fe17dce813f500b4c633669a7078ee843bb44886"
 dependencies = [
  "backoff",
  "bytes",
@@ -1135,7 +1135,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-base"
 version = "0.2.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#cd77441d1bf8318ecf4cc9e1886696558ea6ed7b"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#fe17dce813f500b4c633669a7078ee843bb44886"
 dependencies = [
  "chacha20poly1305",
  "dashmap",
@@ -1158,7 +1158,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-common"
 version = "0.2.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#cd77441d1bf8318ecf4cc9e1886696558ea6ed7b"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#fe17dce813f500b4c633669a7078ee843bb44886"
 dependencies = [
  "async-trait",
  "futures",
@@ -1174,7 +1174,7 @@ dependencies = [
 [[package]]
 name = "matrix-sdk-crypto"
 version = "0.2.0"
-source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#cd77441d1bf8318ecf4cc9e1886696558ea6ed7b"
+source = "git+https://github.com/matrix-org/matrix-rust-sdk?branch=master#fe17dce813f500b4c633669a7078ee843bb44886"
 dependencies = [
  "aes-ctr",
  "aes-gcm",
@@ -1183,7 +1183,7 @@ dependencies = [
  "byteorder",
  "dashmap",
  "futures",
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
  "hmac",
  "matrix-sdk-common",
  "olm-rs",
@@ -1338,7 +1338,7 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8962a1fc909accf520991dcda872888554ecf16320097e02d3bd9981844a24ae"
 dependencies = [
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
  "olm-sys",
  "serde",
  "serde_json",
@@ -1594,9 +1594,9 @@ checksum = "bc881b2c22681370c6a780e47af9840ef841837bc98118431d4e1868bd0c1086"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.26"
+version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a152013215dca273577e18d2bf00fa862b89b24169fb78c4c95aeb07992c9cec"
+checksum = "f0d8caf72986c1a598726adc988bb5984792ef84f5ee5aa50209145ee8077038"
 dependencies = [
  "unicode-xid",
 ]
@@ -1677,7 +1677,7 @@ version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34cf66eb183df1c5876e2dcf6b13d57340741e8dc255b48e40a26de954d06ae7"
 dependencies = [
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
 ]
 
 [[package]]
@@ -1722,7 +1722,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "528532f3d801c87aec9def2add9ca802fe569e44a544afe633765267840abe64"
 dependencies = [
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
  "redox_syscall",
 ]
 
@@ -2892,7 +2892,7 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 dependencies = [
- "getrandom 0.2.2",
+ "getrandom 0.2.3",
  "serde",
 ]
 
