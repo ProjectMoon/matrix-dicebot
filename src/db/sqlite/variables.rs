@@ -3,11 +3,6 @@ use crate::db::{errors::DataError, Variables};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-struct UserVariableRow {
-    key: String,
-    value: i32,
-}
-
 #[async_trait]
 impl Variables for Database {
     async fn get_user_variables(

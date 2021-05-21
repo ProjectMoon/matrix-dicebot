@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use errors::DataError;
 use std::collections::{HashMap, HashSet};
-use std::str::FromStr;
 
 use crate::models::RoomInfo;
 

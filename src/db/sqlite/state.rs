@@ -35,7 +35,6 @@ impl DbState for Database {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::db::sqlite::Database;
     use crate::db::DbState;
 

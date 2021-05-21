@@ -1,9 +1,8 @@
-use crate::db::errors::DataError;
 use crate::db::Rooms;
 use crate::error::BotError;
 use crate::matrix;
 use crate::models::RoomInfo;
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::stream::{self, StreamExt};
 use matrix_sdk::{self, identifiers::RoomId, Client};
 
 /// Record the information about a room, including users in it.
