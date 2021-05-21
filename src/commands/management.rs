@@ -33,3 +33,20 @@ impl Command for ResyncCommand {
         Execution::success(message)
     }
 }
+
+pub struct RegisterCommand(pub String);
+
+#[async_trait]
+impl Command for RegisterCommand {
+    fn name(&self) -> &'static str {
+        "register user account"
+    }
+
+    fn is_secure(&self) -> bool {
+        true
+    }
+
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
+        Execution::success("User account registered".to_string())
+    }
+}

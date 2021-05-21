@@ -19,6 +19,9 @@ pub enum CommandError {
     #[error("invalid command: {0}")]
     InvalidCommand(String),
 
+    #[error("command can only be executed from encrypted direct message")]
+    InsecureExecution,
+
     #[error("ignored command")]
     IgnoredCommand,
 }
@@ -99,13 +102,33 @@ pub trait Command: Send + Sync {
     fn is_secure(&self) -> bool;
 }
 
+/// Determine if we are allowed to execute this command. Currently the
+/// rules are that secure commands must be executed in secure rooms
+/// (encrypted + direct), and anything else can be executed where
+/// ever. Later, we can add stuff like admin/regular user power
+/// separation, etc.
+fn execution_allowed(cmd: &(impl Command + ?Sized), ctx: &Context<'_>) -> Result<(), CommandError> {
+    if cmd.is_secure() {
+        if ctx.is_secure() {
+            Ok(())
+        } else {
+            Err(CommandError::InsecureExecution)
+        }
+    } else {
+        Ok(())
+    }
+}
 /// Attempt to execute a command, and return the content that should
 /// go back to Matrix, if the command was executed (successfully or
 /// not). If a command is determined to be ignored, this function will
 /// return None, signifying that we should not send a response.
 pub async fn execute_command(ctx: &Context<'_>) -> ExecutionResult {
     let cmd = parser::parse_command(&ctx.message_body)?;
-    cmd.execute(ctx).await
+
+    match execution_allowed(cmd.as_ref(), ctx) {
+        Ok(_) => cmd.execute(ctx).await,
+        Err(e) => Err(ExecutionError(e.into())),
+    }
 }
 
 #[cfg(test)]

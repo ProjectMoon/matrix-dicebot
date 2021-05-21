@@ -9,7 +9,7 @@ use crate::commands::{
     basic_rolling::RollCommand,
     cofd::PoolRollCommand,
     cthulhu::{CthAdvanceRoll, CthRoll},
-    management::ResyncCommand,
+    management::{RegisterCommand, ResyncCommand},
     misc::HelpCommand,
     variables::{
         DeleteVariableCommand, GetAllVariablesCommand, GetVariableCommand, SetVariableCommand,
@@ -45,6 +45,10 @@ fn parse_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
         Err(NomErr::Failure(e)) => Err(BotError::NomParserError(e.1)),
         Err(NomErr::Incomplete(_)) => Err(BotError::NomParserIncomplete),
     }
+}
+
+fn parse_register_command(input: &str) -> Result<Box<dyn Command>, BotError> {
+    Ok(Box::new(RegisterCommand(input.to_owned())))
 }
 
 fn parse_get_variable_command(input: &str) -> Result<Box<dyn Command>, BotError> {
@@ -141,6 +145,7 @@ pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
             "cthadv" | "ctharoll" => parse_cth_advancement_roll(&cmd_input),
             "chance" => chance_die(),
             "help" => help(&cmd_input),
+            "register" => parse_register_command(&cmd_input),
             _ => Err(CommandParsingError::UnrecognizedCommand(cmd).into()),
         },
         //All other errors passed up.
