@@ -2,7 +2,7 @@ use crate::context::Context;
 use crate::db::Variables;
 use crate::error::{BotError, DiceRollingError};
 use crate::parser::{Amount, Element};
-use crate::{dice::calculate_single_die_amount, parser::DiceParsingError};
+use crate::{logic::calculate_single_die_amount, parser::DiceParsingError};
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;

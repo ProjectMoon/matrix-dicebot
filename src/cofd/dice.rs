@@ -308,7 +308,7 @@ pub async fn roll_pool(pool: &DicePoolWithContext<'_>) -> Result<RolledDicePool,
         return Err(DiceRollingError::ExpressionTooLarge.into());
     }
 
-    let num_dice = crate::dice::calculate_dice_amount(&pool.0.amounts, &pool.1).await?;
+    let num_dice = crate::logic::calculate_dice_amount(&pool.0.amounts, &pool.1).await?;
     let mut roller = RngDieRoller(rand::thread_rng());
 
     if num_dice > 0 {
@@ -578,7 +578,7 @@ mod tests {
         let pool = DicePool::new(amounts, DicePoolModifiers::default());
 
         assert_eq!(
-            crate::dice::calculate_dice_amount(&pool.amounts, &ctx)
+            crate::logic::calculate_dice_amount(&pool.amounts, &ctx)
                 .await
                 .unwrap(),
             10

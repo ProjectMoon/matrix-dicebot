@@ -6,7 +6,6 @@ pub mod config;
 pub mod context;
 pub mod cthulhu;
 pub mod db;
-pub mod dice;
 pub mod error;
 mod help;
 pub mod logic;
