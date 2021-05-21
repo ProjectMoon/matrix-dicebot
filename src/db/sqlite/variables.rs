@@ -1,5 +1,5 @@
-use super::errors::DataError;
-use super::{Database, Variables};
+use super::Database;
+use crate::db::{errors::DataError, Variables};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
@@ -104,8 +104,9 @@ impl Variables for Database {
 
 #[cfg(test)]
 mod tests {
-    use super::super::Variables;
     use super::*;
+    use crate::db::sqlite::Database;
+    use crate::db::Variables;
 
     async fn create_db() -> Database {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
@@ -120,7 +121,6 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn set_and_get_variable_test() {
-        use super::super::Variables;
         let db = create_db().await;
 
         db.set_user_variable("myuser", "myroom", "myvariable", 1)
@@ -137,7 +137,6 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn get_missing_variable_test() {
-        use super::super::Variables;
         let db = create_db().await;
 
         let value = db.get_user_variable("myuser", "myroom", "myvariable").await;
@@ -151,7 +150,6 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn get_other_user_variable_test() {
-        use super::super::Variables;
         let db = create_db().await;
 
         db.set_user_variable("myuser1", "myroom", "myvariable", 1)

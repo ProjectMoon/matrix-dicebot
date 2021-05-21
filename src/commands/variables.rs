@@ -1,8 +1,7 @@
 use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
-use crate::db::sqlite::errors::DataError;
-use crate::db::sqlite::Variables;
-use crate::db::variables::UserAndRoom;
+use crate::db::errors::DataError;
+use crate::db::Variables;
 use async_trait::async_trait;
 
 pub struct GetAllVariablesCommand;

@@ -2,7 +2,7 @@ use crate::context::Context;
 use crate::error::BotError;
 use async_trait::async_trait;
 use thiserror::Error;
-use BotError::{DataError, SqliteDataError};
+use BotError::DataError;
 
 pub mod basic_rolling;
 pub mod cofd;
@@ -52,12 +52,6 @@ pub struct ExecutionError(#[from] pub BotError);
 impl From<crate::db::errors::DataError> for ExecutionError {
     fn from(error: crate::db::errors::DataError) -> Self {
         Self(DataError(error))
-    }
-}
-
-impl From<crate::db::sqlite::errors::DataError> for ExecutionError {
-    fn from(error: crate::db::sqlite::errors::DataError) -> Self {
-        Self(SqliteDataError(error))
     }
 }
 

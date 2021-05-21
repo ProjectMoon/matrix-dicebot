@@ -326,7 +326,7 @@ pub async fn roll_pool(pool: &DicePoolWithContext<'_>) -> Result<RolledDicePool,
 mod tests {
     use super::*;
     use crate::db::sqlite::Database;
-    use crate::db::sqlite::Variables;
+    use crate::db::Variables;
     use url::Url;
 
     macro_rules! dummy_room {

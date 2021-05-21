@@ -1,5 +1,5 @@
-use crate::db::sqlite::errors::DataError;
-use crate::db::sqlite::Rooms;
+use crate::db::errors::DataError;
+use crate::db::Rooms;
 use crate::error::BotError;
 use crate::matrix;
 use crate::models::RoomInfo;

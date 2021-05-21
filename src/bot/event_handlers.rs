@@ -5,7 +5,7 @@
  */
 use super::DiceBot;
 use crate::db::sqlite::Database;
-use crate::db::sqlite::Rooms;
+use crate::db::Rooms;
 use crate::error::BotError;
 use crate::logic::record_room_information;
 use async_trait::async_trait;

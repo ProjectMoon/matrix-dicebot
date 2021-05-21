@@ -1,5 +1,5 @@
-use super::errors::DataError;
-use super::{Database, DbState};
+use super::Database;
+use crate::db::{errors::DataError, DbState};
 use async_trait::async_trait;
 
 #[async_trait]
@@ -35,8 +35,9 @@ impl DbState for Database {
 
 #[cfg(test)]
 mod tests {
-    use super::super::DbState;
     use super::*;
+    use crate::db::sqlite::Database;
+    use crate::db::DbState;
 
     async fn create_db() -> Database {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();

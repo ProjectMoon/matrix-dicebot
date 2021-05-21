@@ -1,9 +1,9 @@
-use super::errors::DataError;
-use super::{Database, Rooms};
+use super::Database;
+use crate::db::{errors::DataError, Rooms};
 use crate::models::RoomInfo;
 use async_trait::async_trait;
 use sqlx::SqlitePool;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 async fn record_event(conn: &SqlitePool, room_id: &str, event_id: &str) -> Result<(), DataError> {
@@ -148,8 +148,9 @@ impl Rooms for Database {
 
 #[cfg(test)]
 mod tests {
-    use super::super::Rooms;
     use super::*;
+    use crate::db::sqlite::Database;
+    use crate::db::Rooms;
 
     async fn create_db() -> Database {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();

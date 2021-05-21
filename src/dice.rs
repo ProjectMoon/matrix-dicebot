@@ -1,6 +1,5 @@
 use crate::context::Context;
-use crate::db::sqlite::Variables;
-use crate::db::variables::UserAndRoom;
+use crate::db::Variables;
 use crate::error::BotError;
 use crate::error::DiceRollingError;
 use crate::parser::Amount;

@@ -2,7 +2,7 @@ use crate::commands::{execute_command, ExecutionError, ExecutionResult, Response
 use crate::config::*;
 use crate::context::{Context, RoomContext};
 use crate::db::sqlite::Database;
-use crate::db::sqlite::DbState;
+use crate::db::DbState;
 use crate::error::BotError;
 use crate::matrix;
 use crate::state::DiceBotState;

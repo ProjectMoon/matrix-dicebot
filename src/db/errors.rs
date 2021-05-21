@@ -1,20 +1,8 @@
+use std::num::TryFromIntError;
+
 use sled::transaction::{TransactionError, UnabortableTransactionError};
 use thiserror::Error;
 
-#[derive(Error, Debug)]
-pub enum MigrationError {
-    #[error("cannot downgrade to an older database version")]
-    CannotDowngrade,
-
-    #[error("migration for version {0} not defined")]
-    MigrationNotFound(u32),
-
-    #[error("migration failed: {0}")]
-    MigrationFailed(String),
-}
-
-//TODO better combining of key and value in certain errors (namely
-//I32SchemaViolation).
 #[derive(Error, Debug)]
 pub enum DataError {
     #[error("value does not exist for key: {0}")]
@@ -25,9 +13,6 @@ pub enum DataError {
 
     #[error("expected i32, but i32 schema was violated")]
     I32SchemaViolation,
-
-    #[error("parse error")]
-    ParseError(#[from] std::num::ParseIntError),
 
     #[error("unexpected or corruptd data bytes")]
     InvalidValue,
@@ -48,10 +33,16 @@ pub enum DataError {
     UnabortableTransactionError(#[from] UnabortableTransactionError),
 
     #[error("data migration error: {0}")]
-    MigrationError(#[from] MigrationError),
+    MigrationError(#[from] crate::db::sqlite::migrator::MigrationError),
 
     #[error("deserialization error: {0}")]
     DeserializationError(#[from] bincode::Error),
+
+    #[error("sqlx error: {0}")]
+    SqlxError(#[from] sqlx::Error),
+
+    #[error("numeric conversion error")]
+    NumericConversionError(#[from] TryFromIntError),
 }
 
 /// This From implementation is necessary to deal with the recursive
