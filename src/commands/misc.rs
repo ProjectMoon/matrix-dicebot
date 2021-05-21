@@ -11,6 +11,10 @@ impl Command for HelpCommand {
         "help information"
     }
 
+    fn is_secure(&self) -> bool {
+        false
+    }
+
     async fn execute(&self, _ctx: &Context<'_>) -> ExecutionResult {
         let help = match &self.0 {
             Some(topic) => topic.message(),

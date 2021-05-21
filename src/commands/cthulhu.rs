@@ -14,6 +14,10 @@ impl Command for CthRoll {
         "roll percentile dice"
     }
 
+    fn is_secure(&self) -> bool {
+        false
+    }
+
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let roll_with_ctx = DiceRollWithContext(&self.0, ctx);
         let executed_roll = regular_roll(&roll_with_ctx).await?;
@@ -33,6 +37,10 @@ pub struct CthAdvanceRoll(pub AdvancementRoll);
 impl Command for CthAdvanceRoll {
     fn name(&self) -> &'static str {
         "roll skill advancement dice"
+    }
+
+    fn is_secure(&self) -> bool {
+        false
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {

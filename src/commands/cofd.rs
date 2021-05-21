@@ -11,6 +11,10 @@ impl Command for PoolRollCommand {
         "roll dice pool"
     }
 
+    fn is_secure(&self) -> bool {
+        false
+    }
+
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let pool_with_ctx = DicePoolWithContext(&self.0, ctx);
         let rolled_pool = roll_pool(&pool_with_ctx).await?;

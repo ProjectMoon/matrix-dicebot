@@ -12,6 +12,10 @@ impl Command for GetAllVariablesCommand {
         "get all variables"
     }
 
+    fn is_secure(&self) -> bool {
+        false
+    }
+
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let variables = ctx
             .db
@@ -43,6 +47,10 @@ impl Command for GetVariableCommand {
         "retrieve variable value"
     }
 
+    fn is_secure(&self) -> bool {
+        false
+    }
+
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let name = &self.0;
         let result = ctx
@@ -69,6 +77,10 @@ impl Command for SetVariableCommand {
         "set variable value"
     }
 
+    fn is_secure(&self) -> bool {
+        false
+    }
+
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let name = &self.0;
         let value = self.1;
@@ -89,6 +101,10 @@ pub struct DeleteVariableCommand(pub String);
 impl Command for DeleteVariableCommand {
     fn name(&self) -> &'static str {
         "delete variable"
+    }
+
+    fn is_secure(&self) -> bool {
+        false
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {

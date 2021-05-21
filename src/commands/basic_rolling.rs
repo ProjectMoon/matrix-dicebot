@@ -12,6 +12,10 @@ impl Command for RollCommand {
         "roll regular dice"
     }
 
+    fn is_secure(&self) -> bool {
+        false
+    }
+
     async fn execute(&self, _ctx: &Context<'_>) -> ExecutionResult {
         let roll = self.0.roll();
         let html = format!(

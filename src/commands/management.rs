@@ -12,6 +12,10 @@ impl Command for ResyncCommand {
         "resync room information"
     }
 
+    fn is_secure(&self) -> bool {
+        false
+    }
+
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let our_username: Option<UserId> = ctx.matrix_client.user_id().await;
         let our_username: &str = our_username.as_ref().map_or("", UserId::as_str);

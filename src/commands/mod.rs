@@ -96,6 +96,7 @@ impl ResponseExtractor for ExecutionResult {
 pub trait Command: Send + Sync {
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult;
     fn name(&self) -> &'static str;
+    fn is_secure(&self) -> bool;
 }
 
 /// Attempt to execute a command, and return the content that should
