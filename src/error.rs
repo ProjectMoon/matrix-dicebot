@@ -1,6 +1,6 @@
+use crate::commands::CommandError;
 use crate::config::ConfigError;
 use crate::db::errors::DataError;
-use crate::{commands::CommandError, db::sqlite::migrator};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -69,12 +69,6 @@ pub enum BotError {
 
     #[error("variables not yet supported")]
     VariablesNotSupported,
-
-    #[error("database error")]
-    DatabaseError(#[from] sled::Error),
-
-    #[error("database migration error: {0}")]
-    SqliteError(#[from] migrator::MigrationError),
 
     #[error("too many commands or message was too large")]
     MessageTooLarge,
