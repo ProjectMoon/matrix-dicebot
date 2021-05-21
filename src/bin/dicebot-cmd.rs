@@ -30,7 +30,8 @@ async fn main() -> Result<(), BotError> {
             .expect("Could not create matrix client"),
         room: RoomContext {
             id: &room_id!("!fakeroomid:example.com"),
-            display_name: "fake room",
+            display_name: "fake room".to_owned(),
+            secure: false,
         },
         username: "@localuser:example.com",
         message_body: &input,

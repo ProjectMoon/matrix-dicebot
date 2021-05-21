@@ -1,20 +1,18 @@
-use crate::commands::{execute_command, ExecutionError, ExecutionResult, ResponseExtractor};
+use crate::commands::{ExecutionError, ExecutionResult};
 use crate::config::*;
-use crate::context::{Context, RoomContext};
 use crate::db::sqlite::Database;
 use crate::db::DbState;
 use crate::error::BotError;
-use crate::matrix;
 use crate::state::DiceBotState;
 use dirs;
-use futures::stream::{self, StreamExt};
-use log::{error, info};
+use log::info;
 use matrix_sdk::{self, identifiers::EventId, room::Joined, Client, ClientConfig, SyncSettings};
 use std::clone::Clone;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use url::Url;
 
+mod command_execution;
 pub mod event_handlers;
 
 /// How many commands can be in one message. If the amount is higher
@@ -51,72 +49,6 @@ fn create_client(config: &Config) -> Result<Client, BotError> {
     let homeserver_url = Url::parse(&config.matrix_homeserver())?;
 
     Ok(Client::new_with_config(homeserver_url, client_config)?)
-}
-
-/// Handle responding to a single command being executed. Wil print
-/// out the full result of that command.
-async fn handle_single_result(
-    client: &Client,
-    cmd_result: &ExecutionResult,
-    respond_to: &str,
-    room: &Joined,
-    event_id: EventId,
-) {
-    if cmd_result.is_err() {
-        error!(
-            "Command execution error: {}",
-            cmd_result.as_ref().err().unwrap()
-        );
-    }
-
-    let html = cmd_result.message_html(respond_to);
-    matrix::send_message(client, room.room_id(), &html, Some(event_id)).await;
-}
-
-/// Handle responding to multiple commands being executed. Will print
-/// out how many commands succeeded and failed (if any failed).
-async fn handle_multiple_results(
-    client: &Client,
-    results: &[(String, ExecutionResult)],
-    respond_to: &str,
-    room: &Joined,
-) {
-    let respond_to = format!(
-        "<a href=\"https://matrix.to/#/{}\">{}</a>",
-        respond_to, respond_to
-    );
-
-    let errors: Vec<(&str, &ExecutionError)> = results
-        .into_iter()
-        .filter_map(|(cmd, result)| match result {
-            Err(e) => Some((cmd.as_ref(), e)),
-            _ => None,
-        })
-        .collect();
-
-    for result in errors.iter() {
-        error!("Command execution error: '{}' - {}", result.0, result.1);
-    }
-
-    let message = if errors.len() == 0 {
-        format!("{}: Executed {} commands", respond_to, results.len())
-    } else {
-        let failures: Vec<String> = errors
-            .iter()
-            .map(|&(cmd, err)| format!("<strong>{}:</strong> {}", cmd, err))
-            .collect();
-
-        format!(
-            "{}: Executed {} commands ({} failed)\n\nFailures:\n{}",
-            respond_to,
-            results.len(),
-            errors.len(),
-            failures.join("\n")
-        )
-        .replace("\n", "<br/>")
-    };
-
-    matrix::send_message(client, room.room_id(), &message, None).await;
 }
 
 impl DiceBot {
@@ -184,11 +116,9 @@ impl DiceBot {
     async fn execute_commands(
         &self,
         room: &Joined,
-        sender_username: &str,
+        sender: &str,
         msg_body: &str,
     ) -> Vec<(String, ExecutionResult)> {
-        let room_name: &str = &room.display_name().await.ok().unwrap_or_default();
-
         let commands: Vec<&str> = msg_body
             .lines()
             .filter(|line| line.starts_with("!"))
@@ -197,22 +127,7 @@ impl DiceBot {
 
         //Up to 50 commands allowed, otherwise we send back an error.
         let results: Vec<(String, ExecutionResult)> = if commands.len() < MAX_COMMANDS_PER_MESSAGE {
-            stream::iter(commands)
-                .then(|command| async move {
-                    let ctx = Context {
-                        db: self.db.clone(),
-                        matrix_client: &self.client,
-                        room: RoomContext::new_with_name(&room, room_name),
-                        username: &sender_username,
-                        message_body: &command,
-                    };
-
-                    let cmd_result = execute_command(&ctx).await;
-                    info!("[{}] {} executed: {}", room_name, sender_username, command);
-                    (command.to_owned(), cmd_result)
-                })
-                .collect()
-                .await
+            command_execution::execute(commands, &self.db, &self.client, room, sender).await
         } else {
             vec![(
                 "".to_owned(),
@@ -232,7 +147,7 @@ impl DiceBot {
     ) {
         if results.len() >= 1 {
             if results.len() == 1 {
-                handle_single_result(
+                command_execution::handle_single_result(
                     &self.client,
                     &results[0].1,
                     sender_username,
@@ -241,7 +156,13 @@ impl DiceBot {
                 )
                 .await;
             } else if results.len() > 1 {
-                handle_multiple_results(&self.client, &results, sender_username, &room).await;
+                command_execution::handle_multiple_results(
+                    &self.client,
+                    &results,
+                    sender_username,
+                    &room,
+                )
+                .await;
             }
         }
     }

@@ -117,7 +117,8 @@ mod tests {
         () => {
             crate::context::RoomContext {
                 id: &matrix_sdk::identifiers::room_id!("!fakeroomid:example.com"),
-                display_name: "displayname",
+                display_name: "displayname".to_owned(),
+                secure: false,
             }
         };
     }

@@ -75,6 +75,9 @@ pub enum BotError {
 
     #[error("could not convert to proper integer type")]
     TryFromIntError(#[from] std::num::TryFromIntError),
+
+    #[error("identifier error: {0}")]
+    IdentifierError(#[from] matrix_sdk::identifiers::Error),
 }
 
 #[derive(Error, Debug)]
