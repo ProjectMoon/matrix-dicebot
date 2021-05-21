@@ -10,10 +10,6 @@ repository = 'https://git.agnos.is/projectmoon/matrix-dicebot'
 keywords = ["games", "dice", "matrix", "bot"]
 categories = ["games"]
 
-[[bin]]
-name = "dicebot-migrate"
-path = "src/migrate_cli.rs"
-
 [dependencies]
 log = "0.4"
 tracing-subscriber = "0.2"

@@ -27,7 +27,7 @@ pub enum DiceParsingError {
 }
 
 impl From<std::num::ParseIntError> for DiceParsingError {
-    fn from(_error: std::num::ParseIntError) -> Self {
+    fn from(_: std::num::ParseIntError) -> Self {
         DiceParsingError::ConversionError
     }
 }
