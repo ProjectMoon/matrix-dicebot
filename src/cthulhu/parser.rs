@@ -1,5 +1,5 @@
 use super::dice::{AdvancementRoll, DiceRoll, DiceRollModifier};
-use crate::parser::DiceParsingError;
+use crate::parser::dice::DiceParsingError;
 
 //TOOD convert these to use parse_amounts from the common dice code.
 
@@ -30,13 +30,13 @@ pub fn parse_regular_roll(input: &str) -> Result<DiceRoll, DiceParsingError> {
     }?;
 
     let modifier = parse_modifier(modifiers_str)?;
-    let amount = crate::parser::parse_single_amount(amounts_str)?;
+    let amount = crate::parser::dice::parse_single_amount(amounts_str)?;
     Ok(DiceRoll { modifier, amount })
 }
 
 pub fn parse_advancement_roll(input: &str) -> Result<AdvancementRoll, DiceParsingError> {
     let input = input.trim();
-    let amounts = crate::parser::parse_single_amount(input)?;
+    let amounts = crate::parser::dice::parse_single_amount(input)?;
 
     Ok(AdvancementRoll {
         existing_skill: amounts,
@@ -45,9 +45,8 @@ pub fn parse_advancement_roll(input: &str) -> Result<AdvancementRoll, DiceParsin
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
-    use crate::parser::{Amount, Element, Operator};
+    use crate::parser::dice::{Amount, Element, Operator};
 
     #[test]
     fn regular_roll_accepts_single_number() {

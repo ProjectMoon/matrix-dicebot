@@ -3,7 +3,7 @@ use crate::db::{Rooms, Variables};
 use crate::error::{BotError, DiceRollingError};
 use crate::matrix;
 use crate::models::RoomInfo;
-use crate::parser::{Amount, Element};
+use crate::parser::dice::{Amount, Element};
 use futures::stream::{self, StreamExt, TryStreamExt};
 use matrix_sdk::{self, identifiers::RoomId, Client};
 use std::slice;

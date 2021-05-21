@@ -1,6 +1,6 @@
 use crate::cofd::dice::{DicePool, DicePoolModifiers, DicePoolQuality};
 use crate::error::BotError;
-use crate::parser::{parse_amounts, DiceParsingError};
+use crate::parser::dice::{parse_amounts, DiceParsingError};
 use combine::parser::char::{digit, spaces, string};
 use combine::{choice, count, many1, one_of, Parser};
 
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn dice_pool_complex_expression_test() {
-        use crate::parser::*;
+        use crate::parser::dice::*;
         let modifiers = DicePoolModifiers::custom(DicePoolQuality::Rote, 3);
         let amounts = vec![
             Amount {

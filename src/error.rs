@@ -50,7 +50,7 @@ pub enum BotError {
     IoError(#[from] std::io::Error),
 
     #[error("dice parsing error: {0}")]
-    DiceParsingError(#[from] crate::parser::DiceParsingError),
+    DiceParsingError(#[from] crate::parser::dice::DiceParsingError),
 
     #[error("command parsing error: {0}")]
     CommandParsingError(#[from] crate::commands::parser::CommandParsingError),
@@ -59,7 +59,7 @@ pub enum BotError {
     DiceRollingError(#[from] DiceRollingError),
 
     #[error("variable parsing error: {0}")]
-    VariableParsingError(#[from] crate::variables::VariableParsingError),
+    VariableParsingError(#[from] crate::parser::variables::VariableParsingError),
 
     #[error("legacy parsing error")]
     NomParserError(nom::error::ErrorKind),

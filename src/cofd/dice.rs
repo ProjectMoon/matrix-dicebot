@@ -1,6 +1,6 @@
 use crate::context::Context;
 use crate::error::{BotError, DiceRollingError};
-use crate::parser::{Amount, Element, Operator};
+use crate::parser::dice::{Amount, Element, Operator};
 use itertools::Itertools;
 use std::convert::TryFrom;
 use std::fmt;

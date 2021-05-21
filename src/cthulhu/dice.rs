@@ -1,8 +1,8 @@
 use crate::context::Context;
 use crate::db::Variables;
 use crate::error::{BotError, DiceRollingError};
-use crate::parser::{Amount, Element};
-use crate::{logic::calculate_single_die_amount, parser::DiceParsingError};
+use crate::logic::calculate_single_die_amount;
+use crate::parser::dice::{Amount, DiceParsingError, Element};
 use rand::rngs::StdRng;
 use rand::Rng;
 use rand::SeedableRng;
@@ -420,7 +420,7 @@ pub async fn advancement_roll(
 mod tests {
     use super::*;
     use crate::db::sqlite::Database;
-    use crate::parser::{Amount, Element, Operator};
+    use crate::parser::dice::{Amount, Element, Operator};
     use url::Url;
 
     macro_rules! dummy_room {

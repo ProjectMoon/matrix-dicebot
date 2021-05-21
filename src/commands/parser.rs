@@ -19,7 +19,7 @@ use crate::commands::{
 use crate::cthulhu::parser::{parse_advancement_roll, parse_regular_roll};
 use crate::error::BotError;
 use crate::help::parse_help_topic;
-use crate::variables::parse_set_variable;
+use crate::parser::variables::parse_set_variable;
 use combine::parser::char::{char, letter, space};
 use combine::{any, many1, optional, Parser};
 use nom::Err as NomErr;
