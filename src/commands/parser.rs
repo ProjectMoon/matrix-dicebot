@@ -129,7 +129,7 @@ fn split_command(input: &str) -> Result<(String, String), CommandParsingError> {
 /// we don't recognize the command, return an error.
 pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
     match split_command(input) {
-        Ok((cmd, cmd_input)) => match cmd.as_ref() {
+        Ok((cmd, cmd_input)) => match cmd.to_lowercase().as_ref() {
             "variables" => get_all_variables(),
             "get" => parse_get_variable_command(&cmd_input),
             "set" => parse_set_variable_command(&cmd_input),
@@ -137,10 +137,8 @@ pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
             "resync" => parse_resync(),
             "r" | "roll" => parse_roll(&cmd_input),
             "rp" | "pool" => parse_pool_roll(&cmd_input),
-            "cthroll" | "cthRoll" => parse_cth_roll(&cmd_input),
-            "cthadv" | "ctharoll" | "cthAroll" | "cthARoll" => {
-                parse_cth_advancement_roll(&cmd_input)
-            }
+            "cthroll" => parse_cth_roll(&cmd_input),
+            "cthadv" | "ctharoll" => parse_cth_advancement_roll(&cmd_input),
             "chance" => chance_die(),
             "help" => help(&cmd_input),
             _ => Err(CommandParsingError::UnrecognizedCommand(cmd).into()),
@@ -289,5 +287,10 @@ mod tests {
         parse_command("!roll 1d4 + 5d6 -3   ").expect("was error");
         parse_command("!roll 1d4 + 5d6 -3   ").expect("was error");
         parse_command("   !roll 1d4 + 5d6 -3   ").expect("was error");
+    }
+
+    #[test]
+    fn case_insensitive_test() {
+        parse_command("!CTHROLL 40").expect("command parsing is not case sensitive.");
     }
 }
