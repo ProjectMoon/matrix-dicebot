@@ -60,6 +60,30 @@
       ]
     }
   },
+  "64e137107139c56a43f7041db933671c210df4fa5110fe481d191fd63b2d3aeb": {
+    "query": "SELECT user_id, password FROM accounts\n               WHERE user_id = ?",
+    "describe": {
+      "columns": [
+        {
+          "name": "user_id",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "password",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "711d222911c1258365a6a0de1fe00eeec4686fd3589e976e225ad599e7cfc75d": {
     "query": "SELECT count(*) as \"count: i32\" FROM user_variables\n               WHERE room_id = ? and user_id = ?",
     "describe": {
