@@ -4,7 +4,6 @@ use crate::db::sqlite::Database;
 use crate::error::BotError;
 use crate::matrix;
 use futures::stream::{self, StreamExt};
-use log::{error, info};
 use matrix_sdk::{self, identifiers::EventId, room::Joined, Client};
 use std::clone::Clone;
 
@@ -17,13 +16,6 @@ pub(super) async fn handle_single_result(
     room: &Joined,
     event_id: EventId,
 ) {
-    if cmd_result.is_err() {
-        error!(
-            "Command execution error: {}",
-            cmd_result.as_ref().err().unwrap()
-        );
-    }
-
     let html = cmd_result.message_html(respond_to);
     matrix::send_message(client, room.room_id(), &html, Some(event_id)).await;
 }
@@ -48,10 +40,6 @@ pub(super) async fn handle_multiple_results(
             _ => None,
         })
         .collect();
-
-    for result in errors.iter() {
-        error!("Command execution error: '{}' - {}", result.0, result.1);
-    }
 
     let message = if errors.len() == 0 {
         format!("{}: Executed {} commands", respond_to, results.len())
@@ -109,10 +97,6 @@ pub(super) async fn execute(
                 Err(e) => (command.to_owned(), Err(ExecutionError(e))),
                 Ok(ctx) => {
                     let cmd_result = execute_command(&ctx).await;
-                    info!(
-                        "[{}] {} executed: {}",
-                        ctx.room.display_name, sender, command
-                    );
                     (command.to_owned(), cmd_result)
                 }
             }

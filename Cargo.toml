@@ -31,6 +31,7 @@ matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", branch = "
 refinery = { version = "0.5", features = ["rusqlite"]}
 barrel = { version = "0.6", features = ["sqlite3"] }
 tempfile = "3"
+substring = "1.4"
 
 [dependencies.sqlx]
 version = "0.5"

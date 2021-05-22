@@ -1,6 +1,7 @@
 use crate::context::Context;
 use crate::error::BotError;
 use async_trait::async_trait;
+use log::{error, info};
 use thiserror::Error;
 use BotError::DataError;
 
@@ -118,6 +119,7 @@ fn execution_allowed(cmd: &(impl Command + ?Sized), ctx: &Context<'_>) -> Result
         Ok(())
     }
 }
+
 /// Attempt to execute a command, and return the content that should
 /// go back to Matrix, if the command was executed (successfully or
 /// not). If a command is determined to be ignored, this function will
@@ -125,10 +127,42 @@ fn execution_allowed(cmd: &(impl Command + ?Sized), ctx: &Context<'_>) -> Result
 pub async fn execute_command(ctx: &Context<'_>) -> ExecutionResult {
     let cmd = parser::parse_command(&ctx.message_body)?;
 
-    match execution_allowed(cmd.as_ref(), ctx) {
+    let result = match execution_allowed(cmd.as_ref(), ctx) {
         Ok(_) => cmd.execute(ctx).await,
         Err(e) => Err(ExecutionError(e.into())),
-    }
+    };
+
+    log_command(cmd.as_ref(), ctx, &result);
+    result
+}
+
+/// Log result of an executed command.
+fn log_command(cmd: &(impl Command + ?Sized), ctx: &Context, result: &ExecutionResult) {
+    use substring::Substring;
+    let command = match cmd.is_secure() {
+        true => cmd.name(),
+        false => ctx.message_body.substring(0, 30),
+    };
+
+    let dots = match ctx.message_body.len() {
+        _len if _len > 30 => "[...]",
+        _ => "",
+    };
+
+    match result {
+        Ok(_) => {
+            info!(
+                "[{}] {} <{}{}> - success",
+                ctx.room.display_name, ctx.username, command, dots
+            );
+        }
+        Err(e) => {
+            error!(
+                "[{}] {} <{}{}> - {}",
+                ctx.room.display_name, ctx.username, command, dots, e
+            );
+        }
+    };
 }
 
 #[cfg(test)]
