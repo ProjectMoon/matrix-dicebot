@@ -1,3 +1,5 @@
+use crate::error::BotError;
+use crate::models::User;
 use async_trait::async_trait;
 use errors::DataError;
 use std::collections::{HashMap, HashSet};
@@ -12,6 +14,19 @@ pub(crate) trait DbState {
     async fn get_device_id(&self) -> Result<Option<String>, DataError>;
 
     async fn set_device_id(&self, device_id: &str) -> Result<(), DataError>;
+}
+
+#[async_trait]
+pub(crate) trait Users {
+    async fn upsert_user(&self, user: &User) -> Result<(), DataError>;
+
+    async fn get_user(&self, username: &str) -> Result<Option<User>, DataError>;
+
+    async fn authenticate_user(
+        &self,
+        username: &str,
+        raw_password: &str,
+    ) -> Result<Option<User>, BotError>;
 }
 
 #[async_trait]

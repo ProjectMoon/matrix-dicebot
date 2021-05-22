@@ -1,6 +1,9 @@
 use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
-use crate::logic::record_room_information;
+use crate::db::Users;
+use crate::error::BotError::PasswordCreationError;
+use crate::logic::{hash_password, record_room_information};
+use crate::models::User;
 use async_trait::async_trait;
 use matrix_sdk::identifiers::UserId;
 
@@ -47,6 +50,13 @@ impl Command for RegisterCommand {
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
-        Execution::success("User account registered".to_string())
+        let pw_hash = hash_password(&self.0).map_err(|e| PasswordCreationError(e))?;
+        let user = User {
+            username: ctx.username.to_owned(),
+            password: pw_hash,
+        };
+
+        ctx.db.upsert_user(&user).await?;
+        Execution::success("User account registered/updated".to_string())
     }
 }

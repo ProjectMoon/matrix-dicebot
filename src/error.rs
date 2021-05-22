@@ -78,6 +78,9 @@ pub enum BotError {
 
     #[error("identifier error: {0}")]
     IdentifierError(#[from] matrix_sdk::identifiers::Error),
+
+    #[error("password creation error: {0}")]
+    PasswordCreationError(argon2::Error),
 }
 
 #[derive(Error, Debug)]

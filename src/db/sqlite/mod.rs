@@ -7,6 +7,7 @@ use std::str::FromStr;
 pub mod migrator;
 pub mod rooms;
 pub mod state;
+pub mod users;
 pub mod variables;
 
 pub struct Database {

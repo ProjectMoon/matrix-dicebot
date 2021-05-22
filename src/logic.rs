@@ -4,8 +4,10 @@ use crate::error::{BotError, DiceRollingError};
 use crate::matrix;
 use crate::models::RoomInfo;
 use crate::parser::dice::{Amount, Element};
+use argon2::{self, Config, Error as ArgonError};
 use futures::stream::{self, StreamExt, TryStreamExt};
 use matrix_sdk::{self, identifiers::RoomId, Client};
+use rand::Rng;
 use std::slice;
 
 /// Record the information about a room, including users in it.
@@ -85,4 +87,11 @@ pub async fn calculate_dice_amount(amounts: &[Amount], ctx: &Context<'_>) -> Res
         .await?;
 
     Ok(dice_amount)
+}
+
+/// Hash a password using the argon2 algorithm with a 16 byte salt.
+pub(crate) fn hash_password(raw_password: &str) -> Result<String, ArgonError> {
+    let salt = rand::thread_rng().gen::<[u8; 16]>();
+    let config = Config::default();
+    argon2::hash_encoded(raw_password.as_bytes(), &salt, &config)
 }
