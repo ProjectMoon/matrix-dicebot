@@ -47,8 +47,9 @@ impl Users for Database {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::db::sqlite::Database;
-    use crate::db::DbState;
+    use crate::db::Users;
 
     async fn create_db() -> Database {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
@@ -62,41 +63,114 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn set_and_get_device_id() {
+    async fn create_and_get_user_test() {
         let db = create_db().await;
 
-        db.set_device_id("device_id")
+        let insert_result = db
+            .upsert_user(&User {
+                username: "myuser".to_string(),
+                password: "abc".to_string(),
+            })
+            .await;
+
+        assert!(insert_result.is_ok());
+
+        let user = db
+            .get_user("myuser")
             .await
-            .expect("Could not set device ID");
+            .expect("User retrieval query failed");
 
-        let device_id = db.get_device_id().await.expect("Could not get device ID");
-
-        assert!(device_id.is_some());
-        assert_eq!(device_id.unwrap(), "device_id");
+        assert!(user.is_some());
+        let user = user.unwrap();
+        assert_eq!(user.username, "myuser");
+        assert_eq!(user.password, "abc");
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn no_device_id_set_returns_none() {
+    async fn can_update_user() {
         let db = create_db().await;
-        let device_id = db.get_device_id().await.expect("Could not get device ID");
-        assert!(device_id.is_none());
+
+        let insert_result1 = db
+            .upsert_user(&User {
+                username: "myuser".to_string(),
+                password: "abc".to_string(),
+            })
+            .await;
+
+        assert!(insert_result1.is_ok());
+
+        let insert_result2 = db
+            .upsert_user(&User {
+                username: "myuser".to_string(),
+                password: "123".to_string(),
+            })
+            .await;
+
+        assert!(insert_result2.is_ok());
+
+        let user = db
+            .get_user("myuser")
+            .await
+            .expect("User retrieval query failed");
+
+        assert!(user.is_some());
+        let user = user.unwrap();
+        assert_eq!(user.username, "myuser");
+        assert_eq!(user.password, "123"); //From second upsert
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn can_update_device_id() {
+    async fn username_not_in_db_returns_none() {
+        let db = create_db().await;
+        let user = db
+            .get_user("does not exist")
+            .await
+            .expect("Get user query failure");
+
+        assert!(user.is_none());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn authenticate_user_is_some_with_valid_password() {
         let db = create_db().await;
 
-        db.set_device_id("device_id")
+        let insert_result = db
+            .upsert_user(&User {
+                username: "myuser".to_string(),
+                password: crate::logic::hash_password("abc").expect("password hash error!"),
+            })
+            .await;
+
+        assert!(insert_result.is_ok());
+
+        let user = db
+            .authenticate_user("myuser", "abc")
             .await
-            .expect("Could not set device ID");
+            .expect("User retrieval query failed");
 
-        db.set_device_id("device_id2")
+        assert!(user.is_some());
+        let user = user.unwrap();
+        assert_eq!(user.username, "myuser");
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn authenticate_user_is_none_with_wrong_password() {
+        let db = create_db().await;
+
+        let insert_result = db
+            .upsert_user(&User {
+                username: "myuser".to_string(),
+                password: crate::logic::hash_password("abc").expect("password hash error!"),
+            })
+            .await;
+
+        assert!(insert_result.is_ok());
+
+        let user = db
+            .authenticate_user("myuser", "wrong-password")
             .await
-            .expect("Could not set device ID");
+            .expect("User retrieval query failed");
 
-        let device_id = db.get_device_id().await.expect("Could not get device ID");
-
-        assert!(device_id.is_some());
-        assert_eq!(device_id.unwrap(), "device_id2");
+        assert!(user.is_none());
     }
 }

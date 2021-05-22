@@ -168,6 +168,7 @@ fn log_command(cmd: &(impl Command + ?Sized), ctx: &Context, result: &ExecutionR
 #[cfg(test)]
 mod tests {
     use super::*;
+    use management::RegisterCommand;
     use url::Url;
 
     macro_rules! dummy_room {
@@ -178,6 +179,100 @@ mod tests {
                 secure: false,
             }
         };
+    }
+
+    macro_rules! secure_room {
+        () => {
+            crate::context::RoomContext {
+                id: &matrix_sdk::identifiers::room_id!("!fakeroomid:example.com"),
+                display_name: "displayname".to_owned(),
+                secure: true,
+            }
+        };
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn secure_context_secure_command_allows_execution() {
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        let db = crate::db::sqlite::Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        let homeserver = Url::parse("http://example.com").unwrap();
+
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
+            room: secure_room!(),
+            username: "myusername",
+            message_body: "!notacommand",
+        };
+
+        let cmd = RegisterCommand("".to_owned());
+        assert_eq!(execution_allowed(&cmd, &ctx).is_ok(), true);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn secure_context_insecure_command_allows_execution() {
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        let db = crate::db::sqlite::Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        let homeserver = Url::parse("http://example.com").unwrap();
+
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
+            room: secure_room!(),
+            username: "myusername",
+            message_body: "!notacommand",
+        };
+
+        let cmd = variables::GetVariableCommand("".to_owned());
+        assert_eq!(execution_allowed(&cmd, &ctx).is_ok(), true);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn insecure_context_insecure_command_allows_execution() {
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        let db = crate::db::sqlite::Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        let homeserver = Url::parse("http://example.com").unwrap();
+
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
+            room: dummy_room!(),
+            username: "myusername",
+            message_body: "!notacommand",
+        };
+
+        let cmd = variables::GetVariableCommand("".to_owned());
+        assert_eq!(execution_allowed(&cmd, &ctx).is_ok(), true);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn insecure_context_secure_command_denies_execution() {
+        let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
+        let db = crate::db::sqlite::Database::new(db_path.path().to_str().unwrap())
+            .await
+            .unwrap();
+
+        let homeserver = Url::parse("http://example.com").unwrap();
+
+        let ctx = Context {
+            db: db,
+            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
+            room: dummy_room!(),
+            username: "myusername",
+            message_body: "!notacommand",
+        };
+
+        let cmd = RegisterCommand("".to_owned());
+        assert_eq!(execution_allowed(&cmd, &ctx).is_err(), true);
     }
 
     #[test]
@@ -205,6 +300,7 @@ mod tests {
             username: "myusername",
             message_body: "!notacommand",
         };
+
         let result = execute_command(&ctx).await;
         assert!(result.is_err());
     }

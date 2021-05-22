@@ -18,3 +18,28 @@ impl User {
         argon2::verify_encoded(&self.password, raw_password.as_bytes()).unwrap_or(false)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verify_password_passes_with_correct_password() {
+        let user = User {
+            username: "myuser".to_string(),
+            password: crate::logic::hash_password("mypassword").expect("Password hashing error!"),
+        };
+
+        assert_eq!(user.verify_password("mypassword"), true);
+    }
+
+    #[test]
+    fn verify_password_fails_with_wrong_password() {
+        let user = User {
+            username: "myuser".to_string(),
+            password: crate::logic::hash_password("mypassword").expect("Password hashing error!"),
+        };
+
+        assert_eq!(user.verify_password("wrong-password"), false);
+    }
+}
