@@ -1,7 +1,7 @@
 use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
 use crate::db::Users;
-use crate::error::BotError::{AuthenticationError, PasswordCreationError};
+use crate::error::BotError::{AccountDoesNotExist, AuthenticationError, PasswordCreationError};
 use crate::logic::{hash_password, record_room_information};
 use crate::models::User;
 use async_trait::async_trait;
@@ -79,6 +79,31 @@ impl Command for CheckCommand {
         match user {
             Some(_) => Execution::success("Password is correct!".to_string()),
             None => Err(AuthenticationError.into()),
+        }
+    }
+}
+
+pub struct UnregisterCommand;
+
+#[async_trait]
+impl Command for UnregisterCommand {
+    fn name(&self) -> &'static str {
+        "unregister user account"
+    }
+
+    fn is_secure(&self) -> bool {
+        true
+    }
+
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
+        let user = ctx.db.get_user(&ctx.username).await?;
+
+        match user {
+            Some(_) => {
+                ctx.db.delete_user(&ctx.username).await?;
+                Execution::success("Your user account has been removed.".to_string())
+            }
+            None => Err(AccountDoesNotExist.into()),
         }
     }
 }

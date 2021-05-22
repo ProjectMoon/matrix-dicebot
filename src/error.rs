@@ -84,6 +84,9 @@ pub enum BotError {
 
     #[error("account does not exist, or password incorrect")]
     AuthenticationError,
+
+    #[error("user account does not exist, try registering")]
+    AccountDoesNotExist,
 }
 
 #[derive(Error, Debug)]

@@ -22,6 +22,8 @@ pub(crate) trait Users {
 
     async fn get_user(&self, username: &str) -> Result<Option<User>, DataError>;
 
+    async fn delete_user(&self, username: &str) -> Result<(), DataError>;
+
     async fn authenticate_user(
         &self,
         username: &str,

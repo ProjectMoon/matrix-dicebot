@@ -20,6 +20,15 @@ impl Users for Database {
         Ok(())
     }
 
+    async fn delete_user(&self, username: &str) -> Result<(), DataError> {
+        sqlx::query(r#"DELETE FROM accounts WHERE user_id = ?"#)
+            .bind(&username)
+            .execute(&self.conn)
+            .await?;
+
+        Ok(())
+    }
+
     async fn get_user(&self, username: &str) -> Result<Option<User>, DataError> {
         let user_row = sqlx::query!(
             r#"SELECT user_id, password FROM accounts
@@ -117,6 +126,31 @@ mod tests {
         let user = user.unwrap();
         assert_eq!(user.username, "myuser");
         assert_eq!(user.password, "123"); //From second upsert
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn can_delete_user() {
+        let db = create_db().await;
+
+        let insert_result = db
+            .upsert_user(&User {
+                username: "myuser".to_string(),
+                password: "abc".to_string(),
+            })
+            .await;
+
+        assert!(insert_result.is_ok());
+
+        db.delete_user("myuser")
+            .await
+            .expect("User deletion query failed");
+
+        let user = db
+            .get_user("myuser")
+            .await
+            .expect("User retrieval query failed");
+
+        assert!(user.is_none());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
