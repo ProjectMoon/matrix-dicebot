@@ -81,6 +81,9 @@ pub enum BotError {
 
     #[error("password creation error: {0}")]
     PasswordCreationError(argon2::Error),
+
+    #[error("account does not exist, or password incorrect")]
+    AuthenticationError,
 }
 
 #[derive(Error, Debug)]

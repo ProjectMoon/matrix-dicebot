@@ -1,7 +1,7 @@
 use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
 use crate::db::Users;
-use crate::error::BotError::PasswordCreationError;
+use crate::error::BotError::{AuthenticationError, PasswordCreationError};
 use crate::logic::{hash_password, record_room_information};
 use crate::models::User;
 use async_trait::async_trait;
@@ -58,5 +58,27 @@ impl Command for RegisterCommand {
 
         ctx.db.upsert_user(&user).await?;
         Execution::success("User account registered/updated".to_string())
+    }
+}
+
+pub struct CheckCommand(pub String);
+
+#[async_trait]
+impl Command for CheckCommand {
+    fn name(&self) -> &'static str {
+        "check user password"
+    }
+
+    fn is_secure(&self) -> bool {
+        true
+    }
+
+    async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
+        let user = ctx.db.authenticate_user(&ctx.username, &self.0).await?;
+
+        match user {
+            Some(_) => Execution::success("Password is correct!".to_string()),
+            None => Err(AuthenticationError.into()),
+        }
     }
 }
