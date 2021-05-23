@@ -57,7 +57,11 @@ impl Command for RegisterCommand {
         };
 
         ctx.db.upsert_user(&user).await?;
-        Execution::success("User account registered/updated".to_string())
+        Execution::success(format!(
+            "User account registered/updated. Please log in to external applications \
+             with username {} and the password you set.",
+            ctx.username
+        ))
     }
 }
 
