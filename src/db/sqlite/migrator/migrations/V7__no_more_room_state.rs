@@ -1,5 +1,5 @@
 use barrel::backend::Sqlite;
-use barrel::{types, Migration};
+use barrel::Migration;
 
 pub fn migration() -> String {
     let mut m = Migration::new();

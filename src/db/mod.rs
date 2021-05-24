@@ -2,9 +2,7 @@ use crate::error::BotError;
 use crate::models::User;
 use async_trait::async_trait;
 use errors::DataError;
-use std::collections::{HashMap, HashSet};
-
-use crate::models::RoomInfo;
+use std::collections::HashMap;
 
 pub mod errors;
 pub mod sqlite;
@@ -34,20 +32,6 @@ pub(crate) trait Users {
 #[async_trait]
 pub(crate) trait Rooms {
     async fn should_process(&self, room_id: &str, event_id: &str) -> Result<bool, DataError>;
-
-    async fn insert_room_info(&self, info: &RoomInfo) -> Result<(), DataError>;
-
-    async fn get_room_info(&self, room_id: &str) -> Result<Option<RoomInfo>, DataError>;
-
-    async fn get_rooms_for_user(&self, user_id: &str) -> Result<HashSet<String>, DataError>;
-
-    async fn get_users_in_room(&self, room_id: &str) -> Result<HashSet<String>, DataError>;
-
-    async fn add_user_to_room(&self, username: &str, room_id: &str) -> Result<(), DataError>;
-
-    async fn remove_user_from_room(&self, username: &str, room_id: &str) -> Result<(), DataError>;
-
-    async fn clear_info(&self, room_id: &str) -> Result<(), DataError>;
 }
 
 // TODO move this up to the top once we delete sled. Traits will be the
