@@ -1,6 +1,6 @@
 use futures::stream::{self, StreamExt, TryStreamExt};
 use log::error;
-use matrix_sdk::{events::room::message::NoticeMessageEventContent, room::Joined, StoreError};
+use matrix_sdk::{events::room::message::NoticeMessageEventContent, room::Joined};
 use matrix_sdk::{
     events::room::message::{InReplyTo, Relation},
     events::room::message::{MessageEventContent, MessageType},
