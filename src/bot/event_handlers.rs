@@ -7,15 +7,14 @@ use super::DiceBot;
 use crate::db::sqlite::Database;
 use crate::db::Rooms;
 use crate::error::BotError;
-use crate::logic::record_room_information;
 use async_trait::async_trait;
 use log::{debug, error, info, warn};
 use matrix_sdk::{
     self,
     events::{
-        room::member::{MemberEventContent, MembershipChange},
+        room::member::MemberEventContent,
         room::message::{MessageEventContent, MessageType, TextMessageEventContent},
-        StrippedStateEvent, SyncMessageEvent, SyncStateEvent,
+        StrippedStateEvent, SyncMessageEvent,
     },
     room::Room,
     EventHandler,
@@ -111,73 +110,6 @@ async fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> b
 /// Originally adapted from the matrix-rust-sdk examples.
 #[async_trait]
 impl EventHandler for DiceBot {
-    async fn on_room_member(&self, room: Room, event: &SyncStateEvent<MemberEventContent>) {
-        //let room = Common::new(self.client.clone(), room);
-        let (room_id, room_display_name) = match room.display_name().await {
-            Ok(display_name) => (room.room_id(), display_name),
-            _ => return,
-        };
-
-        let room_id_str = room_id.as_str();
-        let username = &event.state_key;
-
-        if !should_process_event(&self.db, room_id_str, event.event_id.as_str()).await {
-            return;
-        }
-
-        let event_affects_us = if let Some(our_user_id) = self.client.user_id().await {
-            event.state_key == our_user_id
-        } else {
-            false
-        };
-
-        // user_joing is true if a user is joining this room, and
-        // false if they have left for some reason. This user may be
-        // us, or another user in the room.
-        use MembershipChange::*;
-        let user_joining = match event.membership_change() {
-            Joined => true,
-            Banned | Left | Kicked | KickedAndBanned => false,
-            _ => return,
-        };
-
-        let result = if event_affects_us && !user_joining {
-            info!("Clearing all information for room ID {}", room_id);
-            self.db.clear_info(room_id_str).await.map_err(|e| e.into())
-        } else if event_affects_us && user_joining {
-            info!("Joined room {}; recording room information", room_id);
-            record_room_information(
-                &self.client,
-                &self.db,
-                &room_id,
-                &room_display_name,
-                &event.state_key,
-            )
-            .await
-        } else if !event_affects_us && user_joining {
-            info!("Adding user {} to room ID {}", username, room_id);
-            self.db
-                .add_user_to_room(username, room_id_str)
-                .await
-                .map_err(|e| e.into())
-        } else if !event_affects_us && !user_joining {
-            info!("Removing user {} from room ID {}", username, room_id);
-            self.db
-                .remove_user_from_room(username, room_id_str)
-                .await
-                .map_err(|e| e.into())
-        } else {
-            debug!("Ignoring a room member event: {:#?}", event);
-            Ok(())
-        };
-
-        if let Err(e) = result {
-            error!("Could not update room information: {}", e.to_string());
-        } else {
-            debug!("Successfully processed room member update.");
-        }
-    }
-
     async fn on_stripped_state_member(
         &self,
         room: Room,

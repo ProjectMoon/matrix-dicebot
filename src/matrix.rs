@@ -1,5 +1,6 @@
+use futures::stream::{self, StreamExt, TryStreamExt};
 use log::error;
-use matrix_sdk::events::room::message::NoticeMessageEventContent;
+use matrix_sdk::{events::room::message::NoticeMessageEventContent, room::Joined, StoreError};
 use matrix_sdk::{
     events::room::message::{InReplyTo, Relation},
     events::room::message::{MessageEventContent, MessageType},
@@ -7,7 +8,7 @@ use matrix_sdk::{
     identifiers::EventId,
     Error as MatrixError,
 };
-use matrix_sdk::{identifiers::RoomId, Client};
+use matrix_sdk::{identifiers::RoomId, identifiers::UserId, Client};
 
 /// Extracts more detailed error messages out of a matrix SDK error.
 fn extract_error_message(error: MatrixError) -> String {
@@ -34,6 +35,30 @@ pub async fn get_users_in_room(
     } else {
         Ok(vec![])
     }
+}
+
+pub async fn get_rooms_for_user(
+    client: &Client,
+    user: &UserId,
+) -> Result<Vec<Joined>, MatrixError> {
+    // Carries errors through, in case we cannot load joined user IDs
+    // from the room for some reason.
+    let user_is_in_room = |room: Joined| async move {
+        match room.joined_user_ids().await {
+            Ok(users) => match users.contains(user) {
+                true => Some(Ok(room)),
+                false => None,
+            },
+            Err(e) => Some(Err(e)),
+        }
+    };
+
+    let rooms_for_user: Vec<Joined> = stream::iter(client.joined_rooms())
+        .filter_map(user_is_in_room)
+        .try_collect()
+        .await?;
+
+    Ok(rooms_for_user)
 }
 
 pub async fn send_message(
