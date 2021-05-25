@@ -1,6 +1,7 @@
 use crate::commands::{execute_command, ExecutionError, ExecutionResult, ResponseExtractor};
 use crate::context::{Context, RoomContext};
 use crate::db::sqlite::Database;
+use crate::db::Users;
 use crate::error::BotError;
 use crate::matrix;
 use futures::stream::{self, StreamExt};
@@ -77,6 +78,7 @@ async fn create_context<'a>(
         matrix_client: client,
         room: room_ctx,
         username: &sender,
+        user: db.get_or_create_user(&sender).await?,
         message_body: &command,
     })
 }

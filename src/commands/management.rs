@@ -3,7 +3,7 @@ use crate::context::Context;
 use crate::db::Users;
 use crate::error::BotError::{AccountDoesNotExist, AuthenticationError, PasswordCreationError};
 use crate::logic::hash_password;
-use crate::models::User;
+use crate::models::{AccountStatus, User};
 use async_trait::async_trait;
 
 pub struct RegisterCommand(pub String);
@@ -22,7 +22,9 @@ impl Command for RegisterCommand {
         let pw_hash = hash_password(&self.0).map_err(|e| PasswordCreationError(e))?;
         let user = User {
             username: ctx.username.to_owned(),
-            password: pw_hash,
+            password: Some(pw_hash),
+            account_status: AccountStatus::Registered,
+            ..Default::default()
         };
 
         ctx.db.upsert_user(&user).await?;

@@ -16,6 +16,8 @@ pub(crate) trait DbState {
 
 #[async_trait]
 pub(crate) trait Users {
+    async fn get_or_create_user(&self, username: &str) -> Result<User, DataError>;
+
     async fn upsert_user(&self, user: &User) -> Result<(), DataError>;
 
     async fn get_user(&self, username: &str) -> Result<Option<User>, DataError>;
