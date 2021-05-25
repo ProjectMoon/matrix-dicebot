@@ -3,8 +3,6 @@
  * governed by the terms of the MIT license, from the original
  * axfive-matrix-dicebot project.
  */
-use crate::basic::parser::parse_element_expression;
-use crate::cofd::parser::{create_chance_die, parse_dice_pool};
 use crate::commands::{
     basic_rolling::RollCommand,
     cofd::PoolRollCommand,
@@ -16,13 +14,10 @@ use crate::commands::{
     },
     Command,
 };
-use crate::cthulhu::parser::{parse_advancement_roll, parse_regular_roll};
 use crate::error::BotError;
-use crate::help::parse_help_topic;
-use crate::parser::variables::parse_set_variable;
 use combine::parser::char::{char, letter, space};
 use combine::{any, many1, optional, Parser};
-use nom::Err as NomErr;
+use std::convert::TryFrom;
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Error)]
@@ -32,73 +27,6 @@ pub enum CommandParsingError {
 
     #[error("parser error: {0}")]
     InternalParseError(#[from] combine::error::StringStreamError),
-}
-
-// Parse a roll expression.
-fn parse_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
-    let result = parse_element_expression(input);
-    match result {
-        Ok((rest, expression)) if rest.len() == 0 => Ok(Box::new(RollCommand(expression))),
-        //Legacy code boundary translates nom errors into BotErrors.
-        Ok(_) => Err(BotError::NomParserIncomplete),
-        Err(NomErr::Error(e)) => Err(BotError::NomParserError(e.1)),
-        Err(NomErr::Failure(e)) => Err(BotError::NomParserError(e.1)),
-        Err(NomErr::Incomplete(_)) => Err(BotError::NomParserIncomplete),
-    }
-}
-
-fn parse_register_command(input: &str) -> Result<Box<dyn Command>, BotError> {
-    Ok(Box::new(RegisterCommand(input.to_owned())))
-}
-
-fn parse_check_command(input: &str) -> Result<Box<dyn Command>, BotError> {
-    Ok(Box::new(CheckCommand(input.to_owned())))
-}
-
-fn parse_unregister_command() -> Result<Box<dyn Command>, BotError> {
-    Ok(Box::new(UnregisterCommand))
-}
-
-fn parse_get_variable_command(input: &str) -> Result<Box<dyn Command>, BotError> {
-    Ok(Box::new(GetVariableCommand(input.to_owned())))
-}
-
-fn parse_set_variable_command(input: &str) -> Result<Box<dyn Command>, BotError> {
-    let (variable_name, value) = parse_set_variable(input)?;
-    Ok(Box::new(SetVariableCommand(variable_name, value)))
-}
-
-fn parse_delete_variable_command(input: &str) -> Result<Box<dyn Command>, BotError> {
-    Ok(Box::new(DeleteVariableCommand(input.to_owned())))
-}
-
-fn parse_pool_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
-    let pool = parse_dice_pool(input)?;
-    Ok(Box::new(PoolRollCommand(pool)))
-}
-
-fn parse_cth_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
-    let roll = parse_regular_roll(input)?;
-    Ok(Box::new(CthRoll(roll)))
-}
-
-fn parse_cth_advancement_roll(input: &str) -> Result<Box<dyn Command>, BotError> {
-    let roll = parse_advancement_roll(input)?;
-    Ok(Box::new(CthAdvanceRoll(roll)))
-}
-
-fn chance_die() -> Result<Box<dyn Command>, BotError> {
-    let pool = create_chance_die()?;
-    Ok(Box::new(PoolRollCommand(pool)))
-}
-
-fn get_all_variables() -> Result<Box<dyn Command>, BotError> {
-    Ok(Box::new(GetAllVariablesCommand))
-}
-
-fn help(topic: &str) -> Result<Box<dyn Command>, BotError> {
-    let topic = parse_help_topic(topic);
-    Ok(Box::new(HelpCommand(topic)))
 }
 
 /// Split an input string into its constituent command and "everything
@@ -132,25 +60,34 @@ fn split_command(input: &str) -> Result<(String, String), CommandParsingError> {
     Ok((command, command_input))
 }
 
+/// Atempt to convert text input to a Boxed command type. Shortens
+/// boilerplate.
+macro_rules! convert_to {
+    ($type:ident, $input: expr) => {
+        $type::try_from($input.as_str()).map(Into::into)
+    };
+}
+
 /// Potentially parse a command expression. If we recognize the
 /// command, an error should be raised if the command is misparsed. If
 /// we don't recognize the command, return an error.
 pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
     match split_command(input) {
         Ok((cmd, cmd_input)) => match cmd.to_lowercase().as_ref() {
-            "variables" => get_all_variables(),
-            "get" => parse_get_variable_command(&cmd_input),
-            "set" => parse_set_variable_command(&cmd_input),
-            "del" => parse_delete_variable_command(&cmd_input),
-            "r" | "roll" => parse_roll(&cmd_input),
-            "rp" | "pool" => parse_pool_roll(&cmd_input),
-            "cthroll" => parse_cth_roll(&cmd_input),
-            "cthadv" | "ctharoll" => parse_cth_advancement_roll(&cmd_input),
-            "chance" => chance_die(),
-            "help" => help(&cmd_input),
-            "register" => parse_register_command(&cmd_input),
-            "check" => parse_check_command(&cmd_input),
-            "unregister" => parse_unregister_command(),
+            // "variables" => GetAllVariablesCommand::try_from(input).map(Into::into),
+            "variables" => convert_to!(GetAllVariablesCommand, cmd_input),
+            "get" => convert_to!(GetVariableCommand, cmd_input),
+            "set" => convert_to!(SetVariableCommand, cmd_input),
+            "del" => convert_to!(DeleteVariableCommand, cmd_input),
+            "r" | "roll" => convert_to!(RollCommand, cmd_input),
+            "rp" | "pool" => convert_to!(PoolRollCommand, cmd_input),
+            "chance" => PoolRollCommand::chance_die().map(Into::into),
+            "cthroll" => convert_to!(CthRoll, cmd_input),
+            "cthadv" | "ctharoll" => convert_to!(CthAdvanceRoll, cmd_input),
+            "help" => convert_to!(HelpCommand, cmd_input),
+            "register" => convert_to!(RegisterCommand, cmd_input),
+            "check" => convert_to!(CheckCommand, cmd_input),
+            "unregister" => convert_to!(UnregisterCommand, cmd_input),
             _ => Err(CommandParsingError::UnrecognizedCommand(cmd).into()),
         },
         //All other errors passed up.

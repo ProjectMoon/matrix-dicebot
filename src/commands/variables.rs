@@ -2,9 +2,25 @@ use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
 use crate::db::errors::DataError;
 use crate::db::Variables;
+use crate::error::BotError;
 use async_trait::async_trait;
+use std::convert::TryFrom;
 
 pub struct GetAllVariablesCommand;
+
+impl From<GetAllVariablesCommand> for Box<dyn Command> {
+    fn from(cmd: GetAllVariablesCommand) -> Self {
+        Box::new(cmd)
+    }
+}
+
+impl TryFrom<&str> for GetAllVariablesCommand {
+    type Error = BotError;
+
+    fn try_from(_: &str) -> Result<Self, Self::Error> {
+        Ok(GetAllVariablesCommand)
+    }
+}
 
 #[async_trait]
 impl Command for GetAllVariablesCommand {
@@ -41,6 +57,20 @@ impl Command for GetAllVariablesCommand {
 
 pub struct GetVariableCommand(pub String);
 
+impl From<GetVariableCommand> for Box<dyn Command> {
+    fn from(cmd: GetVariableCommand) -> Self {
+        Box::new(cmd)
+    }
+}
+
+impl TryFrom<&str> for GetVariableCommand {
+    type Error = BotError;
+
+    fn try_from(input: &str) -> Result<Self, Self::Error> {
+        Ok(GetVariableCommand(input.to_owned()))
+    }
+}
+
 #[async_trait]
 impl Command for GetVariableCommand {
     fn name(&self) -> &'static str {
@@ -71,6 +101,21 @@ impl Command for GetVariableCommand {
 
 pub struct SetVariableCommand(pub String, pub i32);
 
+impl From<SetVariableCommand> for Box<dyn Command> {
+    fn from(cmd: SetVariableCommand) -> Self {
+        Box::new(cmd)
+    }
+}
+
+impl TryFrom<&str> for SetVariableCommand {
+    type Error = BotError;
+
+    fn try_from(input: &str) -> Result<Self, Self::Error> {
+        let (variable_name, value) = crate::parser::variables::parse_set_variable(input)?;
+        Ok(SetVariableCommand(variable_name, value))
+    }
+}
+
 #[async_trait]
 impl Command for SetVariableCommand {
     fn name(&self) -> &'static str {
@@ -96,6 +141,20 @@ impl Command for SetVariableCommand {
 }
 
 pub struct DeleteVariableCommand(pub String);
+
+impl From<DeleteVariableCommand> for Box<dyn Command> {
+    fn from(cmd: DeleteVariableCommand) -> Self {
+        Box::new(cmd)
+    }
+}
+
+impl TryFrom<&str> for DeleteVariableCommand {
+    type Error = BotError;
+
+    fn try_from(input: &str) -> Result<Self, Self::Error> {
+        Ok(DeleteVariableCommand(input.to_owned()))
+    }
+}
 
 #[async_trait]
 impl Command for DeleteVariableCommand {

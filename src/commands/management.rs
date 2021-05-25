@@ -1,12 +1,27 @@
 use super::{Command, Execution, ExecutionResult};
-use crate::context::Context;
 use crate::db::Users;
 use crate::error::BotError::{AccountDoesNotExist, AuthenticationError, PasswordCreationError};
 use crate::logic::hash_password;
 use crate::models::{AccountStatus, User};
+use crate::{context::Context, error::BotError};
 use async_trait::async_trait;
+use std::convert::{Into, TryFrom};
 
 pub struct RegisterCommand(pub String);
+
+impl From<RegisterCommand> for Box<dyn Command> {
+    fn from(cmd: RegisterCommand) -> Self {
+        Box::new(cmd)
+    }
+}
+
+impl TryFrom<&str> for RegisterCommand {
+    type Error = BotError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(RegisterCommand(value.to_owned()))
+    }
+}
 
 #[async_trait]
 impl Command for RegisterCommand {
@@ -38,6 +53,20 @@ impl Command for RegisterCommand {
 
 pub struct CheckCommand(pub String);
 
+impl From<CheckCommand> for Box<dyn Command> {
+    fn from(cmd: CheckCommand) -> Self {
+        Box::new(cmd)
+    }
+}
+
+impl TryFrom<&str> for CheckCommand {
+    type Error = BotError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(CheckCommand(value.to_owned()))
+    }
+}
+
 #[async_trait]
 impl Command for CheckCommand {
     fn name(&self) -> &'static str {
@@ -59,6 +88,20 @@ impl Command for CheckCommand {
 }
 
 pub struct UnregisterCommand;
+
+impl From<UnregisterCommand> for Box<dyn Command> {
+    fn from(cmd: UnregisterCommand) -> Self {
+        Box::new(cmd)
+    }
+}
+
+impl TryFrom<&str> for UnregisterCommand {
+    type Error = BotError;
+
+    fn try_from(_: &str) -> Result<Self, Self::Error> {
+        Ok(UnregisterCommand)
+    }
+}
 
 #[async_trait]
 impl Command for UnregisterCommand {

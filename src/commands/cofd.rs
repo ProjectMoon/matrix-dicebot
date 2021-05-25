@@ -1,9 +1,34 @@
 use super::{Command, Execution, ExecutionResult};
 use crate::cofd::dice::{roll_pool, DicePool, DicePoolWithContext};
+use crate::cofd::parser::{create_chance_die, parse_dice_pool};
 use crate::context::Context;
+use crate::error::BotError;
 use async_trait::async_trait;
+use std::convert::TryFrom;
 
 pub struct PoolRollCommand(pub DicePool);
+
+impl PoolRollCommand {
+    pub fn chance_die() -> Result<PoolRollCommand, BotError> {
+        let pool = create_chance_die()?;
+        Ok(PoolRollCommand(pool))
+    }
+}
+
+impl From<PoolRollCommand> for Box<dyn Command> {
+    fn from(cmd: PoolRollCommand) -> Self {
+        Box::new(cmd)
+    }
+}
+
+impl TryFrom<&str> for PoolRollCommand {
+    type Error = BotError;
+
+    fn try_from(input: &str) -> Result<Self, Self::Error> {
+        let pool = parse_dice_pool(input)?;
+        Ok(PoolRollCommand(pool))
+    }
+}
 
 #[async_trait]
 impl Command for PoolRollCommand {
