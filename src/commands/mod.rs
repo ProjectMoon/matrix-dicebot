@@ -62,7 +62,7 @@ impl From<crate::db::errors::DataError> for ExecutionError {
 impl ExecutionError {
     /// Error message in bolded HTML.
     pub fn html(&self) -> String {
-        format!("<p><strong>{}</strong></p>", self.0)
+        format!("<strong>{}</strong>", self.0)
     }
 }
 
