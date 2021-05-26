@@ -483,7 +483,7 @@ mod tests {
             .unwrap();
 
         let ctx = Context {
-            user: crate::models::User::default(),
+            account: crate::models::Account::default(),
             db: db,
             matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),
@@ -524,7 +524,7 @@ mod tests {
 
         let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
-            user: crate::models::User::default(),
+            account: crate::models::Account::default(),
             db: db,
             matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),
@@ -562,7 +562,7 @@ mod tests {
 
         let homeserver = Url::parse("http://example.com").unwrap();
         let ctx = Context {
-            user: crate::models::User::default(),
+            account: crate::models::Account::default(),
             db: db.clone(),
             matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
             room: dummy_room!(),

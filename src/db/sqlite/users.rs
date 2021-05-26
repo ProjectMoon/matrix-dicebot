@@ -76,21 +76,6 @@ impl Users for Database {
         Ok(user_row)
     }
 
-    //TODO should this logic be moved further up into logic.rs maybe?
-    async fn get_or_create_user(&self, username: &str) -> Result<User, DataError> {
-        let maybe_user = self.get_user(username).await?;
-
-        match maybe_user {
-            Some(user) => Ok(user),
-            None => {
-                info!("Creating unregistered account for {}", username);
-                let user = User::unregistered(&username);
-                self.upsert_user(&user).await?;
-                Ok(user)
-            }
-        }
-    }
-
     async fn authenticate_user(
         &self,
         username: &str,
@@ -117,48 +102,6 @@ mod tests {
         Database::new(db_path.path().to_str().unwrap())
             .await
             .unwrap()
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn get_or_create_user_no_user_exists() {
-        let db = create_db().await;
-
-        let user = db
-            .get_or_create_user("@test:example.com")
-            .await
-            .expect("User creation didn't work.");
-
-        assert_eq!(user.username, "@test:example.com");
-
-        let user_again = db
-            .get_user("@test:example.com")
-            .await
-            .expect("User retrieval didn't work.")
-            .expect("No user returned from option.");
-
-        assert_eq!(user, user_again);
-    }
-
-    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-    async fn get_or_create_user_when_user_exists() {
-        let db = create_db().await;
-
-        let user = User {
-            username: "myuser".to_string(),
-            password: Some("abc".to_string()),
-            account_status: AccountStatus::Registered,
-            active_room: Some("myroom".to_string()),
-        };
-
-        let insert_result = db.upsert_user(&user).await;
-        assert!(insert_result.is_ok());
-
-        let user_again = db
-            .get_or_create_user("myuser")
-            .await
-            .expect("User retrieval didn't work.");
-
-        assert_eq!(user, user_again);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]

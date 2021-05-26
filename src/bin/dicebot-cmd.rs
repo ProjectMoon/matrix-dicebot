@@ -4,7 +4,7 @@ use tenebrous_dicebot::commands::ResponseExtractor;
 use tenebrous_dicebot::context::{Context, RoomContext};
 use tenebrous_dicebot::db::sqlite::Database;
 use tenebrous_dicebot::error::BotError;
-use tenebrous_dicebot::models::User;
+use tenebrous_dicebot::models::Account;
 use url::Url;
 
 #[tokio::main]
@@ -27,7 +27,7 @@ async fn main() -> Result<(), BotError> {
 
     let context = Context {
         db: db,
-        user: User::default(),
+        account: Account::default(),
         matrix_client: &matrix_sdk::Client::new(homeserver)
             .expect("Could not create matrix client"),
         room: RoomContext {

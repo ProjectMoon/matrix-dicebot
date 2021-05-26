@@ -10,9 +10,9 @@ pub struct RoomInfo {
 #[derive(Eq, PartialEq, Clone, Copy, Debug, sqlx::Type)]
 #[sqlx(rename_all = "snake_case")]
 pub enum AccountStatus {
-    /// User is not registered, which means the "account" only exists
-    /// for state management in the bot. No privileged actions
-    /// possible.
+    /// Account is not registered, which means a transient "account"
+    /// with limited information exists only for the duration of the
+    /// command request.
     NotRegistered,
 
     /// User account is fully registered, either via Matrix directly,
@@ -28,6 +28,62 @@ impl Default for AccountStatus {
     fn default() -> Self {
         AccountStatus::NotRegistered
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Account {
+    /// A registered user account, stored in the database.
+    Registered(User),
+
+    /// A transient account. Not stored in the database. Represents a
+    /// user in a public channel that has not registered directly with
+    /// the bot yet.
+    Transient(TransientUser),
+}
+
+impl Account {
+    /// Gets the account status. For registered users, this is their
+    /// actual account status (fully registered or awaiting
+    /// activation). For transient users, this is
+    /// AccountStatus::NotRegistered.
+    pub fn account_status(&self) -> AccountStatus {
+        match self {
+            Self::Registered(user) => user.account_status,
+            Self::Transient(_) => AccountStatus::NotRegistered,
+        }
+    }
+
+    /// Consume self into an Option<User> instance, which will be Some
+    /// if this account has a registered user, and None otherwise.
+    pub fn registered_user(self) -> Option<User> {
+        match self {
+            Self::Registered(user) => Some(user),
+            _ => None,
+        }
+    }
+
+    /// Consume self into an Option<TransientUser> instance, which
+    /// will be Some if this account has a non-registered user, and
+    /// None otherwise.
+    pub fn transient_user(self) -> Option<TransientUser> {
+        match self {
+            Self::Transient(user) => Some(user),
+            _ => None,
+        }
+    }
+}
+
+impl Default for Account {
+    fn default() -> Self {
+        Account::Transient(TransientUser {
+            username: "".to_string(),
+        })
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TransientUser {
+    pub username: String,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, Default, sqlx::FromRow)]

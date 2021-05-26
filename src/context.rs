@@ -1,6 +1,6 @@
 use crate::db::sqlite::Database;
 use crate::error::BotError;
-use crate::models::User;
+use crate::models::{Account, User};
 use matrix_sdk::identifiers::{RoomId, UserId};
 use matrix_sdk::room::Joined;
 use matrix_sdk::Client;
@@ -15,7 +15,7 @@ pub struct Context<'a> {
     pub room: RoomContext<'a>,
     pub username: &'a str,
     pub message_body: &'a str,
-    pub user: User,
+    pub account: Account,
 }
 
 impl Context<'_> {
