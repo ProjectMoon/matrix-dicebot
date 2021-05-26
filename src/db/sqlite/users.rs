@@ -3,7 +3,6 @@ use crate::db::{errors::DataError, Users};
 use crate::error::BotError;
 use crate::models::User;
 use async_trait::async_trait;
-use log::info;
 
 #[async_trait]
 impl Users for Database {

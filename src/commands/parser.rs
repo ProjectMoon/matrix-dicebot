@@ -7,7 +7,7 @@ use crate::commands::{
     basic_rolling::RollCommand,
     cofd::PoolRollCommand,
     cthulhu::{CthAdvanceRoll, CthRoll},
-    management::{CheckCommand, RegisterCommand, UnregisterCommand},
+    management::{CheckCommand, LinkCommand, RegisterCommand, UnlinkCommand, UnregisterCommand},
     misc::HelpCommand,
     variables::{
         DeleteVariableCommand, GetAllVariablesCommand, GetVariableCommand, SetVariableCommand,
@@ -86,6 +86,8 @@ pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
             "cthadv" | "ctharoll" => convert_to!(CthAdvanceRoll, cmd_input),
             "help" => convert_to!(HelpCommand, cmd_input),
             "register" => convert_to!(RegisterCommand, cmd_input),
+            "link" => convert_to!(LinkCommand, cmd_input),
+            "unlink" => convert_to!(UnlinkCommand, cmd_input),
             "check" => convert_to!(CheckCommand, cmd_input),
             "unregister" => convert_to!(UnregisterCommand, cmd_input),
             _ => Err(CommandParsingError::UnrecognizedCommand(cmd).into()),

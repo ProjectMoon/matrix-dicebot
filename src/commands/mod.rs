@@ -209,7 +209,7 @@ mod tests {
             message_body: "!notacommand",
         };
 
-        let cmd = RegisterCommand("".to_owned());
+        let cmd = RegisterCommand;
         assert_eq!(execution_allowed(&cmd, &ctx).is_ok(), true);
     }
 
@@ -275,7 +275,7 @@ mod tests {
             message_body: "!notacommand",
         };
 
-        let cmd = RegisterCommand("".to_owned());
+        let cmd = RegisterCommand;
         assert_eq!(execution_allowed(&cmd, &ctx).is_err(), true);
     }
 

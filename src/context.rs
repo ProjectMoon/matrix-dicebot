@@ -1,6 +1,6 @@
 use crate::db::sqlite::Database;
 use crate::error::BotError;
-use crate::models::{Account, User};
+use crate::models::Account;
 use matrix_sdk::identifiers::{RoomId, UserId};
 use matrix_sdk::room::Joined;
 use matrix_sdk::Client;
