@@ -42,6 +42,11 @@ pub enum Account {
 }
 
 impl Account {
+    /// Whether or not this account is a registered user account.
+    pub fn is_registered(&self) -> bool {
+        matches!(self, Self::Registered(_))
+    }
+
     /// Gets the account status. For registered users, this is their
     /// actual account status (fully registered or awaiting
     /// activation). For transient users, this is

@@ -34,7 +34,7 @@ impl Command for RegisterCommand {
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
-        if let Some(_) = ctx.db.get_user(ctx.username).await? {
+        if ctx.account.is_registered() {
             return Err(ExecutionError(BotError::AccountAlreadyExists));
         }
 
@@ -46,6 +46,7 @@ impl Command for RegisterCommand {
         };
 
         ctx.db.upsert_user(&user).await?;
+
         Execution::success(format!(
             "User account {} registered for bot commands.",
             ctx.username
