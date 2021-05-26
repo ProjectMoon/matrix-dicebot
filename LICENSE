@@ -1,15 +1,11 @@
 This software project is governed by the terms of the Affero GNU
 General Public License. Portions of the code come from the original
 MIT-licensed project, and the terms of the MIT license also apply to
-those portions. Some portions of the code are also taken from the Rust
-Matrix SDK examples, which are governed by the MIT license. In files
-that are partially or wholly subject to the MIT license in addition to
-the Affero GNU General Public License, this is noted with a header at
-the top of the file.
+those portions. In files that are partially or wholly subject to the
+MIT license in addition to the Affero GNU General Public License, this
+is noted with a header at the top of the file.
 
 Original upstream project: https://gitlab.com/Taywee/axfive-matrix-dicebot
-
-Rust Matrix SDK: https://github.com/matrix-org/matrix-rust-sdk
 
 For code from the original project that is governed by the MIT license
 in addition to the Affero GNU General Public License, the following
