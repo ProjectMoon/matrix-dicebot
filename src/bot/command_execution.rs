@@ -1,4 +1,4 @@
-use crate::commands::{execute_command, ExecutionError, ExecutionResult, ResponseExtractor};
+use crate::commands::{execute_command, ExecutionResult, ResponseExtractor};
 use crate::context::{Context, RoomContext};
 use crate::db::sqlite::Database;
 use crate::error::BotError;
@@ -34,7 +34,7 @@ pub(super) async fn handle_multiple_results(
         respond_to, respond_to
     );
 
-    let errors: Vec<(&str, &ExecutionError)> = results
+    let errors: Vec<(&str, &BotError)> = results
         .into_iter()
         .filter_map(|(cmd, result)| match result {
             Err(e) => Some((cmd.as_ref(), e)),
@@ -96,7 +96,7 @@ pub(super) async fn execute(
     stream::iter(commands)
         .then(|command| async move {
             match create_context(db, client, room, sender, command).await {
-                Err(e) => (command.to_owned(), Err(ExecutionError(e))),
+                Err(e) => (command.to_owned(), Err(e)),
                 Ok(ctx) => {
                     let cmd_result = execute_command(&ctx).await;
                     (command.to_owned(), cmd_result)

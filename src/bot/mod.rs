@@ -1,4 +1,4 @@
-use crate::commands::{ExecutionError, ExecutionResult};
+use crate::commands::ExecutionResult;
 use crate::config::*;
 use crate::db::sqlite::Database;
 use crate::db::DbState;
@@ -129,10 +129,7 @@ impl DiceBot {
         let results: Vec<(String, ExecutionResult)> = if commands.len() < MAX_COMMANDS_PER_MESSAGE {
             command_execution::execute(commands, &self.db, &self.client, room, sender).await
         } else {
-            vec![(
-                "".to_owned(),
-                Err(ExecutionError(BotError::MessageTooLarge)),
-            )]
+            vec![("".to_owned(), Err(BotError::MessageTooLarge))]
         };
 
         results

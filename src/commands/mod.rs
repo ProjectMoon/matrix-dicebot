@@ -3,7 +3,6 @@ use crate::error::BotError;
 use async_trait::async_trait;
 use log::{error, info};
 use thiserror::Error;
-use BotError::DataError;
 
 pub mod basic_rolling;
 pub mod cofd;
@@ -46,29 +45,9 @@ impl Execution {
     }
 }
 
-/// Wraps a command execution failure. Provides HTML formatting for
-/// any error message from the BotError type, similar to how Execution
-/// provides formatting for successfully executed commands.
-#[derive(Error, Debug)]
-#[error("{0}")]
-pub struct ExecutionError(#[from] pub BotError);
-
-impl From<crate::db::errors::DataError> for ExecutionError {
-    fn from(error: crate::db::errors::DataError) -> Self {
-        Self(DataError(error))
-    }
-}
-
-impl ExecutionError {
-    /// Error message in bolded HTML.
-    pub fn html(&self) -> String {
-        format!("<strong>{}</strong>", self.0)
-    }
-}
-
 /// Wraps either a successful command execution response, or an error
 /// that occurred.
-pub type ExecutionResult = Result<Execution, ExecutionError>;
+pub type ExecutionResult = Result<Execution, BotError>;
 
 /// Extract response messages out of a type, whether it is success or
 /// failure.
@@ -90,7 +69,9 @@ impl ResponseExtractor for ExecutionResult {
 
         match self {
             Ok(resp) => format!("<p>{}</p><p>{}</p>", username, resp.html).replace("\n", "<br/>"),
-            Err(e) => format!("<p>{}</p><p>{}</p>", username, e.html()).replace("\n", "<br/>"),
+            Err(e) => {
+                format!("<p>{}</p><p><strong>{}</strong></p>", username, e).replace("\n", "<br/>")
+            }
         }
     }
 }
@@ -125,7 +106,7 @@ pub async fn execute_command(ctx: &Context<'_>) -> ExecutionResult {
 
     let result = match execution_allowed(cmd.as_ref(), ctx) {
         Ok(_) => cmd.execute(ctx).await,
-        Err(e) => Err(ExecutionError(e.into())),
+        Err(e) => Err(e.into()),
     };
 
     log_command(cmd.as_ref(), ctx, &result);

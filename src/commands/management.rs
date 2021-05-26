@@ -1,4 +1,4 @@
-use super::{Command, Execution, ExecutionError, ExecutionResult};
+use super::{Command, Execution, ExecutionResult};
 use crate::db::Users;
 use crate::error::BotError::{AccountDoesNotExist, PasswordCreationError};
 use crate::logic::hash_password;
@@ -35,7 +35,7 @@ impl Command for RegisterCommand {
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         if ctx.account.is_registered() {
-            return Err(ExecutionError(BotError::AccountAlreadyExists));
+            return Err(BotError::AccountAlreadyExists);
         }
 
         let user = User {
