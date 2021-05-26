@@ -109,14 +109,10 @@ pub trait Command: Send + Sync {
 /// ever. Later, we can add stuff like admin/regular user power
 /// separation, etc.
 fn execution_allowed(cmd: &(impl Command + ?Sized), ctx: &Context<'_>) -> Result<(), CommandError> {
-    if cmd.is_secure() {
-        if ctx.is_secure() {
-            Ok(())
-        } else {
-            Err(CommandError::InsecureExecution)
-        }
-    } else {
-        Ok(())
+    match cmd {
+        cmd if cmd.is_secure() && ctx.is_secure() => Ok(()),
+        cmd if cmd.is_secure() && !ctx.is_secure() => Err(CommandError::InsecureExecution),
+        _ => Ok(()),
     }
 }
 
