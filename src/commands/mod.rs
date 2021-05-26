@@ -55,6 +55,8 @@ pub trait ResponseExtractor {
     /// HTML representation of the message, directly mentioning the
     /// username.
     fn message_html(&self, username: &str) -> String;
+
+    fn message_plain(&self, username: &str) -> String;
 }
 
 impl ResponseExtractor for ExecutionResult {
@@ -68,11 +70,22 @@ impl ResponseExtractor for ExecutionResult {
         );
 
         match self {
-            Ok(resp) => format!("<p>{}</p><p>{}</p>", username, resp.html).replace("\n", "<br/>"),
-            Err(e) => {
-                format!("<p>{}</p><p><strong>{}</strong></p>", username, e).replace("\n", "<br/>")
-            }
+            Ok(resp) => format!("<p>{}</p>", resp.html).replace("\n", "<br/>"),
+            Err(e) => format!("<p>{}: <strong>{}</strong></p>", username, e).replace("\n", "<br/>"),
         }
+    }
+
+    fn message_plain(&self, username: &str) -> String {
+        let message = match self {
+            Ok(resp) => format!("{}", resp.html),
+            Err(e) => format!("{}", e),
+        };
+
+        format!(
+            "{}:\n{}",
+            username,
+            html2text::from_read(message.as_bytes(), message.len())
+        )
     }
 }
 
@@ -254,15 +267,6 @@ mod tests {
 
         let cmd = RegisterCommand;
         assert_eq!(execution_allowed(&cmd, &ctx).is_err(), true);
-    }
-
-    #[test]
-    fn command_result_extractor_creates_bubble() {
-        let result = Execution::success("test".to_string());
-        let message = result.message_html("@myuser:example.com");
-        assert!(message.contains(
-            "<a href=\"https://matrix.to/#/@myuser:example.com\">@myuser:example.com</a>"
-        ));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]

@@ -18,7 +18,45 @@ pub(super) async fn handle_single_result(
     event_id: EventId,
 ) {
     let html = cmd_result.message_html(respond_to);
-    matrix::send_message(client, room.room_id(), &html, Some(event_id)).await;
+    let plain = cmd_result.message_plain(respond_to);
+    matrix::send_message(client, room.room_id(), (&html, &plain), Some(event_id)).await;
+}
+
+/// Format failure messages nicely in either HTML or plain text. If
+/// plain is true, plain-text will be returned. Otherwise, formatted
+/// HTML.
+fn format_failures(
+    errors: &[(&str, &BotError)],
+    commands_executed: usize,
+    respond_to: &str,
+    plain: bool,
+) -> String {
+    let respond_to = match plain {
+        true => respond_to.to_owned(),
+        false => format!(
+            "<a href=\"https://matrix.to/#/{}\">{}</a>",
+            respond_to, respond_to
+        ),
+    };
+
+    let failures: Vec<String> = errors
+        .iter()
+        .map(|&(cmd, err)| format!("<strong>{}:</strong> {}", cmd, err))
+        .collect();
+
+    let message = format!(
+        "{}: Executed {} commands ({} failed)\n\nFailures:\n{}",
+        respond_to,
+        commands_executed,
+        errors.len(),
+        failures.join("\n")
+    )
+    .replace("\n", "<br/>");
+
+    match plain {
+        true => html2text::from_read(message.as_bytes(), message.len()),
+        false => message,
+    }
 }
 
 /// Handle responding to multiple commands being executed. Will print
@@ -29,7 +67,7 @@ pub(super) async fn handle_multiple_results(
     respond_to: &str,
     room: &Joined,
 ) {
-    let respond_to = format!(
+    let user_pill = format!(
         "<a href=\"https://matrix.to/#/{}\">{}</a>",
         respond_to, respond_to
     );
@@ -42,25 +80,19 @@ pub(super) async fn handle_multiple_results(
         })
         .collect();
 
-    let message = if errors.len() == 0 {
-        format!("{}: Executed {} commands", respond_to, results.len())
-    } else {
-        let failures: Vec<String> = errors
-            .iter()
-            .map(|&(cmd, err)| format!("<strong>{}:</strong> {}", cmd, err))
-            .collect();
-
-        format!(
-            "{}: Executed {} commands ({} failed)\n\nFailures:\n{}",
-            respond_to,
-            results.len(),
-            errors.len(),
-            failures.join("\n")
+    let (message, plain) = if errors.len() == 0 {
+        (
+            format!("{}: Executed {} commands", user_pill, results.len()),
+            format!("{}: Executed {} commands", respond_to, results.len()),
         )
-        .replace("\n", "<br/>")
+    } else {
+        (
+            format_failures(&errors, results.len(), respond_to, false),
+            format_failures(&errors, results.len(), respond_to, true),
+        )
     };
 
-    matrix::send_message(client, room.room_id(), &message, None).await;
+    matrix::send_message(client, room.room_id(), (&message, &plain), None).await;
 }
 
 /// Create a context for command execution. Can fai if the room

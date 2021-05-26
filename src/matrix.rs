@@ -61,20 +61,22 @@ pub async fn get_rooms_for_user(
     Ok(rooms_for_user)
 }
 
+/// Send a message. The message is a tuple of HTML and plain text
+/// responses.
 pub async fn send_message(
     client: &Client,
     room_id: &RoomId,
-    message: &str,
+    message: (&str, &str),
     reply_to: Option<EventId>,
 ) {
+    let (html, plain) = message;
     let room = match client.get_joined_room(room_id) {
         Some(room) => room,
         _ => return,
     };
 
-    let plain = html2text::from_read(message.as_bytes(), message.len());
     let mut content = MessageEventContent::new(MessageType::Notice(
-        NoticeMessageEventContent::html(plain.trim(), message),
+        NoticeMessageEventContent::html(plain.trim(), html),
     ));
 
     content.relates_to = reply_to.map(|event_id| Relation::Reply {
@@ -86,7 +88,7 @@ pub async fn send_message(
     let result = room.send(content, None).await;
 
     if let Err(e) = result {
-        let message = extract_error_message(e);
-        error!("Error sending message: {}", message);
+        let html = extract_error_message(e);
+        error!("Error sending html: {}", html);
     };
 }
