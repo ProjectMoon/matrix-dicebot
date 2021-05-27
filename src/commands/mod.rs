@@ -10,6 +10,7 @@ pub mod cthulhu;
 pub mod management;
 pub mod misc;
 pub mod parser;
+pub mod rooms;
 pub mod variables;
 
 /// A custom error type specifically related to parsing command text.
