@@ -13,11 +13,11 @@ impl From<HelpCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for HelpCommand {
+impl TryFrom<String> for HelpCommand {
     type Error = BotError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        let topic = parse_help_topic(input);
+    fn try_from(input: String) -> Result<Self, Self::Error> {
+        let topic = parse_help_topic(&input);
         Ok(HelpCommand(topic))
     }
 }

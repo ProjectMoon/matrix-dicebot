@@ -16,11 +16,11 @@ impl From<RollCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for RollCommand {
+impl TryFrom<String> for RollCommand {
     type Error = BotError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        let result = parse_element_expression(input);
+    fn try_from(input: String) -> Result<Self, Self::Error> {
+        let result = parse_element_expression(&input);
         match result {
             Ok((rest, expression)) if rest.len() == 0 => Ok(RollCommand(expression)),
             //"Legacy code boundary": translates Nom errors into BotErrors.

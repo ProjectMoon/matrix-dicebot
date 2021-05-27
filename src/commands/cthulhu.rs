@@ -17,11 +17,11 @@ impl From<CthRoll> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for CthRoll {
+impl TryFrom<String> for CthRoll {
     type Error = BotError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        let roll = parse_regular_roll(input)?;
+    fn try_from(input: String) -> Result<Self, Self::Error> {
+        let roll = parse_regular_roll(&input)?;
         Ok(CthRoll(roll))
     }
 }
@@ -57,11 +57,11 @@ impl From<CthAdvanceRoll> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for CthAdvanceRoll {
+impl TryFrom<String> for CthAdvanceRoll {
     type Error = BotError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        let roll = parse_advancement_roll(input)?;
+    fn try_from(input: String) -> Result<Self, Self::Error> {
+        let roll = parse_advancement_roll(&input)?;
         Ok(CthAdvanceRoll(roll))
     }
 }

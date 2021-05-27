@@ -21,11 +21,11 @@ impl From<PoolRollCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for PoolRollCommand {
+impl TryFrom<String> for PoolRollCommand {
     type Error = BotError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        let pool = parse_dice_pool(input)?;
+    fn try_from(input: String) -> Result<Self, Self::Error> {
+        let pool = parse_dice_pool(&input)?;
         Ok(PoolRollCommand(pool))
     }
 }

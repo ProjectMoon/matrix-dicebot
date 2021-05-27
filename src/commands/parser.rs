@@ -64,7 +64,7 @@ fn split_command(input: &str) -> Result<(String, String), CommandParsingError> {
 /// boilerplate.
 macro_rules! convert_to {
     ($type:ident, $input: expr) => {
-        $type::try_from($input.as_str()).map(Into::into)
+        $type::try_from($input).map(Into::into)
     };
 }
 
@@ -74,7 +74,6 @@ macro_rules! convert_to {
 pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
     match split_command(input) {
         Ok((cmd, cmd_input)) => match cmd.to_lowercase().as_ref() {
-            // "variables" => GetAllVariablesCommand::try_from(input).map(Into::into),
             "variables" => convert_to!(GetAllVariablesCommand, cmd_input),
             "get" => convert_to!(GetVariableCommand, cmd_input),
             "set" => convert_to!(SetVariableCommand, cmd_input),

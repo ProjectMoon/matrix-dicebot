@@ -14,10 +14,10 @@ impl From<GetAllVariablesCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for GetAllVariablesCommand {
+impl TryFrom<String> for GetAllVariablesCommand {
     type Error = BotError;
 
-    fn try_from(_: &str) -> Result<Self, Self::Error> {
+    fn try_from(_: String) -> Result<Self, Self::Error> {
         Ok(GetAllVariablesCommand)
     }
 }
@@ -63,11 +63,11 @@ impl From<GetVariableCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for GetVariableCommand {
+impl TryFrom<String> for GetVariableCommand {
     type Error = BotError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        Ok(GetVariableCommand(input.to_owned()))
+    fn try_from(input: String) -> Result<Self, Self::Error> {
+        Ok(GetVariableCommand(input))
     }
 }
 
@@ -107,11 +107,11 @@ impl From<SetVariableCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for SetVariableCommand {
+impl TryFrom<String> for SetVariableCommand {
     type Error = BotError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        let (variable_name, value) = crate::parser::variables::parse_set_variable(input)?;
+    fn try_from(input: String) -> Result<Self, Self::Error> {
+        let (variable_name, value) = crate::parser::variables::parse_set_variable(&input)?;
         Ok(SetVariableCommand(variable_name, value))
     }
 }
@@ -148,11 +148,11 @@ impl From<DeleteVariableCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for DeleteVariableCommand {
+impl TryFrom<String> for DeleteVariableCommand {
     type Error = BotError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        Ok(DeleteVariableCommand(input.to_owned()))
+    fn try_from(input: String) -> Result<Self, Self::Error> {
+        Ok(DeleteVariableCommand(input))
     }
 }
 

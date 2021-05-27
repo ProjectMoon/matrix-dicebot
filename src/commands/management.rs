@@ -15,10 +15,10 @@ impl From<RegisterCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for RegisterCommand {
+impl TryFrom<String> for RegisterCommand {
     type Error = BotError;
 
-    fn try_from(_: &str) -> Result<Self, Self::Error> {
+    fn try_from(_: String) -> Result<Self, Self::Error> {
         Ok(RegisterCommand)
     }
 }
@@ -62,11 +62,11 @@ impl From<UnlinkCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for UnlinkCommand {
+impl TryFrom<String> for UnlinkCommand {
     type Error = BotError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(UnlinkCommand(value.to_owned()))
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(UnlinkCommand(value))
     }
 }
 
@@ -105,11 +105,11 @@ impl From<LinkCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for LinkCommand {
+impl TryFrom<String> for LinkCommand {
     type Error = BotError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(LinkCommand(value.to_owned()))
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(LinkCommand(value))
     }
 }
 
@@ -150,10 +150,10 @@ impl From<CheckCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for CheckCommand {
+impl TryFrom<String> for CheckCommand {
     type Error = BotError;
 
-    fn try_from(_: &str) -> Result<Self, Self::Error> {
+    fn try_from(_: String) -> Result<Self, Self::Error> {
         Ok(CheckCommand)
     }
 }
@@ -195,10 +195,10 @@ impl From<UnregisterCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for UnregisterCommand {
+impl TryFrom<String> for UnregisterCommand {
     type Error = BotError;
 
-    fn try_from(_: &str) -> Result<Self, Self::Error> {
+    fn try_from(_: String) -> Result<Self, Self::Error> {
         Ok(UnregisterCommand)
     }
 }
