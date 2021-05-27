@@ -44,11 +44,11 @@ impl Command for ListRoomsCommand {
                         .map(|room_name| (room.room_id().to_string(), room_name)),
                 )
             })
-            .map_ok(|(room_id, room_name)| format!("[{}] {}", room_id, room_name))
+            .map_ok(|(room_id, room_name)| format!("  {}  |  {}", room_id, room_name))
             .try_collect()
             .await?;
 
-        let html = format!("{}", rooms_for_user.join("\n"));
+        let html = format!("<pre>{}</pre>", rooms_for_user.join("\n"));
         Execution::success(html)
     }
 }
