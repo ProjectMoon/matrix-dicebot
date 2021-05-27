@@ -14,10 +14,10 @@ impl From<ListRoomsCommand> for Box<dyn Command> {
     }
 }
 
-impl TryFrom<&str> for ListRoomsCommand {
+impl TryFrom<String> for ListRoomsCommand {
     type Error = BotError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
+    fn try_from(_: String) -> Result<Self, Self::Error> {
         Ok(ListRoomsCommand)
     }
 }
