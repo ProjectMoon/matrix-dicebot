@@ -10,7 +10,7 @@ use std::convert::TryFrom;
 
 /// Holds matrix room ID and display name as strings, for use with
 /// searching. See search_for_room.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct RoomNameAndId {
     id: String,
     name: String,
@@ -42,6 +42,7 @@ fn search_for_room<'a>(
     rooms_for_user: &'a [RoomNameAndId],
     query: &str,
 ) -> Option<&'a RoomNameAndId> {
+    //Lowest score is the best match.
     rooms_for_user
         .iter()
         .find(|room| room.id == query)
@@ -149,5 +150,29 @@ impl Command for SetRoomCommand {
         } else {
             Err(BotError::RoomDoesNotExist)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn set_room_prefers_room_id_over_name() {
+        let rooms = vec![
+            RoomNameAndId {
+                id: "roomid".to_string(),
+                name: "room_name".to_string(),
+            },
+            RoomNameAndId {
+                id: "anotherone".to_string(),
+                name: "roomid".to_string(),
+            },
+        ];
+
+        let found_room = search_for_room(&rooms, "roomid");
+
+        assert!(found_room.is_some());
+        assert_eq!(found_room.unwrap(), &rooms[0]);
     }
 }
