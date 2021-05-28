@@ -132,13 +132,15 @@ fn log_command(cmd: &(impl Command + ?Sized), ctx: &Context, result: &ExecutionR
     use substring::Substring;
     let command = match cmd.is_secure() {
         true => cmd.name(),
-        false => ctx.message_body.substring(0, 30),
+        false => ctx.message_body,
     };
 
-    let dots = match ctx.message_body.len() {
+    let dots = match command.len() {
         _len if _len > 30 => "[...]",
         _ => "",
     };
+
+    let command = command.substring(0, 30);
 
     match result {
         Ok(_) => {
