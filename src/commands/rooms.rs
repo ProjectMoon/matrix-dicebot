@@ -40,19 +40,21 @@ impl Fuseable for RoomNameAndId {
 /// returned, or None if no matches were found.
 fn search_for_room<'a>(
     rooms_for_user: &'a [RoomNameAndId],
-    query: &str,
+    search_for: &str,
 ) -> Option<&'a RoomNameAndId> {
     //Lowest score is the best match.
+    let best_fuzzy_match = || -> Option<&RoomNameAndId> {
+        Fuse::default()
+            .search_text_in_fuse_list(search_for, &rooms_for_user)
+            .into_iter()
+            .min_by(|r1, r2| r1.score.partial_cmp(&r2.score).unwrap())
+            .and_then(|result| rooms_for_user.get(result.index))
+    };
+
     rooms_for_user
         .iter()
-        .find(|room| room.id == query)
-        .or_else(|| {
-            Fuse::default()
-                .search_text_in_fuse_list(query, &rooms_for_user)
-                .into_iter()
-                .min_by(|r1, r2| r1.score.partial_cmp(&r2.score).unwrap())
-                .and_then(|result| rooms_for_user.get(result.index))
-        })
+        .find(|room| room.id == search_for)
+        .or_else(best_fuzzy_match)
 }
 
 async fn get_rooms_for_user(
