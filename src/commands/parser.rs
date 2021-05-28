@@ -9,7 +9,7 @@ use crate::commands::{
     cthulhu::{CthAdvanceRoll, CthRoll},
     management::{CheckCommand, LinkCommand, RegisterCommand, UnlinkCommand, UnregisterCommand},
     misc::HelpCommand,
-    rooms::ListRoomsCommand,
+    rooms::{ListRoomsCommand, SetRoomCommand},
     variables::{
         DeleteVariableCommand, GetAllVariablesCommand, GetVariableCommand, SetVariableCommand,
     },
@@ -91,6 +91,7 @@ pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
             "check" => convert_to!(CheckCommand, cmd_input),
             "unregister" => convert_to!(UnregisterCommand, cmd_input),
             "rooms" => convert_to!(ListRoomsCommand, cmd_input),
+            "room" => convert_to!(SetRoomCommand, cmd_input),
             _ => Err(CommandParsingError::UnrecognizedCommand(cmd).into()),
         },
         //All other errors passed up.

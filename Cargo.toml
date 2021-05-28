@@ -32,6 +32,7 @@ refinery = { version = "0.5", features = ["rusqlite"]}
 barrel = { version = "0.6", features = ["sqlite3"] }
 tempfile = "3"
 substring = "1.4"
+fuse-rust = "0.2"
 
 [dependencies.sqlx]
 version = "0.5"

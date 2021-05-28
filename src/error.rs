@@ -90,6 +90,9 @@ pub enum BotError {
 
     #[error("user account already exists")]
     AccountAlreadyExists,
+
+    #[error("room name or id does not exist")]
+    RoomDoesNotExist,
 }
 
 #[derive(Error, Debug)]
