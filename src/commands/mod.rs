@@ -146,13 +146,13 @@ fn log_command(cmd: &(impl Command + ?Sized), ctx: &Context, result: &ExecutionR
         Ok(_) => {
             info!(
                 "[{}] {} <{}{}> - success",
-                ctx.room.display_name, ctx.username, command, dots
+                ctx.origin_room.display_name, ctx.username, command, dots
             );
         }
         Err(e) => {
             error!(
                 "[{}] {} <{}{}> - {}",
-                ctx.room.display_name, ctx.username, command, dots, e
+                ctx.origin_room.display_name, ctx.username, command, dots, e
             );
         }
     };
@@ -196,8 +196,9 @@ mod tests {
         let ctx = Context {
             account: crate::models::Account::default(),
             db: db,
-            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
-            room: secure_room!(),
+            matrix_client: matrix_sdk::Client::new(homeserver).unwrap(),
+            origin_room: secure_room!(),
+            active_room: secure_room!(),
             username: "myusername",
             message_body: "!notacommand",
         };
@@ -218,8 +219,9 @@ mod tests {
         let ctx = Context {
             account: crate::models::Account::default(),
             db: db,
-            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
-            room: secure_room!(),
+            matrix_client: matrix_sdk::Client::new(homeserver).unwrap(),
+            origin_room: secure_room!(),
+            active_room: secure_room!(),
             username: "myusername",
             message_body: "!notacommand",
         };
@@ -240,8 +242,9 @@ mod tests {
         let ctx = Context {
             account: crate::models::Account::default(),
             db: db,
-            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
-            room: dummy_room!(),
+            matrix_client: matrix_sdk::Client::new(homeserver).unwrap(),
+            origin_room: dummy_room!(),
+            active_room: dummy_room!(),
             username: "myusername",
             message_body: "!notacommand",
         };
@@ -262,8 +265,9 @@ mod tests {
         let ctx = Context {
             account: crate::models::Account::default(),
             db: db,
-            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
-            room: dummy_room!(),
+            matrix_client: matrix_sdk::Client::new(homeserver).unwrap(),
+            origin_room: dummy_room!(),
+            active_room: dummy_room!(),
             username: "myusername",
             message_body: "!notacommand",
         };
@@ -284,8 +288,9 @@ mod tests {
         let ctx = Context {
             account: crate::models::Account::default(),
             db: db,
-            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
-            room: dummy_room!(),
+            matrix_client: matrix_sdk::Client::new(homeserver).unwrap(),
+            origin_room: dummy_room!(),
+            active_room: dummy_room!(),
             username: "myusername",
             message_body: "!notacommand",
         };

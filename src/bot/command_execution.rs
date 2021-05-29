@@ -1,12 +1,21 @@
-use crate::commands::{execute_command, ExecutionResult, ResponseExtractor};
 use crate::context::{Context, RoomContext};
 use crate::db::sqlite::Database;
 use crate::error::BotError;
 use crate::logic;
 use crate::matrix;
+use crate::{
+    commands::{execute_command, ExecutionResult, ResponseExtractor},
+    models::Account,
+};
 use futures::stream::{self, StreamExt};
-use matrix_sdk::{self, identifiers::EventId, room::Joined, Client};
+use matrix_sdk::{
+    self,
+    identifiers::{EventId, RoomId},
+    room::Joined,
+    Client,
+};
 use std::clone::Clone;
+use std::convert::TryFrom;
 
 /// Handle responding to a single command being executed. Wil print
 /// out the full result of that command.
@@ -95,24 +104,57 @@ pub(super) async fn handle_multiple_results(
     matrix::send_message(client, room.room_id(), (&message, &plain), None).await;
 }
 
-/// Create a context for command execution. Can fai if the room
-/// context creation fails.
-async fn create_context<'a>(
-    db: &'a Database,
-    client: &'a Client,
-    room: &'a Joined,
-    sender: &'a str,
-    command: &'a str,
-) -> Result<Context<'a>, BotError> {
-    let room_ctx = RoomContext::new(room, sender).await?;
-    Ok(Context {
+/// Map an account's active room value to an actual matrix room, if
+/// the account has an active room. This only retrieves the
+/// user-specified active room, and doesn't perform any further
+/// filtering.
+fn get_account_active_room(client: &Client, account: &Account) -> Result<Option<Joined>, BotError> {
+    let active_room = account
+        .registered_user()
+        .and_then(|u| u.active_room.as_deref())
+        .map(|room_id| RoomId::try_from(room_id))
+        .transpose()?
+        .and_then(|active_room_id| client.get_joined_room(&active_room_id));
+
+    Ok(active_room)
+}
+
+/// Execute a single command in the list of commands. Can fail if the
+/// Account value cannot be created/fetched from the database, or if
+/// room display names cannot be calculated. Otherwise, the success or
+/// error of command execution itself is returned.
+async fn execute_single_command(
+    command: &str,
+    db: &Database,
+    client: &Client,
+    origin_room: &Joined,
+    sender: &str,
+) -> ExecutionResult {
+    let origin_ctx = RoomContext::new(origin_room, sender).await?;
+    let account = logic::get_account(db, sender).await?;
+    let active_room = get_account_active_room(client, &account)?;
+
+    // Active room is used in secure command-issuing rooms. In
+    // "public" rooms, where other users are, treat origin as the
+    // active room.
+    let active_room = active_room
+        .as_ref()
+        .filter(|_| origin_ctx.secure)
+        .unwrap_or(origin_room);
+
+    let active_ctx = RoomContext::new(active_room, sender).await?;
+
+    let ctx = Context {
+        account,
         db: db.clone(),
-        matrix_client: client,
-        room: room_ctx,
+        matrix_client: client.clone(),
+        origin_room: origin_ctx,
         username: &sender,
-        account: logic::get_account(db, &sender).await?,
+        active_room: active_ctx,
         message_body: &command,
-    })
+    };
+
+    execute_command(&ctx).await
 }
 
 /// Attempt to execute all commands sent to the bot in a message. This
@@ -127,13 +169,8 @@ pub(super) async fn execute(
 ) -> Vec<(String, ExecutionResult)> {
     stream::iter(commands)
         .then(|command| async move {
-            match create_context(db, client, room, sender, command).await {
-                Err(e) => (command.to_owned(), Err(e)),
-                Ok(ctx) => {
-                    let cmd_result = execute_command(&ctx).await;
-                    (command.to_owned(), cmd_result)
-                }
-            }
+            let result = execute_single_command(command, db, client, room, sender).await;
+            (command.to_owned(), result)
         })
         .collect()
         .await

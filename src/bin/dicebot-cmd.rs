@@ -1,4 +1,5 @@
 use matrix_sdk::identifiers::room_id;
+use matrix_sdk::Client;
 use tenebrous_dicebot::commands;
 use tenebrous_dicebot::commands::ResponseExtractor;
 use tenebrous_dicebot::context::{Context, RoomContext};
@@ -26,11 +27,15 @@ async fn main() -> Result<(), BotError> {
     .await?;
 
     let context = Context {
-        db: db,
+        db,
         account: Account::default(),
-        matrix_client: &matrix_sdk::Client::new(homeserver)
-            .expect("Could not create matrix client"),
-        room: RoomContext {
+        matrix_client: Client::new(homeserver).expect("Could not create matrix client"),
+        origin_room: RoomContext {
+            id: &room_id!("!fakeroomid:example.com"),
+            display_name: "fake room".to_owned(),
+            secure: false,
+        },
+        active_room: RoomContext {
             id: &room_id!("!fakeroomid:example.com"),
             display_name: "fake room".to_owned(),
             secure: false,

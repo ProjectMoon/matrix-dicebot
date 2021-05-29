@@ -506,8 +506,9 @@ mod tests {
         let ctx = Context {
             account: crate::models::Account::default(),
             db: db,
-            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
-            room: dummy_room!(),
+            matrix_client: matrix_sdk::Client::new(homeserver).unwrap(),
+            origin_room: dummy_room!(),
+            active_room: dummy_room!(),
             username: "username",
             message_body: "message",
         };
@@ -543,8 +544,9 @@ mod tests {
         let ctx = Context {
             account: crate::models::Account::default(),
             db: db,
-            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
-            room: dummy_room!(),
+            matrix_client: matrix_sdk::Client::new(homeserver).unwrap(),
+            origin_room: dummy_room!(),
+            active_room: dummy_room!(),
             username: "username",
             message_body: "message",
         };
@@ -580,8 +582,9 @@ mod tests {
         let ctx = Context {
             account: crate::models::Account::default(),
             db: db,
-            matrix_client: &matrix_sdk::Client::new(homeserver).unwrap(),
-            room: dummy_room!(),
+            matrix_client: matrix_sdk::Client::new(homeserver).unwrap(),
+            origin_room: dummy_room!(),
+            active_room: dummy_room!(),
             username: "username",
             message_body: "message",
         };

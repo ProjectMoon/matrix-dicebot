@@ -110,7 +110,7 @@ impl Command for ListRoomsCommand {
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
-        let rooms_for_user: Vec<String> = get_rooms_for_user(ctx.matrix_client, ctx.username)
+        let rooms_for_user: Vec<String> = get_rooms_for_user(&ctx.matrix_client, ctx.username)
             .await
             .map(|rooms| {
                 rooms
@@ -155,7 +155,7 @@ impl Command for SetRoomCommand {
             return Err(BotError::AccountDoesNotExist);
         }
 
-        let rooms_for_user = get_rooms_for_user(ctx.matrix_client, ctx.username).await?;
+        let rooms_for_user = get_rooms_for_user(&ctx.matrix_client, ctx.username).await?;
         let room = search_for_room(&rooms_for_user, &self.0);
 
         if let Some(room) = room {
