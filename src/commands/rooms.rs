@@ -20,17 +20,17 @@ struct RoomNameAndId {
 /// searching room display names directly.
 impl Fuseable for RoomNameAndId {
     fn properties(&self) -> Vec<FuseProperty> {
-        return vec![FuseProperty {
+        vec![FuseProperty {
             value: String::from("name"),
             weight: 1.0,
-        }];
+        }]
     }
 
     fn lookup(&self, key: &str) -> Option<&str> {
-        return match key {
+        match key {
             "name" => Some(&self.name),
             _ => None,
-        };
+        }
     }
 }
 
