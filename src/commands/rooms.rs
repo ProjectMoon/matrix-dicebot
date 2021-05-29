@@ -1,5 +1,6 @@
 use super::{Command, Execution, ExecutionResult};
 use crate::context::Context;
+use crate::db::Users;
 use crate::error::BotError;
 use crate::matrix;
 use async_trait::async_trait;
@@ -63,7 +64,7 @@ async fn get_rooms_for_user(
 ) -> Result<Vec<RoomNameAndId>, BotError> {
     let user_id = UserId::try_from(user_id)?;
     let rooms_for_user = matrix::get_rooms_for_user(client, &user_id).await?;
-    let rooms_for_user: Vec<RoomNameAndId> = stream::iter(rooms_for_user)
+    let mut rooms_for_user: Vec<RoomNameAndId> = stream::iter(rooms_for_user)
         .filter_map(|room| async move {
             Some(room.display_name().await.map(|room_name| RoomNameAndId {
                 id: room.room_id().to_string(),
@@ -73,6 +74,12 @@ async fn get_rooms_for_user(
         .try_collect()
         .await?;
 
+    //Alphabetically descending, symbols first, ignore case.
+    let sort = |r1: &RoomNameAndId, r2: &RoomNameAndId| {
+        r1.name.to_lowercase().cmp(&r2.name.to_lowercase())
+    };
+
+    rooms_for_user.sort_by(sort);
     Ok(rooms_for_user)
 }
 
@@ -144,10 +151,22 @@ impl Command for SetRoomCommand {
     }
 
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
+        if !ctx.account.is_registered() {
+            return Err(BotError::AccountDoesNotExist);
+        }
+
         let rooms_for_user = get_rooms_for_user(ctx.matrix_client, ctx.username).await?;
         let room = search_for_room(&rooms_for_user, &self.0);
 
         if let Some(room) = room {
+            let mut new_user = ctx
+                .account
+                .registered_user()
+                .cloned()
+                .ok_or(BotError::AccountDoesNotExist)?;
+
+            new_user.active_room = Some(room.id.clone());
+            ctx.db.upsert_user(&new_user).await?;
             Execution::success(format!(r#"Active room set to "{}""#, room.name))
         } else {
             Err(BotError::RoomDoesNotExist)

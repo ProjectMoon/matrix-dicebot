@@ -118,6 +118,6 @@ mod tests {
         assert!(matches!(account, Account::Registered(_)));
 
         let user_again = account.registered_user().unwrap();
-        assert_eq!(user, user_again);
+        assert_eq!(user, *user_again);
     }
 }

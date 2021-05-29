@@ -60,9 +60,9 @@ impl Account {
 
     /// Consume self into an Option<User> instance, which will be Some
     /// if this account has a registered user, and None otherwise.
-    pub fn registered_user(self) -> Option<User> {
+    pub fn registered_user(&self) -> Option<&User> {
         match self {
-            Self::Registered(user) => Some(user),
+            Self::Registered(ref user) => Some(user),
             _ => None,
         }
     }
