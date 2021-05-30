@@ -112,9 +112,8 @@ fn execution_allowed(cmd: &(impl Command + ?Sized), ctx: &Context<'_>) -> Result
 }
 
 /// Attempt to execute a command, and return the content that should
-/// go back to Matrix, if the command was executed (successfully or
-/// not). If a command is determined to be ignored, this function will
-/// return None, signifying that we should not send a response.
+/// go back to Matrix, if the command was executed, whether or not the
+/// command was successful.
 pub async fn execute_command(ctx: &Context<'_>) -> ExecutionResult {
     let cmd = parser::parse_command(&ctx.message_body)?;
 
