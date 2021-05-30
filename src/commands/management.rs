@@ -9,12 +9,6 @@ use std::convert::{Into, TryFrom};
 
 pub struct RegisterCommand;
 
-impl From<RegisterCommand> for Box<dyn Command> {
-    fn from(cmd: RegisterCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for RegisterCommand {
     type Error = BotError;
 
@@ -56,12 +50,6 @@ impl Command for RegisterCommand {
 
 pub struct UnlinkCommand(pub String);
 
-impl From<UnlinkCommand> for Box<dyn Command> {
-    fn from(cmd: UnlinkCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for UnlinkCommand {
     type Error = BotError;
 
@@ -98,12 +86,6 @@ impl Command for UnlinkCommand {
 }
 
 pub struct LinkCommand(pub String);
-
-impl From<LinkCommand> for Box<dyn Command> {
-    fn from(cmd: LinkCommand) -> Self {
-        Box::new(cmd)
-    }
-}
 
 impl TryFrom<String> for LinkCommand {
     type Error = BotError;
@@ -144,12 +126,6 @@ impl Command for LinkCommand {
 
 pub struct CheckCommand;
 
-impl From<CheckCommand> for Box<dyn Command> {
-    fn from(cmd: CheckCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for CheckCommand {
     type Error = BotError;
 
@@ -174,26 +150,23 @@ impl Command for CheckCommand {
         match user {
             Some(user) => match user.password {
                 Some(_) => Execution::success(
-                    "Account exists, and is available to external applications with a password. If you forgot your password, change it with !link.".to_string(),
+                    "Account exists, and is available to external applications with a password. \
+                     If you forgot your password, change it with !link."
+                        .to_string(),
                 ),
                 None => Execution::success(
                     "Account exists, but is not available to external applications.".to_string(),
                 ),
             },
             None => Execution::success(
-                "No account registered. Only simple commands in public rooms are available.".to_string(),
+                "No account registered. Only simple commands in public rooms are available."
+                    .to_string(),
             ),
         }
     }
 }
 
 pub struct UnregisterCommand;
-
-impl From<UnregisterCommand> for Box<dyn Command> {
-    fn from(cmd: UnregisterCommand) -> Self {
-        Box::new(cmd)
-    }
-}
 
 impl TryFrom<String> for UnregisterCommand {
     type Error = BotError;

@@ -8,12 +8,6 @@ use std::convert::TryFrom;
 
 pub struct GetAllVariablesCommand;
 
-impl From<GetAllVariablesCommand> for Box<dyn Command> {
-    fn from(cmd: GetAllVariablesCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for GetAllVariablesCommand {
     type Error = BotError;
 
@@ -57,12 +51,6 @@ impl Command for GetAllVariablesCommand {
 
 pub struct GetVariableCommand(pub String);
 
-impl From<GetVariableCommand> for Box<dyn Command> {
-    fn from(cmd: GetVariableCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for GetVariableCommand {
     type Error = BotError;
 
@@ -101,12 +89,6 @@ impl Command for GetVariableCommand {
 
 pub struct SetVariableCommand(pub String, pub i32);
 
-impl From<SetVariableCommand> for Box<dyn Command> {
-    fn from(cmd: SetVariableCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for SetVariableCommand {
     type Error = BotError;
 
@@ -141,12 +123,6 @@ impl Command for SetVariableCommand {
 }
 
 pub struct DeleteVariableCommand(pub String);
-
-impl From<DeleteVariableCommand> for Box<dyn Command> {
-    fn from(cmd: DeleteVariableCommand) -> Self {
-        Box::new(cmd)
-    }
-}
 
 impl TryFrom<String> for DeleteVariableCommand {
     type Error = BotError;

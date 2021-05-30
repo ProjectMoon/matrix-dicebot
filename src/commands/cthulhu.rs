@@ -11,12 +11,6 @@ use std::convert::TryFrom;
 
 pub struct CthRoll(pub DiceRoll);
 
-impl From<CthRoll> for Box<dyn Command> {
-    fn from(cmd: CthRoll) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for CthRoll {
     type Error = BotError;
 
@@ -50,12 +44,6 @@ impl Command for CthRoll {
 }
 
 pub struct CthAdvanceRoll(pub AdvancementRoll);
-
-impl From<CthAdvanceRoll> for Box<dyn Command> {
-    fn from(cmd: CthAdvanceRoll) -> Self {
-        Box::new(cmd)
-    }
-}
 
 impl TryFrom<String> for CthAdvanceRoll {
     type Error = BotError;

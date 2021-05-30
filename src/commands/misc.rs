@@ -7,12 +7,6 @@ use std::convert::TryFrom;
 
 pub struct HelpCommand(pub Option<HelpTopic>);
 
-impl From<HelpCommand> for Box<dyn Command> {
-    fn from(cmd: HelpCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for HelpCommand {
     type Error = BotError;
 

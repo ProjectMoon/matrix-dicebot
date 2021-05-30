@@ -15,12 +15,6 @@ impl PoolRollCommand {
     }
 }
 
-impl From<PoolRollCommand> for Box<dyn Command> {
-    fn from(cmd: PoolRollCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for PoolRollCommand {
     type Error = BotError;
 

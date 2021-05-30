@@ -85,12 +85,6 @@ async fn get_rooms_for_user(
 
 pub struct ListRoomsCommand;
 
-impl From<ListRoomsCommand> for Box<dyn Command> {
-    fn from(cmd: ListRoomsCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for ListRoomsCommand {
     type Error = BotError;
 
@@ -125,12 +119,6 @@ impl Command for ListRoomsCommand {
 }
 
 pub struct SetRoomCommand(String);
-
-impl From<SetRoomCommand> for Box<dyn Command> {
-    fn from(cmd: SetRoomCommand) -> Self {
-        Box::new(cmd)
-    }
-}
 
 impl TryFrom<String> for SetRoomCommand {
     type Error = BotError;

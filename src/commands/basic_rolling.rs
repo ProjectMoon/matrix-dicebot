@@ -10,12 +10,6 @@ use std::convert::TryFrom;
 
 pub struct RollCommand(pub ElementExpression);
 
-impl From<RollCommand> for Box<dyn Command> {
-    fn from(cmd: RollCommand) -> Self {
-        Box::new(cmd)
-    }
-}
-
 impl TryFrom<String> for RollCommand {
     type Error = BotError;
 

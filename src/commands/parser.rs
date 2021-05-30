@@ -65,7 +65,7 @@ fn split_command(input: &str) -> Result<(String, String), CommandParsingError> {
 /// boilerplate.
 macro_rules! convert_to {
     ($type:ident, $input: expr) => {
-        $type::try_from($input).map(Into::into)
+        $type::try_from($input).map(|cmd| Box::new(cmd) as Box<dyn Command>)
     };
 }
 
@@ -81,7 +81,7 @@ pub fn parse_command(input: &str) -> Result<Box<dyn Command>, BotError> {
             "del" => convert_to!(DeleteVariableCommand, cmd_input),
             "r" | "roll" => convert_to!(RollCommand, cmd_input),
             "rp" | "pool" => convert_to!(PoolRollCommand, cmd_input),
-            "chance" => PoolRollCommand::chance_die().map(Into::into),
+            "chance" => PoolRollCommand::chance_die().map(|cmd| Box::new(cmd) as Box<dyn Command>),
             "cthroll" => convert_to!(CthRoll, cmd_input),
             "cthadv" | "ctharoll" => convert_to!(CthAdvanceRoll, cmd_input),
             "help" => convert_to!(HelpCommand, cmd_input),
