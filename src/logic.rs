@@ -27,7 +27,7 @@ pub async fn calculate_dice_amount(amounts: &[Amount], ctx: &Context<'_>) -> Res
     let stream = stream::iter(amounts);
     let variables = &ctx
         .db
-        .get_user_variables(&ctx.username, ctx.room_id().as_str())
+        .get_user_variables(&ctx.username, ctx.active_room_id().as_str())
         .await?;
 
     use DiceRollingError::VariableNotFound;

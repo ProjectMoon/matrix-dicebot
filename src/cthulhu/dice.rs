@@ -380,7 +380,12 @@ async fn update_skill(ctx: &Context<'_>, variable: &str, value: u32) -> Result<(
     use std::convert::TryInto;
     let value: i32 = value.try_into()?;
     ctx.db
-        .set_user_variable(&ctx.username, &ctx.room_id().as_str(), variable, value)
+        .set_user_variable(
+            &ctx.username,
+            &ctx.active_room_id().as_str(),
+            variable,
+            value,
+        )
         .await?;
     Ok(())
 }

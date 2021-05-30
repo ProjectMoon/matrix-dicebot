@@ -20,6 +20,10 @@ pub struct Context<'a> {
 }
 
 impl Context<'_> {
+    pub fn active_room_id(&self) -> &RoomId {
+        self.active_room.id
+    }
+
     pub fn room_id(&self) -> &RoomId {
         self.origin_room.id
     }

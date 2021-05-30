@@ -35,7 +35,7 @@ impl Command for GetAllVariablesCommand {
     async fn execute(&self, ctx: &Context<'_>) -> ExecutionResult {
         let variables = ctx
             .db
-            .get_user_variables(&ctx.username, ctx.room_id().as_str())
+            .get_user_variables(&ctx.username, ctx.active_room_id().as_str())
             .await?;
 
         let mut variable_list: Vec<String> = variables
@@ -85,7 +85,7 @@ impl Command for GetVariableCommand {
         let name = &self.0;
         let result = ctx
             .db
-            .get_user_variable(&ctx.username, ctx.room_id().as_str(), name)
+            .get_user_variable(&ctx.username, ctx.active_room_id().as_str(), name)
             .await;
 
         let value = match result {
@@ -131,7 +131,7 @@ impl Command for SetVariableCommand {
         let value = self.1;
 
         ctx.db
-            .set_user_variable(&ctx.username, ctx.room_id().as_str(), name, value)
+            .set_user_variable(&ctx.username, ctx.active_room_id().as_str(), name, value)
             .await?;
 
         let content = format!("{} = {}", name, value);
@@ -170,7 +170,7 @@ impl Command for DeleteVariableCommand {
         let name = &self.0;
         let result = ctx
             .db
-            .delete_user_variable(&ctx.username, ctx.room_id().as_str(), name)
+            .delete_user_variable(&ctx.username, ctx.active_room_id().as_str(), name)
             .await;
 
         let value = match result {
