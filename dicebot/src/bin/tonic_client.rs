@@ -10,11 +10,12 @@ async fn create_client(
         .await?;
 
     let bearer = MetadataValue::from_str(&format!("Bearer {}", shared_secret))?;
+    let client = DicebotClient::new(channel);
 
-    let client = DicebotClient::with_interceptor(channel, move |mut req: Request<()>| {
-        req.metadata_mut().insert("authorization", bearer.clone());
-        Ok(req)
-    });
+    // let client = DicebotClient::with_interceptor(channel, move |mut req: Request<()>| {
+    //     req.metadata_mut().insert("authorization", bearer.clone());
+    //     Ok(req)
+    // });
 
     Ok(client)
 }

@@ -2655,6 +2655,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tenebrous-api"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "tenebrous-rpc",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tonic-web",
+]
+
+[[package]]
 name = "tenebrous-dicebot"
 version = "0.10.0"
 dependencies = [
@@ -2684,7 +2696,7 @@ dependencies = [
  "tokio",
  "toml",
  "tonic",
- "tonic-build",
+ "tonic-build 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tracing-subscriber",
  "url",
 ]
@@ -2695,7 +2707,7 @@ version = "0.1.0"
 dependencies = [
  "prost",
  "tonic",
- "tonic-build",
+ "tonic-build 0.4.2 (git+https://github.com/hyperium/tonic)",
 ]
 
 [[package]]
@@ -2868,8 +2880,7 @@ dependencies = [
 [[package]]
 name = "tonic"
 version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ac42cd97ac6bd2339af5bcabf105540e21e45636ec6fa6aae5e85d44db31be0"
+source = "git+https://github.com/hyperium/tonic?branch=master#3e95553c57c0a21a7ae150128ee0d35bc50f3b90"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -2889,6 +2900,7 @@ dependencies = [
  "tokio-stream",
  "tokio-util",
  "tower",
+ "tower-layer",
  "tower-service",
  "tracing",
  "tracing-futures",
@@ -2904,6 +2916,34 @@ dependencies = [
  "prost-build",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tonic-build"
+version = "0.4.2"
+source = "git+https://github.com/hyperium/tonic?branch=master#3e95553c57c0a21a7ae150128ee0d35bc50f3b90"
+dependencies = [
+ "proc-macro2",
+ "prost-build",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "tonic-web"
+version = "0.1.0"
+source = "git+https://github.com/hyperium/tonic?branch=master#3e95553c57c0a21a7ae150128ee0d35bc50f3b90"
+dependencies = [
+ "base64",
+ "bytes",
+ "futures-core",
+ "http",
+ "http-body",
+ "hyper",
+ "pin-project",
+ "tonic",
+ "tower-service",
+ "tracing",
 ]
 
 [[package]]
