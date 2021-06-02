@@ -7,6 +7,7 @@ steps:
   commands:
   - apt-get update
   - apt-get install -y cmake
+  - rustup component add rustfmt
   - cargo build --verbose --all
   - cargo test --verbose --all
 

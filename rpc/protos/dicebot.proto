@@ -1,0 +1,52 @@
+syntax = "proto3";
+package dicebot;
+
+service Dicebot {
+  rpc GetVariable(GetVariableRequest) returns (GetVariableReply);
+  rpc GetAllVariables(GetAllVariablesRequest) returns (GetAllVariablesReply);
+  rpc SetVariable(SetVariableRequest) returns (SetVariableReply);
+  rpc RoomsForUser(UserIdRequest) returns (RoomsListReply);
+}
+
+message GetVariableRequest {
+  string user_id = 1;
+  string room_id = 2;
+  string variable_name = 3;
+}
+
+message GetVariableReply {
+  int32 value = 1;
+}
+
+message GetAllVariablesRequest {
+  string user_id = 1;
+  string room_id = 2;
+}
+
+message GetAllVariablesReply {
+  map<string, int32> variables = 1;
+}
+
+message SetVariableRequest {
+  string user_id = 1;
+  string room_id = 2;
+  string variable_name = 3;
+  int32 value = 4;
+}
+
+message SetVariableReply {
+  bool success = 1;
+}
+
+message UserIdRequest {
+  string user_id = 1;
+}
+
+message RoomsListReply {
+  message Room {
+    string room_id = 1;
+    string display_name = 2;
+  }
+
+  repeated Room rooms = 1;
+}

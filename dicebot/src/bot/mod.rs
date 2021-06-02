@@ -4,13 +4,10 @@ use crate::db::sqlite::Database;
 use crate::db::DbState;
 use crate::error::BotError;
 use crate::state::DiceBotState;
-use dirs;
 use log::info;
-use matrix_sdk::{self, identifiers::EventId, room::Joined, Client, ClientConfig, SyncSettings};
+use matrix_sdk::{self, identifiers::EventId, room::Joined, Client, SyncSettings};
 use std::clone::Clone;
-use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use url::Url;
 
 mod command_execution;
 pub mod event_handlers;
@@ -35,22 +32,6 @@ pub struct DiceBot {
     db: Database,
 }
 
-fn cache_dir() -> Result<PathBuf, BotError> {
-    let mut dir = dirs::cache_dir().ok_or(BotError::NoCacheDirectoryError)?;
-    dir.push("matrix-dicebot");
-    Ok(dir)
-}
-
-/// Creates the matrix client.
-fn create_client(config: &Config) -> Result<Client, BotError> {
-    let cache_dir = cache_dir()?;
-    //let store = JsonStore::open(&cache_dir)?;
-    let client_config = ClientConfig::new().store_path(cache_dir);
-    let homeserver_url = Url::parse(&config.matrix_homeserver())?;
-
-    Ok(Client::new_with_config(homeserver_url, client_config)?)
-}
-
 impl DiceBot {
     /// Create a new dicebot with the given configuration and state
     /// actor. This function returns a Result because it is possible
@@ -60,9 +41,10 @@ impl DiceBot {
         config: &Arc<Config>,
         state: &Arc<RwLock<DiceBotState>>,
         db: &Database,
+        client: &Client,
     ) -> Result<Self, BotError> {
         Ok(DiceBot {
-            client: create_client(&config)?,
+            client: client.clone(),
             config: config.clone(),
             state: state.clone(),
             db: db.clone(),

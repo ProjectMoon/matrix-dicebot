@@ -4,10 +4,6 @@ use std::fs;
 use std::path::PathBuf;
 use thiserror::Error;
 
-/// Shortcut to defining db migration versions. Will probably
-/// eventually be moved to a config file.
-const MIGRATION_VERSION: u32 = 5;
-
 #[derive(Error, Debug)]
 pub enum ConfigError {
     #[error("i/o error: {0}")]
@@ -53,10 +49,19 @@ fn db_path_from_env() -> String {
 }
 
 /// The "bot" section of the config file, for bot settings.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 struct BotConfig {
     /// How far back from current time should we process a message?
     oldest_message_age: Option<u64>,
+
+    /// What address and port to run the RPC service on. If not
+    /// specified, RPC will not be enabled.
+    rpc_addr: Option<String>,
+
+    /// The shared secret key between the bot and any RPC clients that
+    /// want to connect to it. The RPC server will reject any clients
+    /// that don't present the shared key.
+    rpc_key: Option<String>,
 }
 
 /// The "database" section of the config file.
@@ -83,6 +88,18 @@ impl BotConfig {
     fn oldest_message_age(&self) -> u64 {
         self.oldest_message_age
             .unwrap_or(DEFAULT_OLDEST_MESSAGE_AGE)
+    }
+
+    #[inline]
+    #[must_use]
+    fn rpc_addr(&self) -> Option<String> {
+        self.rpc_addr.clone()
+    }
+
+    #[inline]
+    #[must_use]
+    fn rpc_key(&self) -> Option<String> {
+        self.rpc_key.clone()
     }
 }
 
@@ -128,15 +145,6 @@ impl Config {
             .unwrap_or_else(|| db_path_from_env())
     }
 
-    /// The current migration version we expect of the database. If
-    /// this number is higher than the one in the database, we will
-    /// execute migrations to update the data.
-    #[inline]
-    #[must_use]
-    pub fn migration_version(&self) -> u32 {
-        MIGRATION_VERSION
-    }
-
     /// Figure out the allowed oldest message age, in seconds. This will
     /// be the defined oldest message age in the bot config, if the bot
     /// configuration and associated "oldest_message_age" setting are
@@ -149,6 +157,18 @@ impl Config {
             .as_ref()
             .map(|bc| bc.oldest_message_age())
             .unwrap_or(DEFAULT_OLDEST_MESSAGE_AGE)
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn rpc_addr(&self) -> Option<String> {
+        self.bot.as_ref().and_then(|bc| bc.rpc_addr())
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn rpc_key(&self) -> Option<String> {
+        self.bot.as_ref().and_then(|bc| bc.rpc_key())
     }
 }
 
@@ -169,6 +189,7 @@ mod tests {
             }),
             bot: Some(BotConfig {
                 oldest_message_age: None,
+                ..Default::default()
             }),
         };
 

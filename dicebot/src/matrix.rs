@@ -1,6 +1,8 @@
+use std::path::PathBuf;
+
 use futures::stream::{self, StreamExt, TryStreamExt};
 use log::error;
-use matrix_sdk::{events::room::message::NoticeMessageEventContent, room::Joined};
+use matrix_sdk::{events::room::message::NoticeMessageEventContent, room::Joined, ClientConfig};
 use matrix_sdk::{
     events::room::message::{InReplyTo, Relation},
     events::room::message::{MessageEventContent, MessageType},
@@ -9,6 +11,15 @@ use matrix_sdk::{
     Error as MatrixError,
 };
 use matrix_sdk::{identifiers::RoomId, identifiers::UserId, Client};
+use url::Url;
+
+use crate::{config::Config, error::BotError};
+
+fn cache_dir() -> Result<PathBuf, BotError> {
+    let mut dir = dirs::cache_dir().ok_or(BotError::NoCacheDirectoryError)?;
+    dir.push("matrix-dicebot");
+    Ok(dir)
+}
 
 /// Extracts more detailed error messages out of a matrix SDK error.
 fn extract_error_message(error: MatrixError) -> String {
@@ -18,6 +29,15 @@ fn extract_error_message(error: MatrixError) -> String {
     } else {
         error.to_string()
     }
+}
+
+/// Creates the matrix client.
+pub fn create_client(config: &Config) -> Result<Client, BotError> {
+    let cache_dir = cache_dir()?;
+    let client_config = ClientConfig::new().store_path(cache_dir);
+    let homeserver_url = Url::parse(&config.matrix_homeserver())?;
+
+    Ok(Client::new_with_config(homeserver_url, client_config)?)
 }
 
 /// Retrieve a list of users in a given room.

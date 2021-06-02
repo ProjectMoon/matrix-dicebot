@@ -1,7 +1,10 @@
+use std::net::AddrParseError;
+
 use crate::commands::CommandError;
 use crate::config::ConfigError;
 use crate::db::errors::DataError;
 use thiserror::Error;
+use tonic::metadata::errors::InvalidMetadataValue;
 
 #[derive(Error, Debug)]
 pub enum BotError {
@@ -93,6 +96,15 @@ pub enum BotError {
 
     #[error("room name or id does not exist")]
     RoomDoesNotExist,
+
+    #[error("tonic transport error: {0}")]
+    TonicTransportError(#[from] tonic::transport::Error),
+
+    #[error("address parsing error: {0}")]
+    AddressParseError(#[from] AddrParseError),
+
+    #[error("invalid metadata value: {0}")]
+    TonicInvalidMetadata(#[from] InvalidMetadataValue),
 }
 
 #[derive(Error, Debug)]

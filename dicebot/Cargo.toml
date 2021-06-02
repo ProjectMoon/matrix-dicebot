@@ -1,0 +1,53 @@
+[package]
+name = "tenebrous-dicebot"
+version = "0.10.0"
+authors = ["Taylor C. Richberger <taywee@gmx.com>", "projectmoon <projectmoon@agnos.is>"]
+edition = "2018"
+license = 'AGPL-3.0-or-later'
+description = 'An async Matrix dice bot for role-playing games'
+readme = 'README.md'
+repository = 'https://git.agnos.is/projectmoon/matrix-dicebot'
+keywords = ["games", "dice", "matrix", "bot"]
+categories = ["games"]
+
+[build-dependencies]
+tonic-build = "0.4"
+
+[dependencies]
+log = "0.4"
+tracing-subscriber = "0.2"
+toml = "0.5"
+nom = "5"
+rand = "0.8"
+rust-argon2 = "0.8"
+thiserror = "1.0"
+itertools = "0.10"
+async-trait = "0.1"
+url = "2.1"
+dirs = "3.0"
+indoc = "1.0"
+combine = "4.5"
+futures = "0.3"
+html2text = "0.2"
+phf = { version = "0.8", features = ["macros"] }
+matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", branch = "master" }
+refinery = { version = "0.5", features = ["rusqlite"]}
+barrel = { version = "0.6", features = ["sqlite3"] }
+tempfile = "3"
+substring = "1.4"
+fuse-rust = "0.2"
+tonic = "0.4"
+prost = "0.7"
+tenebrous-rpc = { path = "../rpc" }
+
+[dependencies.sqlx]
+version = "0.5"
+features = [ "offline", "sqlite", "runtime-tokio-native-tls" ]
+
+[dependencies.serde]
+version = "1"
+features = ['derive']
+
+[dependencies.tokio]
+version = "1"
+features = [ "full" ]
