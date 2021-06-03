@@ -12,3 +12,5 @@ bigboy
 .#*
 *.sqlite
 .tmp*
+node_modules
+dist/

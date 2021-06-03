@@ -1,0 +1,15 @@
+{
+  "devDependencies": {
+    "@wasm-tool/wasm-pack-plugin": "^1.4.0",
+    "clean-webpack-plugin": "^4.0.0-alpha.0",
+    "html-webpack-plugin": "^5.3.1",
+    "webpack": "^5.37.0",
+    "webpack-cli": "^4.7.0"
+  },
+  "name": "runic",
+  "version": "1.0.0",
+  "description": "Stuff",
+  "main": "index.js",
+  "author": "projectmoon <projectmoon@agnos.is>",
+  "license": "MIT"
+}

@@ -1,0 +1,29 @@
+[package]
+name = "tenebrous-web-ui"
+version = "0.1.0"
+authors = ["projectmoon <projectmoon@agnos.is>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+
+[build-dependencies]
+tonic-build = { version = "0.4", default-features = false, features = ["prost"] }
+
+[dependencies]
+yew = { version = "0.17", default_features = false }#features = [ "agent", "web-sys" ] }
+yewtil = {version = "0.3" }
+yew-router = {version = "0.14", default_features = false }
+yewdux = {version = "^0.6", default_features = false }
+wasm-bindgen = { version = "0.2", default-features = false, features = ["serde-serialize"] }
+grpc-web-client = "0.1"
+prost = { version = "0.7.0", default-features = false }
+tonic = { git = "https://github.com/hyperium/tonic", branch = "master", default-features = false, features = ["codegen", "prost"] }
+tenebrous-rpc = { path = "../../rpc", default_features = false, features = ["wasm"] }
+
+# [dependencies.tokio]
+# version = "1"
+# features = [ "rt", "sync" ]
