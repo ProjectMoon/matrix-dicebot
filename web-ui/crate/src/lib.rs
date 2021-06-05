@@ -1,98 +1,84 @@
-use oaths::OathsList;
+use rooms::RoomList;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 use yew_router::{components::RouterAnchor, prelude::*};
 
 pub mod grpc;
-pub mod oaths;
+pub mod rooms;
 
 #[derive(Switch, Clone, Debug)]
 pub enum AppRoute {
-    #[to = "/oaths"]
-    Oaths,
-    #[to = "/commitments"]
-    Commitments,
-    #[to = "/studies"]
-    Studies,
-    #[to = "/divination"]
-    RunicDivination,
+    #[to = "/rooms"]
+    Rooms,
+    #[to = "/rooms/{room_id}"]
+    Room(String),
     #[to = "/"]
     Index,
 }
 
 type AppRouter = Router<AppRoute>;
-type AppAnchor = RouterAnchor<AppRoute>;
+type AppAnchor = RouterAnchor<AppRoute>; //For rendering clickable links.
 
 fn render_route(switch: AppRoute) -> Html {
     match switch {
-        AppRoute::Oaths => {
+        AppRoute::Rooms => {
             html! {
-                <OathsList />
+                <RoomList />
             }
         }
-        AppRoute::Commitments => {
+        AppRoute::Room(room_id) => {
             html! {
-                <div>{"This is the commitments page."}</div>
-            }
-        }
-        AppRoute::Studies => {
-            html! {
-                <div>{"This is the studies page."}</div>
-            }
-        }
-        AppRoute::RunicDivination => {
-            html! {
-                <div>{"This is the runic divination page."}</div>
+                <div>{"This is the specifi roompage."}</div>
             }
         }
         AppRoute::Index => {
             html! {
-                <div>{"This is the index."}</div>
+                <RoomList />
             }
         }
     }
 }
 
-struct AppMenu;
+// struct AppMenu;
 
-impl Component for AppMenu {
-    type Message = ();
-    type Properties = ();
+// impl Component for AppMenu {
+//     type Message = ();
+//     type Properties = ();
 
-    fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self
-    }
+//     fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
+//         Self
+//     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        false
-    }
+//     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+//         false
+//     }
 
-    fn change(&mut self, _: Self::Properties) -> ShouldRender {
-        false
-    }
+//     fn change(&mut self, _: Self::Properties) -> ShouldRender {
+//         false
+//     }
 
-    fn view(&self) -> Html {
-        html! {
-             <ul>
-                <li>
-                    <AppAnchor route=AppRoute::Index>{"Home"}</AppAnchor>
-                </li>
-                <li>
-                    <AppAnchor route=AppRoute::Oaths>{"Oaths"}</AppAnchor>
-                </li>
-                <li>
-                    <AppAnchor route=AppRoute::Commitments>{"Commitments"}</AppAnchor>
-                </li>
-                <li>
-                    <AppAnchor route=AppRoute::Studies>{"Studies"}</AppAnchor>
-                </li>
-                <li>
-                    <AppAnchor route=AppRoute::RunicDivination>{"Runic Divination"}</AppAnchor>
-                </li>
-             </ul>
-        }
-    }
-}
+//     fn view(&self) -> Html {
+//         html! {
+//              <ul>
+//                 <li>
+//                     <AppAnchor route=AppRoute::Index>{"Home"}</AppAnchor>
+//                 </li>
+//                 <li>
+//                     <AppAnchor route=AppRoute::Oaths>{"Oaths"}</AppAnchor>
+//                 </li>
+//                 <li>
+//                     <AppAnchor route=AppRoute::Commitments>{"Commitments"}</AppAnchor>
+//                 </li>
+//                 <li>
+//                     <AppAnchor route=AppRoute::Studies>{"Studies"}</AppAnchor>
+//                 </li>
+//                 <li>
+//                     <AppAnchor route=AppRoute::RunicDivination>{"Runic Divination"}</AppAnchor>
+//                 </li>
+//              </ul>
+//         }
+//     }
+// }
 
 struct App;
 
@@ -116,7 +102,6 @@ impl Component for App {
         html! {
             <div>
             {"Hello World"}
-            <AppMenu />
             <AppRouter render=AppRouter::render(render_route) />
             </div>
         }

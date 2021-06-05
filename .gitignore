@@ -14,3 +14,4 @@ bigboy
 .tmp*
 node_modules
 dist/
+yarn-error.log

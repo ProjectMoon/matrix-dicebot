@@ -3341,7 +3341,10 @@ name = "tenebrous-web-ui"
 version = "0.1.0"
 dependencies = [
  "grpc-web-client",
+ "js-sys",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
  "yew",
  "yew-router",
  "yewdux",

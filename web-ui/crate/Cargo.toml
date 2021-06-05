@@ -15,7 +15,10 @@ yewtil = {version = "0.3" }
 yew-router = {version = "0.14" }
 yewdux = {version = "^0.6" }
 wasm-bindgen = { version = "0.2" }
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
 grpc-web-client = "0.1"
+web-sys = "0.3"
 
 # hopefully we can add grpc-web later instead of graphql.
 # prost = { version = "0.7.0", default-features = false }
