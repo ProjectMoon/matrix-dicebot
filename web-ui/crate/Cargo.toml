@@ -9,21 +9,18 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-
-[build-dependencies]
-tonic-build = { version = "0.4", default-features = false, features = ["prost"] }
-
 [dependencies]
-yew = { version = "0.17", default_features = false }#features = [ "agent", "web-sys" ] }
+yew = { version = "0.17" }
 yewtil = {version = "0.3" }
-yew-router = {version = "0.14", default_features = false }
-yewdux = {version = "^0.6", default_features = false }
-wasm-bindgen = { version = "0.2", default-features = false, features = ["serde-serialize"] }
+yew-router = {version = "0.14" }
+yewdux = {version = "^0.6" }
+wasm-bindgen = { version = "0.2" }
 grpc-web-client = "0.1"
-prost = { version = "0.7.0", default-features = false }
-tonic = { git = "https://github.com/hyperium/tonic", branch = "master", default-features = false, features = ["codegen", "prost"] }
-tenebrous-rpc = { path = "../../rpc", default_features = false, features = ["wasm"] }
 
-# [dependencies.tokio]
-# version = "1"
-# features = [ "rt", "sync" ]
+# hopefully we can add grpc-web later instead of graphql.
+# prost = { version = "0.7.0", default-features = false }
+# tonic = { git = "https://github.com/hyperium/tonic", branch = "master", default-features = false, features = ["codegen", "prost"] }
+# tenebrous-rpc = { path = "../../rpc", default_features = false, features = ["wasm"] }
+
+# [build-dependencies]
+# tonic-build = { version = "0.4", default-features = false, features = ["prost"] }

@@ -13,8 +13,8 @@ default = ["tonic/default", "tonic-build/default"]
 wasm = [ "tonic/codegen", "tonic/prost", "tonic-build/prost"]
 
 [build-dependencies]
-tonic-build = { git = "https://github.com/hyperium/tonic", branch = "master", default_features = false }
+tonic-build = { version = "0.4", default_features = false }
 
 [dependencies]
-tonic = { git = "https://github.com/hyperium/tonic", branch = "master", default_features = false }
+tonic = { version = "0.4", default_features = false }
 prost = "0.7"
