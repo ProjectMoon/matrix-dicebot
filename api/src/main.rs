@@ -1,6 +1,6 @@
 use juniper::{
-    graphql_object, EmptyMutation, EmptySubscription, FieldError, FieldResult, GraphQLObject,
-    RootNode,
+    graphql_object, EmptyMutation, EmptySubscription, FieldError, FieldResult, GraphQLInputObject,
+    GraphQLObject, RootNode,
 };
 use once_cell::sync::OnceCell;
 use rocket::{response::content, Rocket, State};
@@ -30,10 +30,18 @@ async fn create_client(
 }
 
 //api stuff
+#[derive(GraphQLInputObject)]
+struct UserVariableArgument {
+    room_id: String,
+    user_id: String,
+    variable_name: String,
+}
+
 #[derive(GraphQLObject)]
 #[graphql(description = "User variable in a room.")]
 struct UserVariable {
     room_id: String,
+    user_id: String,
     variable_name: String,
     value: i32,
 }
@@ -81,6 +89,7 @@ impl Query {
             .into_inner();
 
         Ok(UserVariable {
+            user_id: user_id.clone(),
             room_id: room_id.clone(),
             variable_name: variable.clone(),
             value: response.value,
@@ -106,21 +115,21 @@ fn graphiql() -> content::Html<String> {
 }
 
 #[rocket::get("/graphql?<request>")]
-fn get_graphql_handler(
+async fn get_graphql_handler(
     context: &State<Context>,
     request: juniper_rocket_async::GraphQLRequest,
     schema: &State<Schema>,
 ) -> juniper_rocket_async::GraphQLResponse {
-    request.execute_sync(&*schema, &*context)
+    request.execute(&*schema, &*context).await
 }
 
 #[rocket::post("/graphql", data = "<request>")]
-fn post_graphql_handler(
+async fn post_graphql_handler(
     context: &State<Context>,
     request: juniper_rocket_async::GraphQLRequest,
     schema: &State<Schema>,
 ) -> juniper_rocket_async::GraphQLResponse {
-    request.execute_sync(&*schema, &*context)
+    request.execute(&*schema, &*context).await
 }
 
 #[rocket::main]
