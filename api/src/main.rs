@@ -125,15 +125,16 @@ fn post_graphql_handler(
 
 #[rocket::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("hi");
     let filter = if env::var("RUST_LOG").is_ok() {
         EnvFilter::from_default_env()
     } else {
-        EnvFilter::new("warp_async")
+        EnvFilter::new("tenebrous_api=info,tonic=info,rocket=info")
     };
 
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
-    let log = warp::log("warp_server");
+    log::info!("Setting up gRPC connection");
     let client = create_client("abc123").await?;
 
     log::info!("Listening on 127.0.0.1:8080");
@@ -142,7 +143,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     Rocket::build()
-        .manage(client)
+        .manage(context)
         .manage(schema())
         .mount(
             "/",
