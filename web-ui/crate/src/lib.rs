@@ -3,6 +3,7 @@ use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 use yew_router::{components::RouterAnchor, prelude::*};
 
+pub mod graphql;
 pub mod grpc;
 pub mod rooms;
 

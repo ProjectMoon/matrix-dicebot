@@ -19,7 +19,8 @@ wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 grpc-web-client = "0.1"
 web-sys = "0.3"
-
+graphql_client = "0.9"
+graphql_client_web = "0.9"
 # hopefully we can add grpc-web later instead of graphql.
 # prost = { version = "0.7.0", default-features = false }
 # tonic = { git = "https://github.com/hyperium/tonic", branch = "master", default-features = false, features = ["codegen", "prost"] }

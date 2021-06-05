@@ -1,93 +1,7 @@
-use juniper::{
-    graphql_object, EmptyMutation, EmptySubscription, FieldResult, GraphQLInputObject,
-    GraphQLObject, RootNode,
-};
 use rocket::{response::content, Rocket, State};
 use std::env;
-use tenebrous_rpc::protos::dicebot::dicebot_client::DicebotClient;
-use tenebrous_rpc::protos::dicebot::GetVariableRequest;
-use tonic::{transport::Channel as TonicChannel, Request as TonicRequest};
+use tenebrous_api::schema::{self, Context, Schema};
 use tracing_subscriber::filter::EnvFilter;
-
-//api stuff
-#[derive(GraphQLInputObject)]
-struct UserVariableArgument {
-    room_id: String,
-    user_id: String,
-    variable_name: String,
-}
-
-#[derive(GraphQLObject)]
-#[graphql(description = "User variable in a room.")]
-struct UserVariable {
-    room_id: String,
-    user_id: String,
-    variable_name: String,
-    value: i32,
-}
-
-//graphql shit
-#[derive(Clone)]
-struct Context {
-    dicebot_client: DicebotClient<TonicChannel>,
-}
-
-// To make our context usable by Juniper, we have to implement a marker trait.
-impl juniper::Context for Context {}
-
-#[derive(Clone, Copy, Debug)]
-struct Query;
-
-#[graphql_object(
-    // Here we specify the context type for the object.
-    // We need to do this in every type that
-    // needs access to the context.
-    context = Context,
-)]
-impl Query {
-    fn apiVersion() -> &str {
-        "1.0"
-    }
-
-    async fn variable(
-        context: &mut Context,
-        room_id: String,
-        user_id: String,
-        variable: String,
-    ) -> FieldResult<UserVariable> {
-        let request = TonicRequest::new(GetVariableRequest {
-            room_id: room_id.clone(),
-            user_id: user_id.clone(),
-            variable_name: variable.clone(),
-        });
-
-        let response = context
-            .dicebot_client
-            .clone()
-            .get_variable(request)
-            .await?
-            .into_inner();
-
-        Ok(UserVariable {
-            user_id: user_id.clone(),
-            room_id: room_id.clone(),
-            variable_name: variable.clone(),
-            value: response.value,
-        })
-    }
-}
-
-type Schema = RootNode<'static, Query, EmptyMutation<Context>, EmptySubscription<Context>>;
-
-fn schema() -> Schema {
-    Schema::new(
-        Query,
-        EmptyMutation::<Context>::new(),
-        EmptySubscription::<Context>::new(),
-    )
-}
-
-//rocket stuff
 
 #[rocket::get("/")]
 fn graphiql() -> content::Html<String> {
@@ -114,7 +28,6 @@ async fn post_graphql_handler(
 
 #[rocket::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("hi");
     let filter = if env::var("RUST_LOG").is_ok() {
         EnvFilter::from_default_env()
     } else {
@@ -131,9 +44,11 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
         dicebot_client: client,
     };
 
+    let schema = schema::schema();
+
     Rocket::build()
         .manage(context)
-        .manage(schema())
+        .manage(schema)
         .mount(
             "/",
             rocket::routes![graphiql, get_graphql_handler, post_graphql_handler],
