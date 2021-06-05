@@ -1,12 +1,9 @@
 use juniper::{
-    graphql_object, EmptyMutation, EmptySubscription, FieldError, FieldResult, GraphQLInputObject,
+    graphql_object, EmptyMutation, EmptySubscription, FieldResult, GraphQLInputObject,
     GraphQLObject, RootNode,
 };
-use once_cell::sync::OnceCell;
 use rocket::{response::content, Rocket, State};
-use std::cell::RefCell;
 use std::env;
-use std::sync::{Arc, RwLock};
 use tenebrous_rpc::protos::dicebot::dicebot_client::DicebotClient;
 use tenebrous_rpc::protos::dicebot::GetVariableRequest;
 use tonic::{metadata::MetadataValue, transport::Channel as TonicChannel, Request as TonicRequest};
