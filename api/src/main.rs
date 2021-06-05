@@ -6,25 +6,8 @@ use rocket::{response::content, Rocket, State};
 use std::env;
 use tenebrous_rpc::protos::dicebot::dicebot_client::DicebotClient;
 use tenebrous_rpc::protos::dicebot::GetVariableRequest;
-use tonic::{metadata::MetadataValue, transport::Channel as TonicChannel, Request as TonicRequest};
+use tonic::{transport::Channel as TonicChannel, Request as TonicRequest};
 use tracing_subscriber::filter::EnvFilter;
-
-//grpc stuff
-async fn create_client(
-    shared_secret: &str,
-) -> Result<DicebotClient<TonicChannel>, Box<dyn std::error::Error>> {
-    let channel = TonicChannel::from_static("http://0.0.0.0:9090")
-        .connect()
-        .await?;
-
-    let bearer = MetadataValue::from_str(&format!("Bearer {}", shared_secret))?;
-    let client = DicebotClient::with_interceptor(channel, move |mut req: TonicRequest<()>| {
-        req.metadata_mut().insert("authorization", bearer.clone());
-        Ok(req)
-    });
-
-    Ok(client)
-}
 
 //api stuff
 #[derive(GraphQLInputObject)]
@@ -141,7 +124,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
     log::info!("Setting up gRPC connection");
-    let client = create_client("abc123").await?;
+    let client = tenebrous_rpc::create_client("http://localhost:9090", "abc123").await?;
 
     log::info!("Listening on 127.0.0.1:8080");
     let context = Context {
