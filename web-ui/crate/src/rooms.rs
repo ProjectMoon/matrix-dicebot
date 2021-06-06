@@ -60,10 +60,16 @@ fn view_room(room: &Room) -> Html {
 }
 
 async fn do_things(dispatch: &RoomListDispatch) {
-    dispatch.send(Action::AddRoom(Room {
-        room_id: "asdf".into(),
-        display_name: "adslkjg".into(),
-    }));
+    let rooms = crate::graphql::rooms_for_user("@projectmoon:agnos.is")
+        .await
+        .unwrap();
+
+    for room in rooms {
+        dispatch.send(Action::AddRoom(Room {
+            room_id: room.room_id,
+            display_name: room.display_name,
+        }));
+    }
 }
 
 impl Component for YewduxRoomList {

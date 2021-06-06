@@ -39,7 +39,6 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Setting up gRPC connection");
     let client = tenebrous_rpc::create_client("http://localhost:9090", "abc123").await?;
 
-    log::info!("Listening on 127.0.0.1:8080");
     let context = Context {
         dicebot_client: client,
     };
