@@ -41,20 +41,17 @@ pub struct Context {
     pub dicebot_client: DicebotGrpcClient,
 }
 
-// To make our context usable by Juniper, we have to implement a marker trait.
+/// Marker trait to make the context object usable in GraphQL.
 impl juniper::Context for Context {}
 
 #[derive(Clone, Copy, Debug)]
 pub struct Query;
 
 #[graphql_object(
-    // Here we specify the context type for the object.
-    // We need to do this in every type that
-    // needs access to the context.
-    context = Context,
+   context = Context,
 )]
 impl Query {
-    fn apiVersion() -> &str {
+    fn api_version() -> &str {
         "1.0"
     }
 
@@ -65,9 +62,9 @@ impl Query {
         variable: String,
     ) -> FieldResult<UserVariable> {
         let request = TonicRequest::new(GetVariableRequest {
-            room_id: room_id.clone(),
-            user_id: user_id.clone(),
-            variable_name: variable.clone(),
+            room_id,
+            user_id,
+            variable_name: variable,
         });
 
         let response = context
@@ -78,17 +75,15 @@ impl Query {
             .into_inner();
 
         Ok(UserVariable {
-            user_id: user_id.clone(),
-            room_id: room_id.clone(),
-            variable_name: variable.clone(),
+            user_id: response.user_id,
+            room_id: response.room_id,
+            variable_name: response.variable_name,
             value: response.value,
         })
     }
 
     async fn user_rooms(context: &Context, user_id: String) -> FieldResult<UserRoomList> {
-        let request = TonicRequest::new(UserIdRequest {
-            user_id: user_id.clone(),
-        });
+        let request = TonicRequest::new(UserIdRequest { user_id });
 
         let response = context
             .dicebot_client
@@ -98,7 +93,7 @@ impl Query {
             .into_inner();
 
         Ok(UserRoomList {
-            user_id,
+            user_id: response.user_id,
             rooms: response
                 .rooms
                 .into_iter()
