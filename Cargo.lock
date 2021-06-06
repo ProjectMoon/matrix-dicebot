@@ -3481,6 +3481,7 @@ dependencies = [
  "js-sys",
  "serde",
  "tenebrous-api",
+ "thiserror",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

@@ -1,7 +1,7 @@
+use crate::api;
+use crate::error::UiError;
 use std::sync::Arc;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsValue;
-use wasm_bindgen_futures::{future_to_promise, spawn_local};
+use wasm_bindgen_futures::spawn_local;
 use web_sys::console;
 use yew::prelude::*;
 use yewdux::prelude::*;
@@ -59,10 +59,8 @@ fn view_room(room: &Room) -> Html {
     }
 }
 
-async fn do_things(dispatch: &RoomListDispatch) {
-    let rooms = crate::graphql::rooms_for_user("@projectmoon:agnos.is")
-        .await
-        .unwrap();
+async fn load_rooms(dispatch: &RoomListDispatch) -> Result<(), UiError> {
+    let rooms = api::dicebot::rooms_for_user("@projectmoon:agnos.is").await?;
 
     for room in rooms {
         dispatch.send(Action::AddRoom(Room {
@@ -70,6 +68,8 @@ async fn do_things(dispatch: &RoomListDispatch) {
             display_name: room.display_name,
         }));
     }
+
+    Ok(())
 }
 
 impl Component for YewduxRoomList {
@@ -95,7 +95,12 @@ impl Component for YewduxRoomList {
             let dispatch = dispatch.clone();
 
             spawn_local(async move {
-                do_things(&*dispatch).await;
+                //TODO make macro to report errors in some common way:
+                //handle_errors!(do_things(&*dispatch).await)
+                match load_rooms(&*dispatch).await {
+                    Err(e) => console::log_1(&format!("Error: {:?}", e).into()),
+                    _ => (),
+                }
             });
         });
 

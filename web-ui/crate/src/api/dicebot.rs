@@ -1,6 +1,9 @@
 use graphql_client::web::Client;
-use graphql_client::web::ClientError;
 use graphql_client::GraphQLQuery;
+use graphql_client_web::Response;
+
+use super::ResponseExt;
+use crate::error::UiError;
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -22,7 +25,7 @@ pub async fn get_user_variable(
     room_id: &str,
     user_id: &str,
     variable_name: &str,
-) -> Result<i64, ClientError> {
+) -> Result<i64, UiError> {
     let client = Client::new("http://localhost:10000/graphql");
     let variables = get_user_variable::Variables {
         room_id: room_id.to_owned(),
@@ -30,27 +33,20 @@ pub async fn get_user_variable(
         variable: variable_name.to_owned(),
     };
 
-    //TODO don't unwrap() option. map to err instead.
     let response = client.call(GetUserVariable, variables).await?;
     let response: graphql_client_web::Response<get_user_variable::ResponseData> = response;
-    let value = response.data.map(|d| d.variable.value).unwrap();
-    Ok(value)
+    Ok(response.data()?.variable.value)
 }
 
 pub async fn rooms_for_user(
     user_id: &str,
-) -> Result<Vec<rooms_for_user::RoomsForUserUserRoomsRooms>, ClientError> {
+) -> Result<Vec<rooms_for_user::RoomsForUserUserRoomsRooms>, UiError> {
     let client = Client::new("http://localhost:10000/graphql");
     let variables = rooms_for_user::Variables {
         user_id: user_id.to_owned(),
     };
 
-    //TODO don't unwrap() option. map to err instead.
     let response = client.call(RoomsForUser, variables).await?;
-    let response: graphql_client_web::Response<rooms_for_user::ResponseData> = response;
-    let rooms = response
-        .data
-        .map(|d| d.user_rooms.rooms)
-        .unwrap_or_default();
-    Ok(rooms)
+    let response: Response<rooms_for_user::ResponseData> = response;
+    Ok(response.data()?.user_rooms.rooms)
 }
