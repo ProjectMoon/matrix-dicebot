@@ -9,6 +9,9 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[build-dependencies]
+tenebrous-api = { path = "../../api" }
+
 [dependencies]
 yew = { version = "0.17" }
 yewtil = {version = "0.3" }
@@ -17,10 +20,12 @@ yewdux = {version = "^0.6" }
 wasm-bindgen = { version = "0.2" }
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
-grpc-web-client = "0.1"
+#grpc-web-client = "0.1"
 web-sys = "0.3"
-graphql_client = "0.9"
-graphql_client_web = "0.9"
+graphql_client = { git = "https://github.com/graphql-rust/graphql-client", branch = "master" }
+graphql_client_web = { git = "https://github.com/graphql-rust/graphql-client", branch = "master" }
+serde = { version = "1.0.67", features = ["derive"] }
+
 # hopefully we can add grpc-web later instead of graphql.
 # prost = { version = "0.7.0", default-features = false }
 # tonic = { git = "https://github.com/hyperium/tonic", branch = "master", default-features = false, features = ["codegen", "prost"] }

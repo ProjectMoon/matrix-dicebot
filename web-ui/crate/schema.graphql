@@ -1,0 +1,16 @@
+"User variable in a room."
+type UserVariable {
+  roomId: String!
+  userId: String!
+  variableName: String!
+  value: Int!
+}
+
+type Query {
+  apiVersion: String!
+  variable(roomId: String!, userId: String!, variable: String!): UserVariable!
+}
+
+schema {
+  query: Query
+}
