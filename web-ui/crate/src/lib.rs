@@ -106,8 +106,12 @@ impl Component for App {
     fn view(&self) -> Html {
         html! {
             <div>
-            {"Hello World"}
-            <AppRouter render=AppRouter::render(render_route) />
+                <div class="alert alert-primary" role="alert">
+                    {"Hello World"}
+                </div>
+                <div>
+                    <AppRouter render=AppRouter::render(render_route) />
+                </div>
             </div>
         }
     }
