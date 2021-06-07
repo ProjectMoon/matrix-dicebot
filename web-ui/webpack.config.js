@@ -17,7 +17,9 @@ module.exports = {
 
     plugins: [
         new CleanWebpackPlugin(),
-        new HtmlWebpackPlugin(),
+        new HtmlWebpackPlugin({
+            title: 'Tenebrous'
+        }),
         new WasmPackPlugin({
             crateDirectory: path.resolve(__dirname, "crate"),
             outDir: path.resolve(__dirname, "pkg"),
