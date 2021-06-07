@@ -1,12 +1,15 @@
 use rooms::RoomList;
+use rooms::YewduxRoomList;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 use yew_router::prelude::*;
+use yewdux::prelude::*;
 
 pub mod api;
 pub mod error;
 pub mod grpc;
 pub mod rooms;
+pub mod state;
 
 #[derive(Routable, PartialEq, Clone, Debug)]
 pub enum AppRoute {
@@ -112,6 +115,5 @@ impl Component for App {
 
 #[wasm_bindgen(start)]
 pub fn run_app() {
-    //App::<EncryptedImage>::new().mount_with_props(body, props);
     yew::start_app::<App>();
 }
