@@ -1,34 +1,34 @@
 use rooms::RoomList;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
-use yew_router::{components::RouterAnchor, prelude::*};
+use yew_router::prelude::*;
 
 pub mod api;
 pub mod error;
 pub mod grpc;
 pub mod rooms;
 
-#[derive(Switch, Clone, Debug)]
+#[derive(Routable, PartialEq, Clone, Debug)]
 pub enum AppRoute {
-    #[to = "/rooms"]
+    #[at("/rooms")]
     Rooms,
-    #[to = "/rooms/{room_id}"]
-    Room(String),
-    #[to = "/"]
+    #[at("/rooms/{room_id}")]
+    Room { room_id: String },
+    #[at("/")]
     Index,
 }
 
 type AppRouter = Router<AppRoute>;
-type AppAnchor = RouterAnchor<AppRoute>; //For rendering clickable links.
+type AppAnchor = Link<AppRoute>; //For rendering clickable links.
 
-fn render_route(switch: AppRoute) -> Html {
-    match switch {
+fn render_route(routes: &AppRoute) -> Html {
+    match routes {
         AppRoute::Rooms => {
             html! {
                 <RoomList />
             }
         }
-        AppRoute::Room(room_id) => {
+        AppRoute::Room { room_id } => {
             html! {
                 <div>{"This is the specifi roompage."}</div>
             }

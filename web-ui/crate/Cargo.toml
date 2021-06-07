@@ -13,10 +13,16 @@ crate-type = ["cdylib", "rlib"]
 tenebrous-api = { path = "../../api" }
 
 [dependencies]
-yew = { version = "0.17" }
-yewtil = {version = "0.3" }
-yew-router = {version = "0.14" }
-yewdux = {version = "^0.6" }
+# yew = { version = "0.18" }
+# yewtil = {version = "0.4" }
+# yew-router = {version = "0.15" }
+# yewdux = {version = "^0.6" }
+yew = { git = "https://github.com/yewstack/yew", rev = "246bc59" }
+yew-functional = { git = "https://github.com/yewstack/yew", rev = "246bc59" }
+yew-router = { git = "https://github.com/yewstack/yew", rev = "246bc59" }
+yew-services = { git = "https://github.com/yewstack/yew", rev = "246bc59" }
+yewtil = { git = "https://github.com/yewstack/yew", rev = "246bc59"}
+yewdux = { git = "https://github.com/deftsp/yewdux", rev = "dbda686"}
 wasm-bindgen = { version = "0.2" }
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
