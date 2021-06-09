@@ -1,8 +1,7 @@
-use crate::config::{create_config, Config};
+use crate::config::create_config;
 use crate::schema::{self, Context, Schema};
 use log::info;
 use rocket::http::Method;
-use rocket::serde::{json::Json, Deserialize};
 use rocket::{response::content, Rocket, State};
 use rocket_cors::AllowedOrigins;
 use std::env;
