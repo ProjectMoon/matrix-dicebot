@@ -262,6 +262,12 @@ checksum = "a4521f3e3d031370679b3b140beb36dfe4801b09ac77e30c61941f97df3ef28b"
 
 [[package]]
 name = "base64"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
+
+[[package]]
+name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
@@ -331,7 +337,7 @@ version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38b6553abdb9d2d8f262f0b5bccf807321d5b7d1a12796bcede8e1f150e85f2e"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "chrono",
  "hex",
  "lazy_static",
@@ -994,9 +1000,9 @@ dependencies = [
 
 [[package]]
 name = "generator"
-version = "0.7.0"
+version = "0.6.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1d9279ca822891c1a4dae06d185612cf8fc6acfe5dff37781b41297811b12ee"
+checksum = "061d3be1afec479d56fa3bd182bf966c7999ec175fcfdb87ac14d417241366c6"
 dependencies = [
  "cc",
  "libc",
@@ -1464,9 +1470,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsonwebtoken"
+version = "7.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "afabcc15e437a6484fc4f12d0fd63068fe457bf93f1c148d3d9649c60b103f32"
+dependencies = [
+ "base64 0.12.3",
+ "pem",
+ "ring",
+ "serde",
+ "serde_json",
+ "simple_asn1",
+]
+
+[[package]]
 name = "juniper"
-version = "0.15.6"
-source = "git+https://github.com/graphql-rust/juniper?branch=master#ae199387fcf3a46888ef8464acb6011a149268c1"
+version = "0.15.5"
+source = "git+https://github.com/graphql-rust/juniper?branch=master#84a07c4a93f96d4352a9a6a23732c46eae486be6"
 dependencies = [
  "async-trait",
  "bson",
@@ -1486,8 +1506,8 @@ dependencies = [
 
 [[package]]
 name = "juniper_codegen"
-version = "0.15.6"
-source = "git+https://github.com/graphql-rust/juniper?branch=master#ae199387fcf3a46888ef8464acb6011a149268c1"
+version = "0.15.5"
+source = "git+https://github.com/graphql-rust/juniper?branch=master#84a07c4a93f96d4352a9a6a23732c46eae486be6"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -1498,7 +1518,7 @@ dependencies = [
 [[package]]
 name = "juniper_rocket_async"
 version = "0.5.1"
-source = "git+https://github.com/graphql-rust/juniper?branch=master#ae199387fcf3a46888ef8464acb6011a149268c1"
+source = "git+https://github.com/graphql-rust/juniper?branch=master#84a07c4a93f96d4352a9a6a23732c46eae486be6"
 dependencies = [
  "futures",
  "juniper",
@@ -1568,11 +1588,11 @@ dependencies = [
 
 [[package]]
 name = "loom"
-version = "0.5.0"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7aa5348dc45fa5f2419b6dd4ea20345e6b01b1fcc9d176a322eada1ac3f382ba"
+checksum = "a0e8460f2f2121162705187214720353c517b97bdfb3494c0b1e33d83ebe4bed"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "generator",
  "scoped-tls",
  "serde",
@@ -1713,7 +1733,7 @@ dependencies = [
  "aes-ctr",
  "aes-gcm",
  "atomic",
- "base64",
+ "base64 0.13.0",
  "byteorder",
  "dashmap",
  "futures",
@@ -1866,6 +1886,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f6bb902e437b6d86e03cce10a7e2af662292c5dfef23b65899ea3ac9354ad44"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
 ]
 
 [[package]]
@@ -2034,6 +2065,17 @@ dependencies = [
  "proc-macro2-diagnostics",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "pem"
+version = "0.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd56cbd21fea48d0c440b41cd69c589faacade08c992d9a54e471b79d0fd13eb"
+dependencies = [
+ "base64 0.13.0",
+ "once_cell",
+ "regex",
 ]
 
 [[package]]
@@ -2526,7 +2568,7 @@ version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2296f2fac53979e8ccbc4a1136b25dcefd37be9ed7e4a1f6b05a6029c84ff124"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -2572,7 +2614,7 @@ dependencies = [
 [[package]]
 name = "rocket"
 version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?branch=master#7595450adc1aa3892004f02b606706597eb924e9"
+source = "git+https://github.com/SergioBenitez/Rocket?branch=master#0d53e23bf6cb86f9136fa8b37a92ba8076aacf67"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -2595,6 +2637,7 @@ dependencies = [
  "rocket_codegen",
  "rocket_http",
  "serde",
+ "serde_json",
  "state",
  "tempfile",
  "time 0.2.26",
@@ -2609,7 +2652,7 @@ dependencies = [
 [[package]]
 name = "rocket_codegen"
 version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?branch=master#7595450adc1aa3892004f02b606706597eb924e9"
+source = "git+https://github.com/SergioBenitez/Rocket?branch=master#0d53e23bf6cb86f9136fa8b37a92ba8076aacf67"
 dependencies = [
  "devise",
  "glob",
@@ -2624,7 +2667,7 @@ dependencies = [
 [[package]]
 name = "rocket_cors"
 version = "0.5.2"
-source = "git+https://git.agnos.is/projectmoon/rocket_cors?branch=sync-rocket-version#a25ba220140030e4553936a8ae130af0d89318dd"
+source = "git+https://git.agnos.is/projectmoon/rocket_cors?branch=sync-rocket-version#acd524db2594b6117160d78983941bc52db69a28"
 dependencies = [
  "log",
  "regex",
@@ -2639,7 +2682,7 @@ dependencies = [
 [[package]]
 name = "rocket_http"
 version = "0.5.0-dev"
-source = "git+https://github.com/SergioBenitez/Rocket?branch=master#7595450adc1aa3892004f02b606706597eb924e9"
+source = "git+https://github.com/SergioBenitez/Rocket?branch=master#0d53e23bf6cb86f9136fa8b37a92ba8076aacf67"
 dependencies = [
  "cookie",
  "either",
@@ -2861,7 +2904,7 @@ version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7007ae39c0ae535438e5b8047e89d50d5dc1f0d6ed0f8c19c54c8ad1d814817"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "ring",
  "ruma-identifiers",
  "ruma-serde",
@@ -2891,7 +2934,7 @@ version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b18820d944b33caa75a71378964ac46f58517c92b6ae5f762636247c09e78fb"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "blake2b_simd",
  "constant_time_eq",
  "crossbeam-utils",
@@ -3087,6 +3130,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "simple_asn1"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "692ca13de57ce0613a363c8c2f1de925adebc81b04c923ac60c5488bb44abe4b"
+dependencies = [
+ "chrono",
+ "num-bigint",
+ "num-traits",
+]
+
+[[package]]
 name = "siphasher"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3270,9 +3324,8 @@ dependencies = [
 
 [[package]]
 name = "state"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b54c22963194db84a59ee48e1fa9ed6c1fa9909ad5db92a700aa6fe956d632b"
+version = "0.4.2"
+source = "git+https://github.com/SergioBenitez/state.git?rev=8f94dc#8f94dce673b7d4b0e7b96c808a84f5e2a4be4a60"
 dependencies = [
  "loom",
 ]
@@ -3440,12 +3493,15 @@ dependencies = [
 name = "tenebrous-api"
 version = "0.1.0"
 dependencies = [
+ "chrono",
+ "jsonwebtoken",
  "juniper",
  "juniper_rocket_async",
  "log",
  "prost",
  "rocket",
  "rocket_cors",
+ "serde",
  "tenebrous-rpc",
  "tonic",
  "tracing-subscriber",
@@ -3691,7 +3747,7 @@ checksum = "2ac42cd97ac6bd2339af5bcabf105540e21e45636ec6fa6aae5e85d44db31be0"
 dependencies = [
  "async-stream",
  "async-trait",
- "base64",
+ "base64 0.13.0",
  "bytes",
  "futures-core",
  "futures-util",

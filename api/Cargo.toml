@@ -9,8 +9,11 @@ log = "0.4"
 tracing-subscriber = "0.2"
 tonic = { version = "0.4" }
 prost = "0.7"
+jsonwebtoken = "7.2"
+chrono = "0.4"
+serde = {version = "1.0", features = ["derive"] }
 tenebrous-rpc = { path = "../rpc" }
 juniper = { git = "https://github.com/graphql-rust/juniper", branch = "master" }
 juniper_rocket_async = { git = "https://github.com/graphql-rust/juniper", branch = "master" }
-rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "master" }
+rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "master", features = ["json"] }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master" }
