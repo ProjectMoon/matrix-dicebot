@@ -1,3 +1,4 @@
+use crate::auth::User;
 use crate::config::create_config;
 use crate::schema::{self, Context, Schema};
 use log::info;
@@ -26,7 +27,9 @@ async fn post_graphql_handler(
     context: &State<Context>,
     request: juniper_rocket_async::GraphQLRequest,
     schema: &State<Schema>,
+    user: User,
 ) -> juniper_rocket_async::GraphQLResponse {
+    println!("User is {:?}", user);
     request.execute(&*schema, &*context).await
 }
 

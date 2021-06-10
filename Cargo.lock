@@ -3518,7 +3518,9 @@ dependencies = [
  "rocket",
  "rocket_cors",
  "serde",
+ "substring",
  "tenebrous-rpc",
+ "thiserror",
  "tonic",
  "tracing-subscriber",
 ]
