@@ -3518,6 +3518,7 @@ dependencies = [
  "rocket",
  "rocket_cors",
  "serde",
+ "serde_json",
  "substring",
  "tenebrous-rpc",
  "thiserror",

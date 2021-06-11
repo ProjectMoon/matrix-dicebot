@@ -50,6 +50,12 @@ async fn do_jwt_stuff(dispatch: &WebUiDispatcher) -> Result<(), UiError> {
     Ok(())
 }
 
+async fn do_refresh_jwt(dispatch: &WebUiDispatcher) -> Result<(), UiError> {
+    let jwt = api::auth::refresh_jwt().await?;
+    dispatch.send(Action::UpdateJwt(jwt));
+    Ok(())
+}
+
 impl Component for YewduxRoomList {
     type Message = ();
     type Properties = WebUiDispatcher;
@@ -84,6 +90,7 @@ impl Component for YewduxRoomList {
     fn view(&self) -> Html {
         let dispatch = Arc::new(self.dispatch.clone());
         let dispatch2 = dispatch.clone();
+        let dispatch3 = dispatch.clone();
 
         let the_future = self.link.callback(move |_| {
             let dispatch = dispatch.clone();
@@ -105,10 +112,18 @@ impl Component for YewduxRoomList {
             });
         });
 
+        let refresh_jwt = self.link.callback(move |_| {
+            let dispatch = dispatch3.clone();
+            spawn_local(async move {
+                do_refresh_jwt(&*dispatch).await;
+            });
+        });
+
         html! {
             <div>
                 <button onclick=the_future>{ "Add Room" }</button>
                 <button onclick=jwt_update>{ "Fetch JWT" }</button>
+                <button onclick=refresh_jwt>{ "Refresh JWT" }</button>
                 <div> { "Current JWT: " } { self.dispatch.state().jwt_token.as_ref().unwrap_or(&"[not set]".to_string()) }</div>
              <ul>
                 {

@@ -3,17 +3,29 @@ use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{console, Request, RequestInit, RequestMode, Response};
+use web_sys::{console, Request, RequestCredentials, RequestInit, RequestMode, Response};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct LoginResponse {
     jwt_token: String,
 }
 
+async fn make_request(request: Request) -> Result<JsValue, UiError> {
+    let window = web_sys::window().unwrap();
+
+    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+    let resp: Response = resp_value.dyn_into().unwrap();
+
+    let json = JsFuture::from(resp.json()?).await?;
+    Ok(json)
+}
+
 pub async fn fetch_jwt() -> Result<String, UiError> {
     let mut opts = RequestInit::new();
     opts.method("POST");
     opts.mode(RequestMode::Cors);
+    opts.credentials(RequestCredentials::Include);
+
     opts.body(Some(&JsValue::from_str(
         r#"
           { "username": "@projectmoon:agnos.is", "password": "lolol" }
@@ -26,21 +38,29 @@ pub async fn fetch_jwt() -> Result<String, UiError> {
     request.headers().set("Content-Type", "application/json")?;
     request.headers().set("Accept", "application/json")?;
 
-    let window = web_sys::window().unwrap();
-    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+    //TODO don't unwrap the response. OR... change it so we have a standard response.
+    let response = make_request(request).await?;
+    let response: LoginResponse = response.into_serde().unwrap();
 
-    // `resp_value` is a `Response` object.
-    assert!(resp_value.is_instance_of::<Response>());
-    let resp: Response = resp_value.dyn_into().unwrap();
+    Ok(response.jwt_token)
+}
 
-    // Convert this other `Promise` into a rust `Future`.
-    let json = JsFuture::from(resp.json()?).await?;
+pub async fn refresh_jwt() -> Result<String, UiError> {
+    let mut opts = RequestInit::new();
+    opts.method("POST");
+    opts.mode(RequestMode::Cors);
+    opts.credentials(RequestCredentials::Include);
 
-    console::log_1(&json);
+    let url = format!("http://localhost:10000/refresh");
 
-    // Use serde to parse the JSON into a struct.
-    let login_response: LoginResponse = json.into_serde().unwrap();
+    let request = Request::new_with_str_and_init(&url, &opts)?;
+    request.headers().set("Content-Type", "application/json")?;
+    request.headers().set("Accept", "application/json")?;
 
-    // Send the `Branch` struct back to JS as an `Object`.
-    Ok(login_response.jwt_token)
+    //TODO don't unwrap the response. OR... change it so we have a standard response.
+    let response = make_request(request).await?;
+    console::log_1(&response);
+    let response: LoginResponse = response.into_serde().unwrap();
+
+    Ok(response.jwt_token)
 }

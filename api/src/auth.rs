@@ -2,8 +2,8 @@ use crate::config::Config;
 use crate::errors::ApiError;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use rocket::request::{self, FromRequest, Request};
 use rocket::response::status::Custom;
+use rocket::{http::SameSite, request::local_cache};
 use rocket::{
     http::Status,
     serde::{json::Json, Deserialize, Serialize},
@@ -11,6 +11,10 @@ use rocket::{
 use rocket::{
     http::{Cookie, CookieJar},
     outcome::Outcome,
+};
+use rocket::{
+    outcome::IntoOutcome,
+    request::{self, FromRequest, Request},
 };
 use rocket::{routes, Route, State};
 use substring::Substring;
@@ -56,7 +60,7 @@ impl<'r> FromRequest<'r> for User {
 }
 
 pub(crate) fn routes() -> Vec<Route> {
-    routes![login]
+    routes![login, refresh_token]
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,7 +79,7 @@ fn create_token<'a>(
     username: &str,
     expiration: Duration,
     secret: &str,
-) -> Result<String, Custom<String>> {
+) -> Result<String, ApiError> {
     let expiration = Utc::now()
         .checked_add_signed(expiration)
         .expect("clock went awry")
@@ -90,8 +94,7 @@ fn create_token<'a>(
         &Header::default(),
         &claims,
         &EncodingKey::from_secret(secret.as_bytes()),
-    )
-    .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+    )?;
 
     Ok(token)
 }
@@ -101,15 +104,51 @@ struct LoginResponse {
     jwt_token: String,
 }
 
+/// A strongly-typed representation of the refresh token, used with a
+/// FromRequest trait to decode it from the cookie.
+struct RefreshToken(String);
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for RefreshToken {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+        let token: Option<RefreshToken> = request
+            .cookies()
+            .get_private("refresh_token")
+            .and_then(|cookie| cookie.value().parse::<String>().ok())
+            .map(|t| RefreshToken(t));
+
+        token.or_forward(())
+    }
+}
+
 #[rocket::post("/login", data = "<request>")]
 async fn login(
     request: Json<LoginRequest<'_>>,
     config: &State<Config>,
     cookies: &CookieJar<'_>,
-) -> Result<Json<LoginResponse>, Custom<String>> {
+) -> Result<Json<LoginResponse>, ApiError> {
     let token = create_token(request.username, Duration::minutes(1), &config.jwt_secret)?;
     let refresh_token = create_token(request.username, Duration::weeks(1), &config.jwt_secret)?;
 
-    cookies.add_private(Cookie::new("refresh_token", refresh_token));
+    let mut cookie = Cookie::new("refresh_token", refresh_token);
+    cookie.set_same_site(SameSite::None);
+    cookies.add_private(cookie);
+
+    Ok(Json(LoginResponse { jwt_token: token }))
+}
+
+#[rocket::post("/refresh")]
+async fn refresh_token(
+    config: &State<Config>,
+    refresh_token: Option<RefreshToken>,
+) -> Result<Json<LoginResponse>, ApiError> {
+    let refresh_token = refresh_token.ok_or(ApiError::RefreshTokenMissing)?;
+    let refresh_token = decode_token(&refresh_token.0, config)?;
+
+    //TODO check if token is valid? maybe decode takes care of it.
+    let token = create_token(&refresh_token.sub, Duration::minutes(1), &config.jwt_secret)?;
+
     Ok(Json(LoginResponse { jwt_token: token }))
 }
