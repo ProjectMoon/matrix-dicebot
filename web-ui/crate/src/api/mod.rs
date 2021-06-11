@@ -2,6 +2,9 @@ use graphql_client_web::Response;
 
 use crate::error::UiError;
 
+pub mod auth;
+pub mod dicebot;
+
 /// Extensions to the GraphQL web response type to add convenience,
 /// particularly when working with errors.
 trait ResponseExt<T> {
@@ -32,5 +35,3 @@ impl<T> ResponseExt<T> for Response<T> {
         Ok(data)
     }
 }
-
-pub mod dicebot;

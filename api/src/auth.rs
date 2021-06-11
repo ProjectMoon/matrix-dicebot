@@ -96,15 +96,20 @@ fn create_token<'a>(
     Ok(token)
 }
 
+#[derive(Serialize)]
+struct LoginResponse {
+    jwt_token: String,
+}
+
 #[rocket::post("/login", data = "<request>")]
 async fn login(
     request: Json<LoginRequest<'_>>,
     config: &State<Config>,
     cookies: &CookieJar<'_>,
-) -> Result<String, Custom<String>> {
+) -> Result<Json<LoginResponse>, Custom<String>> {
     let token = create_token(request.username, Duration::minutes(1), &config.jwt_secret)?;
     let refresh_token = create_token(request.username, Duration::weeks(1), &config.jwt_secret)?;
 
     cookies.add_private(Cookie::new("refresh_token", refresh_token));
-    Ok(token)
+    Ok(Json(LoginResponse { jwt_token: token }))
 }
