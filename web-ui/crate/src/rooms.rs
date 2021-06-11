@@ -26,7 +26,13 @@ fn view_room(room: &Room) -> Html {
 }
 
 async fn load_rooms(dispatch: &WebUiDispatcher) -> Result<(), UiError> {
-    let rooms = api::dicebot::rooms_for_user("@projectmoon:agnos.is").await?;
+    let jwt_token = dispatch
+        .state()
+        .jwt_token
+        .as_ref()
+        .ok_or(UiError::NotLoggedIn)?;
+
+    let rooms = api::dicebot::rooms_for_user(jwt_token, "@projectmoon:agnos.is").await?;
 
     for room in rooms {
         dispatch.send(Action::AddRoom(Room {
@@ -76,11 +82,24 @@ impl Component for YewduxRoomList {
     }
 
     fn view(&self) -> Html {
-        let the_future = self.link.callback(move |_| {});
-
         let dispatch = Arc::new(self.dispatch.clone());
-        let jwt_update = self.link.callback(move |_| {
+        let dispatch2 = dispatch.clone();
+
+        let the_future = self.link.callback(move |_| {
             let dispatch = dispatch.clone();
+
+            spawn_local(async move {
+                //TODO make macro to report errors in some common way:
+                //handle_errors!(do_things(&*dispatch).await)
+                match load_rooms(&*dispatch).await {
+                    Err(e) => console::log_1(&format!("Error: {:?}", e).into()),
+                    _ => (),
+                }
+            });
+        });
+
+        let jwt_update = self.link.callback(move |_| {
+            let dispatch = dispatch2.clone();
             spawn_local(async move {
                 do_jwt_stuff(&*dispatch).await;
             });

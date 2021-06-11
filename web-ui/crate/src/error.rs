@@ -10,6 +10,9 @@ pub enum UiError {
     #[error("error: {0}")]
     ApiError(String),
 
+    #[error("login token invalid or expired")]
+    NotLoggedIn,
+
     #[error("error: {0}")]
     JsError(String),
 }

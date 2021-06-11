@@ -22,11 +22,14 @@ struct GetUserVariable;
 struct RoomsForUser;
 
 pub async fn get_user_variable(
+    jwt_token: &str,
     room_id: &str,
     user_id: &str,
     variable_name: &str,
 ) -> Result<i64, UiError> {
-    let client = Client::new("http://localhost:10000/graphql");
+    let mut client = Client::new("http://localhost:10000/graphql");
+    client.add_header("Authorization", &format!("Bearer {}", jwt_token));
+
     let variables = get_user_variable::Variables {
         room_id: room_id.to_owned(),
         user_id: user_id.to_owned(),
@@ -39,9 +42,12 @@ pub async fn get_user_variable(
 }
 
 pub async fn rooms_for_user(
+    jwt_token: &str,
     user_id: &str,
 ) -> Result<Vec<rooms_for_user::RoomsForUserUserRoomsRooms>, UiError> {
-    let client = Client::new("http://localhost:10000/graphql");
+    let mut client = Client::new("http://localhost:10000/graphql");
+    client.add_header("Authorization", &format!("Bearer {}", jwt_token));
+
     let variables = rooms_for_user::Variables {
         user_id: user_id.to_owned(),
     };
