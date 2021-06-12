@@ -1,6 +1,6 @@
 use crate::api;
 use crate::error::UiError;
-use crate::state::{Action, Room, WebUiDispatcher};
+use crate::state::{Action, DispatchExt, Room, WebUiDispatcher};
 use std::sync::Arc;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::console;
@@ -44,10 +44,13 @@ async fn load_rooms(dispatch: &WebUiDispatcher) -> Result<(), UiError> {
     Ok(())
 }
 
-async fn do_refresh_jwt(dispatch: &WebUiDispatcher) -> Result<(), UiError> {
-    let jwt = api::auth::refresh_jwt().await?;
-    dispatch.send(Action::UpdateJwt(jwt));
-    Ok(())
+async fn do_refresh_jwt(dispatch: &WebUiDispatcher) {
+    let refresh = api::auth::refresh_jwt().await;
+
+    match refresh {
+        Ok(jwt) => dispatch.send(Action::UpdateJwt(jwt)),
+        Err(e) => dispatch.dispatch_error(e),
+    }
 }
 
 impl Component for YewduxRoomList {
@@ -101,9 +104,7 @@ impl Component for YewduxRoomList {
 
         let refresh_jwt = self.link.callback(move |_| {
             let dispatch = dispatch3.clone();
-            spawn_local(async move {
-                do_refresh_jwt(&*dispatch).await;
-            });
+            spawn_local(async move { do_refresh_jwt(&*dispatch).await });
         });
 
         html! {

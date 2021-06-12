@@ -1,3 +1,4 @@
+use crate::components::error_message::ErrorMessage;
 use crate::components::login::Login;
 use rooms::RoomList;
 use rooms::YewduxRoomList;
@@ -42,53 +43,13 @@ fn render_route(routes: &AppRoute) -> Html {
             html! {
                 <div>
                     <Login />
+                    <ErrorMessage />
                     <RoomList />
                 </div>
             }
         }
     }
 }
-
-// struct AppMenu;
-
-// impl Component for AppMenu {
-//     type Message = ();
-//     type Properties = ();
-
-//     fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
-//         Self
-//     }
-
-//     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-//         false
-//     }
-
-//     fn change(&mut self, _: Self::Properties) -> ShouldRender {
-//         false
-//     }
-
-//     fn view(&self) -> Html {
-//         html! {
-//              <ul>
-//                 <li>
-//                     <AppAnchor route=AppRoute::Index>{"Home"}</AppAnchor>
-//                 </li>
-//                 <li>
-//                     <AppAnchor route=AppRoute::Oaths>{"Oaths"}</AppAnchor>
-//                 </li>
-//                 <li>
-//                     <AppAnchor route=AppRoute::Commitments>{"Commitments"}</AppAnchor>
-//                 </li>
-//                 <li>
-//                     <AppAnchor route=AppRoute::Studies>{"Studies"}</AppAnchor>
-//                 </li>
-//                 <li>
-//                     <AppAnchor route=AppRoute::RunicDivination>{"Runic Divination"}</AppAnchor>
-//                 </li>
-//              </ul>
-//         }
-//     }
-// }
 
 struct App;
 

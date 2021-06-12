@@ -5,20 +5,45 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{console, Request, RequestCredentials, RequestInit, RequestMode, Response};
 
+/// A struct representing an error coming back from the REST API
+/// endpoint. The API server encodes any errors as JSON objects with a
+/// "message" property containing the error, and a bad status code.
+#[derive(Debug, Serialize, Deserialize)]
+struct ApiError {
+    message: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct LoginResponse {
     jwt_token: String,
 }
 
-async fn make_request(request: Request) -> Result<JsValue, UiError> {
+async fn make_request<T>(request: Request) -> Result<T, UiError>
+where
+    T: for<'a> Deserialize<'a>,
+{
     let window = web_sys::window().unwrap();
 
     let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
     let resp: Response = resp_value.dyn_into().unwrap();
+    let ok = resp.ok();
 
     let json = JsFuture::from(resp.json()?).await?;
     console::log_1(&json);
-    Ok(json)
+    //if ok, attempt to deserialize into T.
+    //if not ok, attempt to deserialize into struct with message, and fall back
+    //if that fails.
+    if ok {
+        let data: T = json.into_serde()?;
+        Ok(data)
+    } else {
+        let data: ApiError = json.into_serde()?;
+        Err(UiError::ApiError(data.message.unwrap_or_else(|| {
+            let status_text = resp.status_text();
+            let status = resp.status();
+            format!("[{}] - {} - unknown api error", status, status_text)
+        })))
+    }
 }
 
 pub async fn login(username: &str, password: &str) -> Result<String, UiError> {
@@ -42,10 +67,7 @@ pub async fn login(username: &str, password: &str) -> Result<String, UiError> {
     request.headers().set("Content-Type", "application/json")?;
     request.headers().set("Accept", "application/json")?;
 
-    //TODO don't unwrap the response. OR... change it so we have a standard response.
-    let response = make_request(request).await?;
-    let response: LoginResponse = response.into_serde().unwrap();
-
+    let response: LoginResponse = make_request(request).await?;
     Ok(response.jwt_token)
 }
 
@@ -62,8 +84,6 @@ pub async fn refresh_jwt() -> Result<String, UiError> {
     request.headers().set("Accept", "application/json")?;
 
     //TODO don't unwrap the response. OR... change it so we have a standard response.
-    let response = make_request(request).await?;
-    let response: LoginResponse = response.into_serde().unwrap();
-
+    let response: LoginResponse = make_request(request).await?;
     Ok(response.jwt_token)
 }
