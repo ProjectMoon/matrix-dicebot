@@ -17,21 +17,25 @@ async fn make_request(request: Request) -> Result<JsValue, UiError> {
     let resp: Response = resp_value.dyn_into().unwrap();
 
     let json = JsFuture::from(resp.json()?).await?;
+    console::log_1(&json);
     Ok(json)
 }
 
-pub async fn fetch_jwt() -> Result<String, UiError> {
+pub async fn login(username: &str, password: &str) -> Result<String, UiError> {
     let mut opts = RequestInit::new();
     opts.method("POST");
     opts.mode(RequestMode::Cors);
     opts.credentials(RequestCredentials::Include);
 
-    opts.body(Some(&JsValue::from_str(
-        r#"
-          { "username": "@projectmoon:agnos.is", "password": "lolol" }
-        "#,
-    )));
+    let body = JsValue::from_str(
+        &serde_json::json!({
+            "username": username,
+            "password": password
+        })
+        .to_string(),
+    );
 
+    opts.body(Some(&body));
     let url = format!("http://localhost:10000/login");
 
     let request = Request::new_with_str_and_init(&url, &opts)?;
@@ -59,7 +63,6 @@ pub async fn refresh_jwt() -> Result<String, UiError> {
 
     //TODO don't unwrap the response. OR... change it so we have a standard response.
     let response = make_request(request).await?;
-    console::log_1(&response);
     let response: LoginResponse = response.into_serde().unwrap();
 
     Ok(response.jwt_token)

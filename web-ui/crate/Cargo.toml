@@ -30,6 +30,7 @@ js-sys = "0.3"
 graphql_client = { git = "https://github.com/graphql-rust/graphql-client", branch = "master" }
 graphql_client_web = { git = "https://github.com/graphql-rust/graphql-client", branch = "master" }
 serde = { version = "1.0.67", features = ["derive"] }
+serde_json = {version = "1.0" }
 thiserror = "1.0"
 
 [dependencies.web-sys]

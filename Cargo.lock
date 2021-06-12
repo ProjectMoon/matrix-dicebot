@@ -3578,6 +3578,7 @@ dependencies = [
  "graphql_client_web",
  "js-sys",
  "serde",
+ "serde_json",
  "tenebrous-api",
  "thiserror",
  "wasm-bindgen",

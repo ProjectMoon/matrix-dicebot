@@ -15,6 +15,9 @@ pub enum UiError {
 
     #[error("error: {0}")]
     JsError(String),
+
+    #[error("(de)serialization error: {0}")]
+    SerdeError(#[from] serde_json::Error),
 }
 
 impl From<wasm_bindgen::JsValue> for UiError {

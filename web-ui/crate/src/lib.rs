@@ -1,3 +1,4 @@
+use crate::components::login::Login;
 use rooms::RoomList;
 use rooms::YewduxRoomList;
 use wasm_bindgen::prelude::*;
@@ -6,6 +7,7 @@ use yew_router::prelude::*;
 use yewdux::prelude::*;
 
 pub mod api;
+pub mod components;
 pub mod error;
 pub mod grpc;
 pub mod rooms;
@@ -38,7 +40,10 @@ fn render_route(routes: &AppRoute) -> Html {
         }
         AppRoute::Index => {
             html! {
-                <RoomList />
+                <div>
+                    <Login />
+                    <RoomList />
+                </div>
             }
         }
     }
