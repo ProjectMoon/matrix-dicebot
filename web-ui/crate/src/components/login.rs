@@ -1,9 +1,8 @@
+use crate::api;
 use crate::error::UiError;
-use crate::state::{Action, Room, WebUiDispatcher};
-use crate::{api, state::WebUiState};
-use std::sync::Arc;
+use crate::state::{Action, WebUiDispatcher};
+use std::rc::Rc;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::console;
 use web_sys::FocusEvent;
 use yew::prelude::*;
 use yewdux::dispatch::Dispatcher;
@@ -12,7 +11,7 @@ use yewtil::NeqAssign;
 
 #[doc(hidden)]
 pub(crate) struct YewduxLogin {
-    dispatch: Arc<WebUiDispatcher>,
+    dispatch: Rc<WebUiDispatcher>,
     link: ComponentLink<YewduxLogin>,
     username: String,
     password: String,
@@ -49,7 +48,7 @@ impl Component for YewduxLogin {
 
     fn create(dispatch: Self::Properties, link: ComponentLink<Self>) -> Self {
         Self {
-            dispatch: Arc::new(dispatch),
+            dispatch: Rc::new(dispatch),
             link,
             username: "".to_string(),
             password: "".to_string(),
@@ -76,7 +75,7 @@ impl Component for YewduxLogin {
     }
 
     fn change(&mut self, dispatch: Self::Properties) -> ShouldRender {
-        self.dispatch.neq_assign(Arc::new(dispatch))
+        self.dispatch.neq_assign(Rc::new(dispatch))
     }
 
     fn rendered(&mut self, first_render: bool) {
@@ -86,9 +85,6 @@ impl Component for YewduxLogin {
     }
 
     fn view(&self) -> Html {
-        let dispatch = Arc::new(self.dispatch.clone());
-        let dispatch2 = dispatch.clone();
-
         // let do_the_login = self.dispatch.reduce_callback(|state| {
         //     spawn_local(async move {
         //         do_login(state, "user", "pw").await;
