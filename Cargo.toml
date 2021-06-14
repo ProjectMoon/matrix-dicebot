@@ -6,8 +6,3 @@ members = [
     "api",
     "web-ui/crate",
 ]
-
-# Necessary to keep it in sync with current rocket master, as they do
-# not update fast enough.
-[patch.'https://github.com/lawliet89/rocket_cors']
-rocket_cors = { git = 'https://git.agnos.is/projectmoon/rocket_cors', branch = 'sync-rocket-version' }

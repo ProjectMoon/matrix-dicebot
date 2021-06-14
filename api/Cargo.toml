@@ -18,5 +18,5 @@ serde_json = {version = "1.0" }
 tenebrous-rpc = { path = "../rpc" }
 juniper = { git = "https://github.com/graphql-rust/juniper", branch = "master" }
 juniper_rocket_async = { git = "https://github.com/graphql-rust/juniper", branch = "master" }
-rocket = { git = "https://github.com/SergioBenitez/Rocket", branch = "master", features = ["json", "secrets"] }
+rocket = { version = "0.5.0-rc.1", features = ["json", "secrets"] }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master" }
