@@ -391,6 +391,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "cfg-match"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8100e46ff92eb85bf6dc2930c73f2a4f7176393c84a9446b3d501e1b354e7b34"
+
+[[package]]
 name = "chacha20"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2729,12 +2735,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "route-recognizer"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "824172f0afccf3773c3905f5550ac94572144efe0deaf49a1f22bbca188d193e"
-
-[[package]]
 name = "ruma"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3013,12 +3013,6 @@ name = "scoped-tls"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea6a9290e3c9cf0f18145ef7ffa62d68ee0bf5fcd651017e586dc7fd5da448c2"
-
-[[package]]
-name = "scoped-tls-hkt"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2e9d7eaddb227e8fbaaa71136ae0e1e913ca159b86c7da82f3e8f0044ad3a63"
 
 [[package]]
 name = "scopeguard"
@@ -3592,9 +3586,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "yew",
- "yew-functional",
  "yew-router",
- "yew-services",
  "yewdux",
  "yewtil",
 ]
@@ -4222,28 +4214,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "weblog"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6eec0958e0181982bc8b4577b1363f21300a670603615c58643f172c92c47357"
-dependencies = [
- "wasm-bindgen",
- "web-sys",
- "weblog-proc-macro",
-]
-
-[[package]]
-name = "weblog-proc-macro"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d9abb8ee84ede5408a346721d72fb216a27f53a539ff3c83ed1bf7625af7104"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "which"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4335,18 +4305,22 @@ checksum = "9fc79f4a1e39857fc00c3f662cbf2651c771f00e9c15fe2abc341806bd46bd71"
 
 [[package]]
 name = "yew"
-version = "0.17.4"
-source = "git+https://github.com/yewstack/yew?rev=246bc59#246bc5960b504258b0603bc76760777e6650c91d"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4d5154faef86dddd2eb333d4755ea5643787d20aca683e58759b0e53351409f"
 dependencies = [
  "anyhow",
  "anymap",
  "bincode",
+ "cfg-if 1.0.0",
+ "cfg-match",
  "console_error_panic_hook",
  "gloo",
  "http",
  "indexmap",
  "js-sys",
  "log",
+ "ryu",
  "serde",
  "serde_json",
  "slab",
@@ -4358,30 +4332,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "yew-functional"
-version = "0.13.0"
-source = "git+https://github.com/yewstack/yew?rev=246bc59#246bc5960b504258b0603bc76760777e6650c91d"
-dependencies = [
- "scoped-tls-hkt",
- "wasm-bindgen",
- "yew",
- "yew-functional-macro",
-]
-
-[[package]]
-name = "yew-functional-macro"
-version = "0.1.0"
-source = "git+https://github.com/yewstack/yew?rev=246bc59#246bc5960b504258b0603bc76760777e6650c91d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "yew-macro"
-version = "0.17.0"
-source = "git+https://github.com/yewstack/yew?rev=246bc59#246bc5960b504258b0603bc76760777e6650c91d"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6e23bfe3dc3933fbe9592d149c9985f3047d08c637a884b9344c21e56e092ef"
 dependencies = [
  "boolinator",
  "lazy_static",
@@ -4392,68 +4346,65 @@ dependencies = [
 
 [[package]]
 name = "yew-router"
-version = "0.14.0"
-source = "git+https://github.com/yewstack/yew?rev=246bc59#246bc5960b504258b0603bc76760777e6650c91d"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27666236d9597eac9be560e841e415e20ba67020bc8cd081076be178e159c8bc"
 dependencies = [
+ "cfg-if 1.0.0",
+ "cfg-match",
  "gloo",
  "js-sys",
- "route-recognizer",
+ "log",
+ "nom 5.1.2",
  "serde",
- "serde_urlencoded",
+ "serde_json",
  "wasm-bindgen",
  "web-sys",
- "weblog",
  "yew",
  "yew-router-macro",
+ "yew-router-route-parser",
 ]
 
 [[package]]
 name = "yew-router-macro"
-version = "0.14.0"
-source = "git+https://github.com/yewstack/yew?rev=246bc59#246bc5960b504258b0603bc76760777e6650c91d"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c0ace2924b7a175e2d1c0e62ee7022a5ad840040dcd52414ce5f410ab322dba"
 dependencies = [
- "heck",
  "proc-macro2",
  "quote",
  "syn",
+ "yew-router-route-parser",
 ]
 
 [[package]]
-name = "yew-services"
-version = "0.1.0"
-source = "git+https://github.com/yewstack/yew?rev=246bc59#246bc5960b504258b0603bc76760777e6650c91d"
+name = "yew-router-route-parser"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de4a67208fb46b900af18a7397938b01f379dfc18da34799cfa8347eec715697"
 dependencies = [
- "anyhow",
- "gloo",
- "http",
- "js-sys",
- "serde",
- "serde_json",
- "thiserror",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "yew",
+ "nom 5.1.2",
 ]
 
 [[package]]
 name = "yewdux"
-version = "0.6.1"
-source = "git+https://github.com/deftsp/yewdux?rev=dbda686#dbda686dea05c0efaef0cd3af46012033071f40e"
+version = "0.6.2"
+source = "git+https://github.com/intendednull/yewdux?rev=v0.6.2#a6d8dbf69d472a2d0e82ab70237b16e86865c994"
 dependencies = [
  "serde",
  "yew",
- "yew-services",
 ]
 
 [[package]]
 name = "yewtil"
-version = "0.3.2"
-source = "git+https://github.com/yewstack/yew?rev=246bc59#246bc5960b504258b0603bc76760777e6650c91d"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8543663ac49cd613df079282a1d8bdbdebdad6e02bac229f870fd4237b5d9aaa"
 dependencies = [
  "log",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "web-sys",
  "yew",
 ]
 

@@ -8,8 +8,22 @@ pub(crate) struct Room {
     pub display_name: String,
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub(crate) enum AuthState {
+    NotLoggedIn,
+    LoggedIn,
+    RefreshNeeded,
+}
+
+impl Default for AuthState {
+    fn default() -> Self {
+        AuthState::RefreshNeeded
+    }
+}
+
 #[derive(Default, Clone)]
 pub(crate) struct WebUiState {
+    pub auth_state: AuthState,
     pub jwt_token: Option<String>,
     pub rooms: Vec<Room>,
     pub error_messages: Vec<String>,
@@ -20,6 +34,8 @@ pub(crate) enum Action {
     AddRoom(Room),
     ErrorMessage(UiError),
     ClearErrorMessage,
+    ChangeAuthState(AuthState),
+    Login(String),
 }
 
 impl Reducer for WebUiState {
@@ -32,7 +48,12 @@ impl Reducer for WebUiState {
     fn reduce(&mut self, action: Self::Action) -> bool {
         match action {
             Action::UpdateJwt(jwt_token) => self.jwt_token = Some(jwt_token),
+            Action::Login(jwt_token) => {
+                self.jwt_token = Some(jwt_token);
+                self.auth_state = AuthState::LoggedIn;
+            }
             Action::AddRoom(room) => self.rooms.push(room.clone()),
+            Action::ChangeAuthState(auth_state) => self.auth_state = auth_state,
             Action::ErrorMessage(error) => self.error_messages.push(error.to_string()),
             Action::ClearErrorMessage => {
                 if self.error_messages.len() > 0 {

@@ -25,20 +25,14 @@ pub enum LoginAction {
 }
 
 pub(crate) type Login = WithDispatch<YewduxLogin>;
+
 async fn do_login(
     dispatch: &WebUiDispatcher,
     username: &str,
     password: &str,
 ) -> Result<(), UiError> {
     let jwt = api::auth::login(username, password).await?;
-    //state.jwt_token = Some(jwt);
-    dispatch.send(Action::UpdateJwt(jwt));
-    Ok(())
-}
-
-async fn do_refresh_jwt(dispatch: &WebUiDispatcher) -> Result<(), UiError> {
-    let jwt = api::auth::refresh_jwt().await?;
-    dispatch.send(Action::UpdateJwt(jwt));
+    dispatch.send(Action::Login(jwt));
     Ok(())
 }
 
@@ -78,30 +72,11 @@ impl Component for YewduxLogin {
         self.dispatch.neq_assign(Rc::new(dispatch))
     }
 
-    fn rendered(&mut self, first_render: bool) {
-        if first_render {
-            //
-        }
-    }
-
     fn view(&self) -> Html {
-        // let do_the_login = self.dispatch.reduce_callback(|state| {
-        //     spawn_local(async move {
-        //         do_login(state, "user", "pw").await;
-        //     });
-        // });
-
         let do_the_login = self.link.callback(move |e: FocusEvent| {
             e.prevent_default();
             LoginAction::Login
         });
-
-        // let refresh_jwt = self.link.callback(move |_| {
-        //     let dispatch = dispatch2.clone();
-        //     spawn_local(async move {
-        //         do_refresh_jwt(&*dispatch).await;
-        //     });
-        // });
 
         let update_username = self
             .link
