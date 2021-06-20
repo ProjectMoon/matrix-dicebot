@@ -83,7 +83,6 @@ pub async fn refresh_jwt() -> Result<String, UiError> {
     request.headers().set("Content-Type", "application/json")?;
     request.headers().set("Accept", "application/json")?;
 
-    //TODO don't unwrap the response. OR... change it so we have a standard response.
     let response: LoginResponse = make_request(request).await?;
     Ok(response.jwt_token)
 }

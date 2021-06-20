@@ -3578,6 +3578,7 @@ dependencies = [
  "graphql_client",
  "graphql_client_web",
  "js-sys",
+ "jsonwebtoken",
  "serde",
  "serde_json",
  "tenebrous-api",

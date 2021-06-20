@@ -18,6 +18,9 @@ pub enum UiError {
 
     #[error("(de)serialization error: {0}")]
     SerdeError(#[from] serde_json::Error),
+
+    #[error("JWT validation error: {0}")]
+    JwtError(#[from] jsonwebtoken::errors::Error),
 }
 
 impl From<wasm_bindgen::JsValue> for UiError {

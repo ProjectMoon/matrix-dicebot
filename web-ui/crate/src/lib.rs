@@ -16,6 +16,7 @@ pub mod api;
 pub mod components;
 pub mod error;
 pub mod grpc;
+pub mod logic;
 pub mod rooms;
 pub mod state;
 
