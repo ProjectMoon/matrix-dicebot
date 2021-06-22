@@ -1,6 +1,16 @@
 use crate::error::UiError;
+use jsonwebtoken::{
+    dangerous_insecure_decode_with_validation as decode_without_verify, Validation,
+};
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::{prelude::Closure, JsCast};
 use yewdux::prelude::*;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct Claims {
+    exp: usize,
+    sub: String,
+}
 
 #[derive(Clone)]
 pub(crate) struct Room {
@@ -27,6 +37,7 @@ pub(crate) struct WebUiState {
     pub jwt_token: Option<String>,
     pub rooms: Vec<Room>,
     pub error_messages: Vec<String>,
+    pub username: String,
 }
 
 pub(crate) enum Action {
@@ -36,8 +47,24 @@ pub(crate) enum Action {
     ClearErrorMessage,
     ChangeAuthState(AuthState),
     Login(String),
+    Logout,
 }
 
+impl WebUiState {
+    fn login(&mut self, jwt_token: String) {
+        let validation: Result<Claims, _> =
+            decode_without_verify(&jwt_token, &Validation::default()).map(|data| data.claims);
+
+        match validation {
+            Ok(claims) => {
+                self.jwt_token = Some(jwt_token);
+                self.auth_state = AuthState::LoggedIn;
+                self.username = claims.sub;
+            }
+            Err(e) => self.error_messages.push(e.to_string()),
+        }
+    }
+}
 impl Reducer for WebUiState {
     type Action = Action;
 
@@ -48,10 +75,8 @@ impl Reducer for WebUiState {
     fn reduce(&mut self, action: Self::Action) -> bool {
         match action {
             Action::UpdateJwt(jwt_token) => self.jwt_token = Some(jwt_token),
-            Action::Login(jwt_token) => {
-                self.jwt_token = Some(jwt_token);
-                self.auth_state = AuthState::LoggedIn;
-            }
+            Action::Login(jwt_token) => self.login(jwt_token),
+            Action::Logout => (),
             Action::AddRoom(room) => self.rooms.push(room.clone()),
             Action::ChangeAuthState(auth_state) => self.auth_state = auth_state,
             Action::ErrorMessage(error) => self.error_messages.push(error.to_string()),

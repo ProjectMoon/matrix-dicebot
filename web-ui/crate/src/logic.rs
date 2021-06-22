@@ -1,58 +1,63 @@
 use crate::{
     api,
-    error::UiError,
-    state::{Action, Room, WebUiDispatcher},
+    state::{Action, Claims, Room, WebUiDispatcher},
 };
 use jsonwebtoken::{
     dangerous_insecure_decode_with_validation as decode_without_verify, Validation,
 };
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    exp: usize,
-    sub: String,
+pub(crate) type LogicResult = Result<Vec<Action>, Action>;
+
+trait LogicResultExt {
+    /// Consumes self into the vec of Actions to apply to state,
+    /// either the list of successful actions, or a list containing
+    /// the error action.
+    fn actions(self) -> Vec<Action>;
+}
+
+impl LogicResultExt for LogicResult {
+    fn actions(self) -> Vec<Action> {
+        self.unwrap_or_else(|err_action| vec![err_action])
+    }
 }
 
 fn map_to_vec(action: Option<Action>) -> Vec<Action> {
     action.map(|a| vec![a]).unwrap_or_default()
 }
 
-async fn ensure_jwt(dispatch: &WebUiDispatcher) -> Result<(String, Option<Action>), UiError> {
-    //TODO we should add a logout action and return it from here if there's an error when refreshing.
-    //TODO somehow have to handle actions on an error!
+async fn refresh_ensured_jwt() -> Result<(String, Option<Action>), Action> {
+    api::auth::refresh_jwt()
+        .await
+        .map(|new_jwt| (new_jwt.clone(), Some(Action::UpdateJwt(new_jwt))))
+        .map_err(|_| Action::Logout)
+}
 
+async fn ensure_jwt(dispatch: &WebUiDispatcher) -> Result<(String, Option<Action>), Action> {
     //TODO lots of clones here. can we avoid?
     use jsonwebtoken::errors::ErrorKind;
     let token = dispatch.state().jwt_token.as_deref().unwrap_or_default();
-    let validation =
-        decode_without_verify::<Claims>(token, &Validation::default()).map(|data| data.claims);
+    let validation: Result<Claims, _> =
+        decode_without_verify(token, &Validation::default()).map(|data| data.claims);
 
     //If valid, simply return token. If expired, attempt to refresh.
     //Otherwise, bubble error.
     let token_and_action = match validation {
         Ok(_) => (token.to_owned(), None),
-        Err(e) if matches!(e.kind(), ErrorKind::ExpiredSignature) => {
-            match api::auth::refresh_jwt().await {
-                Ok(new_jwt) => (new_jwt.clone(), Some(Action::UpdateJwt(new_jwt))),
-                Err(e) => return Err(e.into()), //TODO logout action
-            }
-        }
-        Err(e) => return Err(e.into()),
+        Err(e) if matches!(e.kind(), ErrorKind::ExpiredSignature) => refresh_ensured_jwt().await?,
+        Err(_) => return Err(Action::Logout), //TODO carry error inside Logout?
     };
 
     Ok(token_and_action)
 }
 
-pub(crate) async fn fetch_rooms(dispatch: &WebUiDispatcher) -> Result<Vec<Action>, UiError> {
+pub(crate) async fn fetch_rooms(dispatch: &WebUiDispatcher) -> LogicResult {
     let (jwt, jwt_update) = ensure_jwt(dispatch)
         .await
         .map(|(token, update)| (token, map_to_vec(update)))?;
 
-    //Use new JWT to list rooms from graphql.
-    //TODO get username from state.
-    let rooms: Vec<Action> = api::dicebot::rooms_for_user(&jwt, "@projectmoon:agnos.is")
-        .await?
+    let rooms: Vec<Action> = api::dicebot::rooms_for_user(&jwt, &dispatch.state().username)
+        .await
+        .map_err(|e| Action::ErrorMessage(e))?
         .into_iter()
         .map(|room| {
             Action::AddRoom(Room {
