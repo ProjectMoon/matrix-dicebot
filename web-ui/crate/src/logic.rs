@@ -2,13 +2,11 @@ use crate::{
     api,
     state::{Action, Claims, Room, WebUiDispatcher},
 };
-use jsonwebtoken::{
-    dangerous_insecure_decode_with_validation as decode_without_verify, Validation,
-};
+use jsonwebtoken::dangerous_insecure_decode;
 
 pub(crate) type LogicResult = Result<Vec<Action>, Action>;
 
-trait LogicResultExt {
+pub(crate) trait LogicResultExt {
     /// Consumes self into the vec of Actions to apply to state,
     /// either the list of successful actions, or a list containing
     /// the error action.
@@ -36,8 +34,7 @@ async fn ensure_jwt(dispatch: &WebUiDispatcher) -> Result<(String, Option<Action
     //TODO lots of clones here. can we avoid?
     use jsonwebtoken::errors::ErrorKind;
     let token = dispatch.state().jwt_token.as_deref().unwrap_or_default();
-    let validation: Result<Claims, _> =
-        decode_without_verify(token, &Validation::default()).map(|data| data.claims);
+    let validation: Result<Claims, _> = dangerous_insecure_decode(token).map(|data| data.claims);
 
     //If valid, simply return token. If expired, attempt to refresh.
     //Otherwise, bubble error.

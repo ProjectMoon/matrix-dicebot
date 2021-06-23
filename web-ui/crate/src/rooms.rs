@@ -1,5 +1,6 @@
 use crate::api;
 use crate::error::UiError;
+use crate::logic::{self, LogicResultExt};
 use crate::state::{Action, DispatchExt, Room, WebUiDispatcher};
 use std::sync::Arc;
 use wasm_bindgen_futures::spawn_local;
@@ -26,19 +27,11 @@ fn view_room(room: &Room) -> Html {
 }
 
 async fn load_rooms(dispatch: &WebUiDispatcher) -> Result<(), UiError> {
-    let jwt_token = dispatch
-        .state()
-        .jwt_token
-        .as_ref()
-        .ok_or(UiError::NotLoggedIn)?;
+    let result = logic::fetch_rooms(dispatch).await;
+    let actions = result.actions();
 
-    let rooms = api::dicebot::rooms_for_user(jwt_token, "@projectmoon:agnos.is").await?;
-
-    for room in rooms {
-        dispatch.send(Action::AddRoom(Room {
-            room_id: room.room_id,
-            display_name: room.display_name,
-        }));
+    for action in actions {
+        dispatch.send(action);
     }
 
     Ok(())

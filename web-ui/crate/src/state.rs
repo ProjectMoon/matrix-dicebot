@@ -1,7 +1,5 @@
 use crate::error::UiError;
-use jsonwebtoken::{
-    dangerous_insecure_decode_with_validation as decode_without_verify, Validation,
-};
+use jsonwebtoken::dangerous_insecure_decode;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::{prelude::Closure, JsCast};
 use yewdux::prelude::*;
@@ -52,10 +50,11 @@ pub(crate) enum Action {
 
 impl WebUiState {
     fn login(&mut self, jwt_token: String) {
-        let validation: Result<Claims, _> =
-            decode_without_verify(&jwt_token, &Validation::default()).map(|data| data.claims);
+        //TODO this will not work because we cannot ignore the key to decode the JWT.
+        let jwt_decoding: Result<Claims, _> =
+            dangerous_insecure_decode(&jwt_token).map(|data| data.claims);
 
-        match validation {
+        match jwt_decoding {
             Ok(claims) => {
                 self.jwt_token = Some(jwt_token);
                 self.auth_state = AuthState::LoggedIn;
