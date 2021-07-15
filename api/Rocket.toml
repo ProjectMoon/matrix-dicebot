@@ -1,0 +1,10 @@
+[default]
+address = "0.0.0.0"
+port = 10000
+keep_alive = 5
+read_timeout = 5
+write_timeout = 5
+log = "normal"
+limits = { forms = 32768 }
+origins = [ "http://localhost:8000" ]
+jwt_secret = "abc123"

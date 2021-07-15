@@ -63,7 +63,12 @@ impl Dicebot for DicebotRpcService {
             .get_user_variable(&request.user_id, &request.room_id, &request.variable_name)
             .await?;
 
-        Ok(Response::new(GetVariableReply { value }))
+        Ok(Response::new(GetVariableReply {
+            user_id: request.user_id.clone(),
+            room_id: request.room_id.clone(),
+            variable_name: request.variable_name.clone(),
+            value,
+        }))
     }
 
     async fn get_all_variables(
@@ -76,7 +81,11 @@ impl Dicebot for DicebotRpcService {
             .get_user_variables(&request.user_id, &request.room_id)
             .await?;
 
-        Ok(Response::new(GetAllVariablesReply { variables }))
+        Ok(Response::new(GetAllVariablesReply {
+            user_id: request.user_id.clone(),
+            room_id: request.user_id.clone(),
+            variables,
+        }))
     }
 
     async fn rooms_for_user(
@@ -111,6 +120,9 @@ impl Dicebot for DicebotRpcService {
 
         rooms.sort_by(sort);
 
-        Ok(Response::new(RoomsListReply { rooms }))
+        Ok(Response::new(RoomsListReply {
+            user_id: user_id.into_string(),
+            rooms,
+        }))
     }
 }

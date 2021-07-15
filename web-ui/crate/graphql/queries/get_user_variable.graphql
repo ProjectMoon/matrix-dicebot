@@ -1,0 +1,8 @@
+query GetUserVariable($roomId: String!, $userId: String!, $variable: String!) {
+  variable(roomId: $roomId, userId: $userId, variable: $variable) {
+    roomId
+    userId
+    value
+    variableName
+  }
+}
