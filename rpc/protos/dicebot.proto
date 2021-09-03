@@ -15,10 +15,7 @@ message GetVariableRequest {
 }
 
 message GetVariableReply {
-  string user_id = 1;
-  string room_id = 2;
-  string variable_name = 3;
-  int32 value = 4;
+  int32 value = 1;
 }
 
 message GetAllVariablesRequest {
@@ -27,9 +24,7 @@ message GetAllVariablesRequest {
 }
 
 message GetAllVariablesReply {
-  string user_id = 1;
-  string room_id = 2;
-  map<string, int32> variables = 3;
+  map<string, int32> variables = 1;
 }
 
 message SetVariableRequest {
@@ -53,6 +48,5 @@ message RoomsListReply {
     string display_name = 2;
   }
 
-  string user_id = 1;
-  repeated Room rooms = 2;
+  repeated Room rooms = 1;
 }

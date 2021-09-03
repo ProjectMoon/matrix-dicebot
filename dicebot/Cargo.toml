@@ -36,7 +36,7 @@ barrel = { version = "0.6", features = ["sqlite3"] }
 tempfile = "3"
 substring = "1.4"
 fuse-rust = "0.2"
-tonic = { version = "0.4" }
+tonic = "0.4"
 prost = "0.7"
 tenebrous-rpc = { path = "../rpc" }
 

@@ -3,6 +3,4 @@
 members = [
     "dicebot",
     "rpc",
-    "api",
-    "web-ui/crate",
 ]

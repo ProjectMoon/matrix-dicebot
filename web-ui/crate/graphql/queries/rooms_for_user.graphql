@@ -1,9 +1,0 @@
-query RoomsForUser($userId: String!) {
-  userRooms(userId: $userId) {
-    userId
-    rooms {
-      roomId
-      displayName
-    }
-  }
-}

@@ -12,6 +12,3 @@ bigboy
 .#*
 *.sqlite
 .tmp*
-node_modules
-dist/
-yarn-error.log

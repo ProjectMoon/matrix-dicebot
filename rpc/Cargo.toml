@@ -4,17 +4,11 @@ version = "0.1.0"
 authors = ["projectmoon <projectmoon@agnos.is>"]
 edition = "2018"
 
-# Default is to build tonic and tonic-build as they normally are. The
-# wasm feature is for WebAssmebly, and disables Tonic's transport
-# feature. There is a separate grpc-web-client that can use tonic's
-# requests to make grpc-web requests.
-[features]
-default = ["tonic/default", "tonic-build/default"]
-wasm = [ "tonic/codegen", "tonic/prost", "tonic-build/prost"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tonic-build = { version = "0.4", default_features = false }
+tonic-build = "0.4"
 
 [dependencies]
-tonic = { version = "0.4", default_features = false }
+tonic = "0.4"
 prost = "0.7"
