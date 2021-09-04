@@ -14,6 +14,8 @@ categories = ["games"]
 tonic-build = "0.4"
 
 [dependencies]
+# indexmap version locked fixes a dependency cycle.
+indexmap = "=1.6.2" 
 log = "0.4"
 tracing-subscriber = "0.2"
 toml = "0.5"
@@ -30,7 +32,7 @@ combine = "4.5"
 futures = "0.3"
 html2text = "0.2"
 phf = { version = "0.8", features = ["macros"] }
-matrix-sdk = { git = "https://github.com/matrix-org/matrix-rust-sdk", branch = "master" }
+matrix-sdk = { version = "0.3" }
 refinery = { version = "0.5", features = ["rusqlite"]}
 barrel = { version = "0.6", features = ["sqlite3"] }
 tempfile = "3"

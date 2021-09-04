@@ -1,5 +1,5 @@
 use tenebrous_rpc::protos::dicebot::UserIdRequest;
-use tenebrous_rpc::protos::dicebot::{dicebot_client::DicebotClient, GetVariableRequest};
+use tenebrous_rpc::protos::dicebot::{dicebot_client::DicebotClient};
 use tonic::{metadata::MetadataValue, transport::Channel, Request};
 
 async fn create_client(
