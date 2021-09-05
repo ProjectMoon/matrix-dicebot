@@ -23,21 +23,11 @@ async fn create_client(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = create_client("example-key").await?;
 
-    // let request = tonic::Request::new(GetVariableRequest {
-    //     user_id: "@projectmoon:agnos.is".into(),
-    //     room_id: "!agICWvldGfuCywUVUM:agnos.is".into(),
-    //     variable_name: "stuff".into(),
-    // });
-
-    // let response = client.get_variable(request).await?.into_inner();
-
     let request = tonic::Request::new(UserIdRequest {
         user_id: "@projectmoon:agnos.is".into(),
     });
 
     let response = client.rooms_for_user(request).await?.into_inner();
-    // println!("RESPONSE={:?}", response);
-    // println!("User friendly response is: {:?}", response.value);
     println!("Rooms: {:?}", response.rooms);
     Ok(())
 }
