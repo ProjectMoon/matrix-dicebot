@@ -46,6 +46,17 @@ root of the repository.
 After pulling or building the image, see [instructions on how to use
 the Docker image](#running-the-bot).
 
+### Install from crates.io
+
+The project can be from [crates.io][crates-io]. To install it, execute
+`cargo install tenebrous-dicebot`. This will make the following
+executables available on your system:
+
+* `dicebot`: Main dicebot executable.
+* `dicebot-cmd`: Run dicebot commands from the command line.
+* `dicebot_migrate`: Standalone database migrator (not required).
+* `tonic_client`: Test client for the gRPC connection (not required).
+
 ### Build from Source
 
 Precompiled executables are not yet available. Clone this repository
@@ -254,3 +265,4 @@ support added for Chronicles of Darkness and Call of Cthulhu.
 [main-repo]: https://git.agnos.is/projectmoon/tenebrous-dicebot
 [github-repo]: https://github.com/ProjectMoon/matrix-dicebot
 [roadmap]: https://git.agnos.is/projectmoon/tenebrous-dicebot/wiki/Roadmap
+[crates-io]: https://crates.io/crates/tenebrous-dicebot
