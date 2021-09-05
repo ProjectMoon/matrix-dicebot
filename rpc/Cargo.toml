@@ -6,7 +6,7 @@ edition = "2018"
 description = "gRPC protobuf models for Tenebrous."
 homepage = "https://git.agnos.is/projectmoon/tenebrous-dicebot"
 repository = "https://git.agnos.is/projectmoon/tenebrous-dicebot"
-license = "AGPL-3.0"
+license = "AGPL-3.0-or-later"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
