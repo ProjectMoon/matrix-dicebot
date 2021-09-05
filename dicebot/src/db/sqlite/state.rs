@@ -37,54 +37,64 @@ impl DbState for Database {
 mod tests {
     use crate::db::sqlite::Database;
     use crate::db::DbState;
+    use std::future::Future;
 
-    async fn create_db() -> Database {
+    async fn with_db<Fut>(f: impl FnOnce(Database) -> Fut)
+    where
+        Fut: Future<Output = ()>,
+    {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
         crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
             .await
             .unwrap();
 
-        Database::new(db_path.path().to_str().unwrap())
+        let db = Database::new(db_path.path().to_str().unwrap())
             .await
-            .unwrap()
+            .unwrap();
+
+        f(db).await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn set_and_get_device_id() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            db.set_device_id("device_id")
+                .await
+                .expect("Could not set device ID");
 
-        db.set_device_id("device_id")
-            .await
-            .expect("Could not set device ID");
+            let device_id = db.get_device_id().await.expect("Could not get device ID");
 
-        let device_id = db.get_device_id().await.expect("Could not get device ID");
-
-        assert!(device_id.is_some());
-        assert_eq!(device_id.unwrap(), "device_id");
+            assert!(device_id.is_some());
+            assert_eq!(device_id.unwrap(), "device_id");
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn no_device_id_set_returns_none() {
-        let db = create_db().await;
-        let device_id = db.get_device_id().await.expect("Could not get device ID");
-        assert!(device_id.is_none());
+        with_db(|db| async move {
+            let device_id = db.get_device_id().await.expect("Could not get device ID");
+            assert!(device_id.is_none());
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn can_update_device_id() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            db.set_device_id("device_id")
+                .await
+                .expect("Could not set device ID");
 
-        db.set_device_id("device_id")
-            .await
-            .expect("Could not set device ID");
+            db.set_device_id("device_id2")
+                .await
+                .expect("Could not set device ID");
 
-        db.set_device_id("device_id2")
-            .await
-            .expect("Could not set device ID");
+            let device_id = db.get_device_id().await.expect("Could not get device ID");
 
-        let device_id = db.get_device_id().await.expect("Could not get device ID");
-
-        assert!(device_id.is_some());
-        assert_eq!(device_id.unwrap(), "device_id2");
+            assert!(device_id.is_some());
+            assert_eq!(device_id.unwrap(), "device_id2");
+        })
+        .await;
     }
 }

@@ -91,251 +91,271 @@ mod tests {
     use crate::db::sqlite::Database;
     use crate::db::Users;
     use crate::models::AccountStatus;
+    use std::future::Future;
 
-    async fn create_db() -> Database {
+    async fn with_db<Fut>(f: impl FnOnce(Database) -> Fut)
+    where
+        Fut: Future<Output = ()>,
+    {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
         crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
             .await
             .unwrap();
 
-        Database::new(db_path.path().to_str().unwrap())
+        let db = Database::new(db_path.path().to_str().unwrap())
             .await
-            .unwrap()
+            .unwrap();
+
+        f(db).await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn create_and_get_full_user_test() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let insert_result = db
+                .upsert_user(&User {
+                    username: "myuser".to_string(),
+                    password: Some("abc".to_string()),
+                    account_status: AccountStatus::Registered,
+                    active_room: Some("myroom".to_string()),
+                })
+                .await;
 
-        let insert_result = db
-            .upsert_user(&User {
-                username: "myuser".to_string(),
-                password: Some("abc".to_string()),
-                account_status: AccountStatus::Registered,
-                active_room: Some("myroom".to_string()),
-            })
-            .await;
+            assert!(insert_result.is_ok());
 
-        assert!(insert_result.is_ok());
+            let user = db
+                .get_user("myuser")
+                .await
+                .expect("User retrieval query failed");
 
-        let user = db
-            .get_user("myuser")
-            .await
-            .expect("User retrieval query failed");
-
-        assert!(user.is_some());
-        let user = user.unwrap();
-        assert_eq!(user.username, "myuser");
-        assert_eq!(user.password, Some("abc".to_string()));
-        assert_eq!(user.account_status, AccountStatus::Registered);
-        assert_eq!(user.active_room, Some("myroom".to_string()));
+            assert!(user.is_some());
+            let user = user.unwrap();
+            assert_eq!(user.username, "myuser");
+            assert_eq!(user.password, Some("abc".to_string()));
+            assert_eq!(user.account_status, AccountStatus::Registered);
+            assert_eq!(user.active_room, Some("myroom".to_string()));
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn can_get_user_with_no_state_record() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let insert_result = db
+                .upsert_user(&User {
+                    username: "myuser".to_string(),
+                    password: Some("abc".to_string()),
+                    account_status: AccountStatus::AwaitingActivation,
+                    active_room: Some("myroom".to_string()),
+                })
+                .await;
 
-        let insert_result = db
-            .upsert_user(&User {
-                username: "myuser".to_string(),
-                password: Some("abc".to_string()),
-                account_status: AccountStatus::AwaitingActivation,
-                active_room: Some("myroom".to_string()),
-            })
-            .await;
+            assert!(insert_result.is_ok());
 
-        assert!(insert_result.is_ok());
+            sqlx::query("DELETE FROM user_state")
+                .execute(&db.conn)
+                .await
+                .expect("Could not delete from user_state table.");
 
-        sqlx::query("DELETE FROM user_state")
-            .execute(&db.conn)
-            .await
-            .expect("Could not delete from user_state table.");
+            let user = db
+                .get_user("myuser")
+                .await
+                .expect("User retrieval query failed");
 
-        let user = db
-            .get_user("myuser")
-            .await
-            .expect("User retrieval query failed");
+            assert!(user.is_some());
+            let user = user.unwrap();
+            assert_eq!(user.username, "myuser");
+            assert_eq!(user.password, Some("abc".to_string()));
+            assert_eq!(user.account_status, AccountStatus::AwaitingActivation);
 
-        assert!(user.is_some());
-        let user = user.unwrap();
-        assert_eq!(user.username, "myuser");
-        assert_eq!(user.password, Some("abc".to_string()));
-        assert_eq!(user.account_status, AccountStatus::AwaitingActivation);
-
-        //These should be default values because the state record is missing.
-        assert_eq!(user.active_room, None);
+            //These should be default values because the state record is missing.
+            assert_eq!(user.active_room, None);
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn can_insert_without_password() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let insert_result = db
+                .upsert_user(&User {
+                    username: "myuser".to_string(),
+                    password: None,
+                    ..Default::default()
+                })
+                .await;
 
-        let insert_result = db
-            .upsert_user(&User {
-                username: "myuser".to_string(),
-                password: None,
-                ..Default::default()
-            })
-            .await;
+            assert!(insert_result.is_ok());
 
-        assert!(insert_result.is_ok());
+            let user = db
+                .get_user("myuser")
+                .await
+                .expect("User retrieval query failed");
 
-        let user = db
-            .get_user("myuser")
-            .await
-            .expect("User retrieval query failed");
-
-        assert!(user.is_some());
-        let user = user.unwrap();
-        assert_eq!(user.username, "myuser");
-        assert_eq!(user.password, None);
+            assert!(user.is_some());
+            let user = user.unwrap();
+            assert_eq!(user.username, "myuser");
+            assert_eq!(user.password, None);
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn can_insert_without_active_room() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let insert_result = db
+                .upsert_user(&User {
+                    username: "myuser".to_string(),
+                    active_room: None,
+                    ..Default::default()
+                })
+                .await;
 
-        let insert_result = db
-            .upsert_user(&User {
-                username: "myuser".to_string(),
-                active_room: None,
-                ..Default::default()
-            })
-            .await;
+            assert!(insert_result.is_ok());
 
-        assert!(insert_result.is_ok());
+            let user = db
+                .get_user("myuser")
+                .await
+                .expect("User retrieval query failed");
 
-        let user = db
-            .get_user("myuser")
-            .await
-            .expect("User retrieval query failed");
-
-        assert!(user.is_some());
-        let user = user.unwrap();
-        assert_eq!(user.username, "myuser");
-        assert_eq!(user.active_room, None);
+            assert!(user.is_some());
+            let user = user.unwrap();
+            assert_eq!(user.username, "myuser");
+            assert_eq!(user.active_room, None);
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn can_update_user() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let insert_result1 = db
+                .upsert_user(&User {
+                    username: "myuser".to_string(),
+                    password: Some("abc".to_string()),
+                    ..Default::default()
+                })
+                .await;
 
-        let insert_result1 = db
-            .upsert_user(&User {
-                username: "myuser".to_string(),
-                password: Some("abc".to_string()),
-                ..Default::default()
-            })
-            .await;
+            assert!(insert_result1.is_ok());
 
-        assert!(insert_result1.is_ok());
+            let insert_result2 = db
+                .upsert_user(&User {
+                    username: "myuser".to_string(),
+                    password: Some("123".to_string()),
+                    active_room: Some("room".to_string()),
+                    account_status: AccountStatus::AwaitingActivation,
+                })
+                .await;
 
-        let insert_result2 = db
-            .upsert_user(&User {
-                username: "myuser".to_string(),
-                password: Some("123".to_string()),
-                active_room: Some("room".to_string()),
-                account_status: AccountStatus::AwaitingActivation,
-            })
-            .await;
+            assert!(insert_result2.is_ok());
 
-        assert!(insert_result2.is_ok());
+            let user = db
+                .get_user("myuser")
+                .await
+                .expect("User retrieval query failed");
 
-        let user = db
-            .get_user("myuser")
-            .await
-            .expect("User retrieval query failed");
+            assert!(user.is_some());
+            let user = user.unwrap();
+            assert_eq!(user.username, "myuser");
 
-        assert!(user.is_some());
-        let user = user.unwrap();
-        assert_eq!(user.username, "myuser");
-
-        //From second upsert
-        assert_eq!(user.password, Some("123".to_string()));
-        assert_eq!(user.active_room, Some("room".to_string()));
-        assert_eq!(user.account_status, AccountStatus::AwaitingActivation);
+            //From second upsert
+            assert_eq!(user.password, Some("123".to_string()));
+            assert_eq!(user.active_room, Some("room".to_string()));
+            assert_eq!(user.account_status, AccountStatus::AwaitingActivation);
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn can_delete_user() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let insert_result = db
+                .upsert_user(&User {
+                    username: "myuser".to_string(),
+                    password: Some("abc".to_string()),
+                    ..Default::default()
+                })
+                .await;
 
-        let insert_result = db
-            .upsert_user(&User {
-                username: "myuser".to_string(),
-                password: Some("abc".to_string()),
-                ..Default::default()
-            })
-            .await;
+            assert!(insert_result.is_ok());
 
-        assert!(insert_result.is_ok());
+            db.delete_user("myuser")
+                .await
+                .expect("User deletion query failed");
 
-        db.delete_user("myuser")
-            .await
-            .expect("User deletion query failed");
+            let user = db
+                .get_user("myuser")
+                .await
+                .expect("User retrieval query failed");
 
-        let user = db
-            .get_user("myuser")
-            .await
-            .expect("User retrieval query failed");
-
-        assert!(user.is_none());
+            assert!(user.is_none());
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn username_not_in_db_returns_none() {
-        let db = create_db().await;
-        let user = db
-            .get_user("does not exist")
-            .await
-            .expect("Get user query failure");
+        with_db(|db| async move {
+            let user = db
+                .get_user("does not exist")
+                .await
+                .expect("Get user query failure");
 
-        assert!(user.is_none());
+            assert!(user.is_none());
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn authenticate_user_is_some_with_valid_password() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let insert_result = db
+                .upsert_user(&User {
+                    username: "myuser".to_string(),
+                    password: Some(
+                        crate::logic::hash_password("abc").expect("password hash error!"),
+                    ),
+                    ..Default::default()
+                })
+                .await;
 
-        let insert_result = db
-            .upsert_user(&User {
-                username: "myuser".to_string(),
-                password: Some(crate::logic::hash_password("abc").expect("password hash error!")),
-                ..Default::default()
-            })
-            .await;
+            assert!(insert_result.is_ok());
 
-        assert!(insert_result.is_ok());
+            let user = db
+                .authenticate_user("myuser", "abc")
+                .await
+                .expect("User retrieval query failed");
 
-        let user = db
-            .authenticate_user("myuser", "abc")
-            .await
-            .expect("User retrieval query failed");
-
-        assert!(user.is_some());
-        let user = user.unwrap();
-        assert_eq!(user.username, "myuser");
+            assert!(user.is_some());
+            let user = user.unwrap();
+            assert_eq!(user.username, "myuser");
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn authenticate_user_is_none_with_wrong_password() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let insert_result = db
+                .upsert_user(&User {
+                    username: "myuser".to_string(),
+                    password: Some(
+                        crate::logic::hash_password("abc").expect("password hash error!"),
+                    ),
+                    ..Default::default()
+                })
+                .await;
 
-        let insert_result = db
-            .upsert_user(&User {
-                username: "myuser".to_string(),
-                password: Some(crate::logic::hash_password("abc").expect("password hash error!")),
-                ..Default::default()
-            })
-            .await;
+            assert!(insert_result.is_ok());
 
-        assert!(insert_result.is_ok());
+            let user = db
+                .authenticate_user("myuser", "wrong-password")
+                .await
+                .expect("User retrieval query failed");
 
-        let user = db
-            .authenticate_user("myuser", "wrong-password")
-            .await
-            .expect("User retrieval query failed");
-
-        assert!(user.is_none());
+            assert!(user.is_none());
+        })
+        .await;
     }
 }

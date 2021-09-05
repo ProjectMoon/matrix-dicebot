@@ -71,53 +71,61 @@ mod tests {
     use super::*;
     use crate::db::Users;
     use crate::models::{AccountStatus, User};
+    use std::future::Future;
 
-    async fn create_db() -> Database {
+    async fn with_db<Fut>(f: impl FnOnce(Database) -> Fut)
+    where
+        Fut: Future<Output = ()>,
+    {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
         crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
             .await
             .unwrap();
 
-        Database::new(db_path.path().to_str().unwrap())
+        let db = Database::new(db_path.path().to_str().unwrap())
             .await
-            .unwrap()
+            .unwrap();
+
+        f(db).await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn get_account_no_user_exists() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let account = get_account(&db, "@test:example.com")
+                .await
+                .expect("Account retrieval didn't work");
 
-        let account = get_account(&db, "@test:example.com")
-            .await
-            .expect("Account retrieval didn't work");
+            assert!(matches!(account, Account::Transient(_)));
 
-        assert!(matches!(account, Account::Transient(_)));
-
-        let user = account.transient_user().unwrap();
-        assert_eq!(user.username, "@test:example.com");
+            let user = account.transient_user().unwrap();
+            assert_eq!(user.username, "@test:example.com");
+        })
+        .await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn get_or_create_user_when_user_exists() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let user = User {
+                username: "myuser".to_string(),
+                password: Some("abc".to_string()),
+                account_status: AccountStatus::Registered,
+                active_room: Some("myroom".to_string()),
+            };
 
-        let user = User {
-            username: "myuser".to_string(),
-            password: Some("abc".to_string()),
-            account_status: AccountStatus::Registered,
-            active_room: Some("myroom".to_string()),
-        };
+            let insert_result = db.upsert_user(&user).await;
+            assert!(insert_result.is_ok());
 
-        let insert_result = db.upsert_user(&user).await;
-        assert!(insert_result.is_ok());
+            let account = get_account(&db, "myuser")
+                .await
+                .expect("Account retrieval did not work");
 
-        let account = get_account(&db, "myuser")
-            .await
-            .expect("Account retrieval did not work");
+            assert!(matches!(account, Account::Registered(_)));
 
-        assert!(matches!(account, Account::Registered(_)));
-
-        let user_again = account.registered_user().unwrap();
-        assert_eq!(user, *user_again);
+            let user_again = account.registered_user().unwrap();
+            assert_eq!(user, *user_again);
+        })
+        .await;
     }
 }

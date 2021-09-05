@@ -53,34 +53,41 @@ impl Rooms for Database {
 mod tests {
     use crate::db::sqlite::Database;
     use crate::db::Rooms;
+    use std::future::Future;
 
-    async fn create_db() -> Database {
+    async fn with_db<Fut>(f: impl FnOnce(Database) -> Fut)
+    where
+        Fut: Future<Output = ()>,
+    {
         let db_path = tempfile::NamedTempFile::new_in(".").unwrap();
         crate::db::sqlite::migrator::migrate(db_path.path().to_str().unwrap())
             .await
             .unwrap();
 
-        Database::new(db_path.path().to_str().unwrap())
+        let db = Database::new(db_path.path().to_str().unwrap())
             .await
-            .unwrap()
+            .unwrap();
+
+        f(db).await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn should_process_test() {
-        let db = create_db().await;
+        with_db(|db| async move {
+            let first_check = db
+                .should_process("myroom", "myeventid")
+                .await
+                .expect("should_process failed in first insert");
 
-        let first_check = db
-            .should_process("myroom", "myeventid")
-            .await
-            .expect("should_process failed in first insert");
+            assert_eq!(first_check, true);
 
-        assert_eq!(first_check, true);
+            let second_check = db
+                .should_process("myroom", "myeventid")
+                .await
+                .expect("should_process failed in first insert");
 
-        let second_check = db
-            .should_process("myroom", "myeventid")
-            .await
-            .expect("should_process failed in first insert");
-
-        assert_eq!(second_check, false);
+            assert_eq!(second_check, false);
+        })
+        .await;
     }
 }
