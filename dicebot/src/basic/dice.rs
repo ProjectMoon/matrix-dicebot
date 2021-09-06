@@ -12,17 +12,22 @@ use std::ops::{Deref, DerefMut};
 pub struct Dice {
     pub(crate) count: u32,
     pub(crate) sides: u32,
+    pub(crate) keep: u32,
 }
 
 impl fmt::Display for Dice {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}d{}", self.count, self.sides)
+        if self.keep == self. count {
+            write!(f, "{}d{}", self.count, self.sides)
+        } else {
+            write!(f, "{}d{}k{}", self.count, self.sides, self.keep)
+        }
     }
 }
 
 impl Dice {
-    pub fn new(count: u32, sides: u32) -> Dice {
-        Dice { count, sides }
+    pub fn new(count: u32, sides: u32, keep: u32) -> Dice {
+        Dice { count, sides, keep }
     }
 }
 

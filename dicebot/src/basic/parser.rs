@@ -36,7 +36,7 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
     let (input, (count, _, sides)) = tuple((digit1, tag("d"), digit1))(input)?;
     Ok((
         input,
-        Dice::new(count.parse().unwrap(), sides.parse().unwrap()),
+        Dice::new(count.parse().unwrap(), sides.parse().unwrap(), count.parse().unwrap()),
     ))
 }
 
@@ -108,16 +108,16 @@ mod tests {
     use super::*;
     #[test]
     fn dice_test() {
-        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4))));
-        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40))));
-        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7))));
+        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4, 2))));
+        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40, 20))));
+        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, 8))));
     }
 
     #[test]
     fn element_test() {
         assert_eq!(
             parse_element("  \t\n\r\n 8d7 \n"),
-            Ok((" \n", Element::Dice(Dice::new(8, 7))))
+            Ok((" \n", Element::Dice(Dice::new(8, 7, 8))))
         );
         assert_eq!(
             parse_element("  \t\n\r\n 8 \n"),
@@ -139,14 +139,14 @@ mod tests {
             parse_signed_element("  \t\n\r\n- 8d4 \n"),
             Ok((
                 " \n",
-                SignedElement::Negative(Element::Dice(Dice::new(8, 4)))
+                SignedElement::Negative(Element::Dice(Dice::new(8, 4, 8)))
             ))
         );
         assert_eq!(
             parse_signed_element("  \t\n\r\n+ 8d4 \n"),
             Ok((
                 " \n",
-                SignedElement::Positive(Element::Dice(Dice::new(8, 4)))
+                SignedElement::Positive(Element::Dice(Dice::new(8, 4, 8)))
             ))
         );
     }
@@ -158,7 +158,7 @@ mod tests {
             Ok((
                 "",
                 ElementExpression(vec![SignedElement::Positive(Element::Dice(Dice::new(
-                    8, 4
+                    8, 4, 8
                 )))])
             ))
         );
@@ -167,7 +167,7 @@ mod tests {
             Ok((
                 " \n ",
                 ElementExpression(vec![SignedElement::Negative(Element::Dice(Dice::new(
-                    8, 4
+                    8, 4, 8
                 )))])
             ))
         );
@@ -176,11 +176,11 @@ mod tests {
             Ok((
                 " 1d5 ",
                 ElementExpression(vec![
-                    SignedElement::Positive(Element::Dice(Dice::new(3, 4))),
+                    SignedElement::Positive(Element::Dice(Dice::new(3, 4, 3))),
                     SignedElement::Positive(Element::Bonus(7)),
                     SignedElement::Negative(Element::Bonus(5)),
-                    SignedElement::Negative(Element::Dice(Dice::new(6, 12))),
-                    SignedElement::Positive(Element::Dice(Dice::new(1, 1))),
+                    SignedElement::Negative(Element::Dice(Dice::new(6, 12, 6))),
+                    SignedElement::Positive(Element::Dice(Dice::new(1, 1, 1))),
                     SignedElement::Positive(Element::Bonus(53)),
                 ])
             ))
