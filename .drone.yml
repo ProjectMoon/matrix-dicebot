@@ -16,8 +16,7 @@ steps:
   when:
     ref:
     - refs/tags/v*
-    branch:
-    - master
+    - refs/heads/master
   settings:
     auto_tag: true
     username:
