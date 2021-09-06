@@ -14,6 +14,8 @@ steps:
 - name: docker
   image: plugins/docker
   when:
+    ref:
+    - refs/tags/v*
     branch:
     - master
   settings:
