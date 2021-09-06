@@ -1,6 +1,7 @@
 # Tenebrous Dicebot
 
 [![Build Status](https://drone.agnos.is/api/badges/projectmoon/tenebrous-dicebot/status.svg)](https://drone.agnos.is/projectmoon/tenebrous-dicebot)
+[![Matrix Chat](https://img.shields.io/matrix/tenebrous:agnos.is?label=matrix&server_fqdn=matrix.org)][matrix-room]
 
 _This repository is hosted on [Agnos.is Git][main-repo] and mirrored
 to [GitHub][github-repo]._
@@ -23,6 +24,23 @@ System.
 * Rolling dice for the Call of Cthulhu system.
 * Works in encrypted or unencrypted Matrix rooms.
 * Storing variables created by the user.
+
+## Support and Community
+
+The project has a Matrix room at [#tenebrous:agnos.is][matrix-room].
+It is also possible to make a post in [GitHub
+Discussions][github-discussions].
+
+For reporting bugs, we prefer that you open an issue on
+[git.agnos.is][agnosis-git-issues]. However, you may also open an
+issue on [GitHub][github-issues].
+
+### Development and Contributions
+
+All development occurs on [git.agnos.is][main-repo]. If you wish to
+contribute, please open a pull request there. In some cases, pull
+requests from GitHub may be accepted. All contributions must be
+licensed under [AGPL 3.0 or later][agpl] to be accepted.
 
 ## Building and Installation
 
@@ -266,3 +284,8 @@ support added for Chronicles of Darkness and Call of Cthulhu.
 [github-repo]: https://github.com/ProjectMoon/matrix-dicebot
 [roadmap]: https://git.agnos.is/projectmoon/tenebrous-dicebot/wiki/Roadmap
 [crates-io]: https://crates.io/crates/tenebrous-dicebot
+[matrix-room]: https://matrix.to/#/#tenebrous:agnos.is
+[agnosis-git-issues]: https://git.agnos.is/projectmoon/tenebrous-dicebot/issues
+[github-discussions]: https://github.com/ProjectMoon/matrix-dicebot/discussions
+[github-issues]: https://github.com/ProjectMoon/matrix-dicebot/issues
+[agpl]: https://www.gnu.org/licenses/agpl-3.0.en.html
