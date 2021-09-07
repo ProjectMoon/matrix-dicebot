@@ -33,10 +33,22 @@ enum Sign {
 
 // Parse a dice expression.  Does not eat whitespace
 fn parse_dice(input: &str) -> IResult<&str, Dice> {
-    let (input, (count, _, sides)) = tuple((digit1, tag("d"), digit1))(input)?;
+    // parse main dice expression
+    let (mut input, (count, _, sides)) = tuple((digit1, tag("d"), digit1))(input)?;
+    // check for keep expression (i.e. D&D 5E Advantage)
+    let keep;
+    match tuple::<&str, _, (_, _), _>((tag("k"), digit1))(input) {
+        // if ok, keep expression is present
+        Ok(r) => {
+            input = r.0;
+            keep  = r.1.1;
+        }
+        // otherwise absent and keep all dice
+        Err(_) => keep = count,
+    };
     Ok((
         input,
-        Dice::new(count.parse().unwrap(), sides.parse().unwrap(), count.parse().unwrap()),
+        Dice::new(count.parse().unwrap(), sides.parse().unwrap(), keep.parse().unwrap()),
     ))
 }
 
@@ -111,6 +123,8 @@ mod tests {
         assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4, 2))));
         assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40, 20))));
         assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, 8))));
+        assert_eq!(parse_dice("2d20k1"), Ok(("", Dice::new(2, 20, 1))));
+        assert_eq!(parse_dice("100d10k90"), Ok(("", Dice::new(100, 10, 90))));
     }
 
     #[test]
@@ -118,6 +132,10 @@ mod tests {
         assert_eq!(
             parse_element("  \t\n\r\n 8d7 \n"),
             Ok((" \n", Element::Dice(Dice::new(8, 7, 8))))
+        );
+        assert_eq!(
+            parse_element("  \t\n\r\n 3d20k2 \n"),
+            Ok((" \n", Element::Dice(Dice::new(3, 20, 2))))
         );
         assert_eq!(
             parse_element("  \t\n\r\n 8 \n"),
@@ -143,6 +161,13 @@ mod tests {
             ))
         );
         assert_eq!(
+            parse_signed_element("  \t\n\r\n- 8d4k4 \n"),
+            Ok((
+                " \n",
+                SignedElement::Negative(Element::Dice(Dice::new(8, 4, 4)))
+            ))
+        );
+        assert_eq!(
             parse_signed_element("  \t\n\r\n+ 8d4 \n"),
             Ok((
                 " \n",
@@ -160,6 +185,16 @@ mod tests {
                 ElementExpression(vec![SignedElement::Positive(Element::Dice(Dice::new(
                     8, 4, 8
                 )))])
+            ))
+        );
+        assert_eq!(
+            parse_element_expression("\t2d20k1 + 5"),
+            Ok((
+                "",
+                ElementExpression(vec![
+                    SignedElement::Positive(Element::Dice(Dice::new(2, 20, 1))),
+                    SignedElement::Positive(Element::Bonus(5)),
+                ])
             ))
         );
         assert_eq!(
