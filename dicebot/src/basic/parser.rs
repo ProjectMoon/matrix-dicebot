@@ -41,7 +41,12 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
         // if ok, keep expression is present
         Ok(r) => {
             input = r.0;
-            keep  = r.1.1;
+            // don't allow keep greater than number of dice, and don't allow keep zero
+            if r.1.1 <= count && r.1.1 != "0" {
+                keep  = r.1.1;
+            } else {
+                keep  = count;
+            }
         }
         // otherwise absent and keep all dice
         Err(_) => keep = count,

@@ -19,15 +19,21 @@ pub trait Rolled {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct DiceRoll(pub Vec<u32>);
+// array of rolls in order, and how many dice to keep
+pub struct DiceRoll (pub Vec<u32>, usize);
 
 impl DiceRoll {
     pub fn rolls(&self) -> &[u32] {
         &self.0
     }
 
+    pub fn keep(&self) -> usize {
+        self.1
+    }
+
+    // only count kept dice in total
     pub fn total(&self) -> u32 {
-        self.0.iter().sum()
+        self.0[..=(self.1-1)].iter().sum()
     }
 }
 
@@ -41,11 +47,16 @@ impl fmt::Display for DiceRoll {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.rolled_value())?;
         let rolls = self.rolls();
-        let mut iter = rolls.iter();
+        let keep  = self.keep();
+        let mut iter = rolls.iter().enumerate();
         if let Some(first) = iter.next() {
-            write!(f, " ({}", first)?;
+            write!(f, " ({}", first.1)?;
             for roll in iter {
-                write!(f, " + {}", roll)?;
+                if roll.0 < keep {
+                    write!(f, " + {}", roll.1)?;
+                } else {
+                    write!(f, " + [{}]", roll.1)?;
+                }
             }
             write!(f, ")")?;
         }
@@ -58,11 +69,13 @@ impl Roll for dice::Dice {
 
     fn roll(&self) -> DiceRoll {
         let mut rng = rand::thread_rng();
-        let rolls: Vec<_> = (0..self.count)
+        let mut rolls: Vec<_> = (0..self.count)
             .map(|_| rng.gen_range(1..=self.sides))
             .collect();
+        // sort rolls in descending order
+        rolls.sort_by(|a, b| b.cmp(a));
 
-        DiceRoll(rolls)
+        DiceRoll(rolls,self.keep as usize)
     }
 }
 
