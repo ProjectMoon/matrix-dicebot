@@ -41,19 +41,21 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
         // if ok, keep expression is present
         Ok(r) => {
             input = r.0;
-            // don't allow keep greater than number of dice, and don't allow keep zero
-            if r.1.1 <= count && r.1.1 != "0" {
-                keep  = r.1.1;
-            } else {
-                keep  = count;
-            }
+            keep  = r.1.1;
         }
         // otherwise absent and keep all dice
         Err(_) => keep = count,
     };
+    // don't allow keep greater than number of dice, and don't allow keep zero
+    let mut keep: u32  = keep.parse().unwrap();
+    let count: u32 = count.parse().unwrap();
+    if keep > count || keep == 0 {
+        keep = count;
+    }
+
     Ok((
         input,
-        Dice::new(count.parse().unwrap(), sides.parse().unwrap(), keep.parse().unwrap()),
+        Dice::new(count, sides.parse().unwrap(), keep),
     ))
 }
 
@@ -130,6 +132,10 @@ mod tests {
         assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, 8))));
         assert_eq!(parse_dice("2d20k1"), Ok(("", Dice::new(2, 20, 1))));
         assert_eq!(parse_dice("100d10k90"), Ok(("", Dice::new(100, 10, 90))));
+        assert_eq!(parse_dice("11d10k10"), Ok(("", Dice::new(11, 10, 10))));
+        assert_eq!(parse_dice("12d10k11"), Ok(("", Dice::new(12, 10, 11))));
+        assert_eq!(parse_dice("12d10k13"), Ok(("", Dice::new(12, 10, 12))));
+        assert_eq!(parse_dice("12d10k0"), Ok(("", Dice::new(12, 10, 12))));
     }
 
     #[test]

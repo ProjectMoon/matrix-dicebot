@@ -33,7 +33,7 @@ impl DiceRoll {
 
     // only count kept dice in total
     pub fn total(&self) -> u32 {
-        self.0[..=(self.1-1)].iter().sum()
+        self.0[..self.1].iter().sum()
     }
 }
 
@@ -211,18 +211,22 @@ mod tests {
     use super::*;
     #[test]
     fn dice_roll_display_test() {
-        assert_eq!(DiceRoll(vec![1, 3, 4]).to_string(), "8 (1 + 3 + 4)");
-        assert_eq!(DiceRoll(vec![]).to_string(), "0");
+        assert_eq!(DiceRoll(vec![1, 3, 4], 3).to_string(), "8 (1 + 3 + 4)");
+        assert_eq!(DiceRoll(vec![], 0).to_string(), "0");
         assert_eq!(
-            DiceRoll(vec![4, 7, 2, 10]).to_string(),
+            DiceRoll(vec![4, 7, 2, 10], 4).to_string(),
             "23 (4 + 7 + 2 + 10)"
+        );
+        assert_eq!(
+            DiceRoll(vec![20, 13, 11, 10], 3).to_string(),
+            "44 (20 + 13 + 11 + [10])"
         );
     }
 
     #[test]
     fn element_roll_display_test() {
         assert_eq!(
-            ElementRoll::Dice(DiceRoll(vec![1, 3, 4])).to_string(),
+            ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3)).to_string(),
             "8 (1 + 3 + 4)"
         );
         assert_eq!(ElementRoll::Bonus(7).to_string(), "7");
@@ -231,11 +235,11 @@ mod tests {
     #[test]
     fn signed_element_roll_display_test() {
         assert_eq!(
-            SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 3, 4]))).to_string(),
+            SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3))).to_string(),
             "8 (1 + 3 + 4)"
         );
         assert_eq!(
-            SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 3, 4]))).to_string(),
+            SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3))).to_string(),
             "-8 (1 + 3 + 4)"
         );
         assert_eq!(
@@ -252,14 +256,14 @@ mod tests {
     fn element_expression_roll_display_test() {
         assert_eq!(
             ElementExpressionRoll(vec![SignedElementRoll::Positive(ElementRoll::Dice(
-                DiceRoll(vec![1, 3, 4])
+                DiceRoll(vec![1, 3, 4], 3)
             )),])
             .to_string(),
             "8 (1 + 3 + 4)"
         );
         assert_eq!(
             ElementExpressionRoll(vec![SignedElementRoll::Negative(ElementRoll::Dice(
-                DiceRoll(vec![1, 3, 4])
+                DiceRoll(vec![1, 3, 4], 3)
             )),])
             .to_string(),
             "-8 (1 + 3 + 4)"
@@ -276,8 +280,8 @@ mod tests {
         );
         assert_eq!(
             ElementExpressionRoll(vec![
-                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 3, 4]))),
-                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 2]))),
+                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3))),
+                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 2], 2))),
                 SignedElementRoll::Positive(ElementRoll::Bonus(4)),
                 SignedElementRoll::Negative(ElementRoll::Bonus(7)),
             ])
@@ -286,13 +290,23 @@ mod tests {
         );
         assert_eq!(
             ElementExpressionRoll(vec![
-                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 3, 4]))),
-                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 2]))),
+                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3))),
+                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 2], 2))),
                 SignedElementRoll::Negative(ElementRoll::Bonus(4)),
                 SignedElementRoll::Positive(ElementRoll::Bonus(7)),
             ])
             .to_string(),
             "-2 (-8 (1 + 3 + 4) + 3 (1 + 2) - 4 + 7)"
+        );
+        assert_eq!(
+            ElementExpressionRoll(vec![
+                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![4, 3, 1], 3))),
+                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![12, 2], 1))),
+                SignedElementRoll::Negative(ElementRoll::Bonus(4)),
+                SignedElementRoll::Positive(ElementRoll::Bonus(7)),
+            ])
+            .to_string(),
+            "7 (-8 (4 + 3 + 1) + 12 (12 + [2]) - 4 + 7)"
         );
     }
 }
