@@ -35,6 +35,7 @@ enum Sign {
 fn parse_dice(input: &str) -> IResult<&str, Dice> {
     // parse main dice expression
     let (mut input, (count, _, sides)) = tuple((digit1, tag("d"), digit1))(input)?;
+
     // check for keep expression (i.e. D&D 5E Advantage)
     let keep;
     match tuple::<&str, _, (_, _), _>((tag("k"), digit1))(input) {
@@ -46,16 +47,36 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
         // otherwise absent and keep all dice
         Err(_) => keep = count,
     };
+
+    // check for drop expression (i.e. D&D 5E Disadvantage)
+    let drop;
+    match tuple::<&str, _, (_, _), _>((tag("d"), digit1))(input) {
+        // if ok, drop expression is present
+        Ok(r) => {
+            input = r.0;
+            drop  = r.1.1;
+        }
+        // otherwise absent and keep all dice
+        Err(_) => drop = "0",
+    };
+
+    let count: u32 = count.parse().unwrap();
+
     // don't allow keep greater than number of dice, and don't allow keep zero
     let mut keep: u32  = keep.parse().unwrap();
-    let count: u32 = count.parse().unwrap();
     if keep > count || keep == 0 {
         keep = count;
     }
 
+    // don't allow drop greater than or equal to number of dice
+    let mut drop: u32  = drop.parse().unwrap();
+    if drop >= count {
+        drop = 0;
+    }
+
     Ok((
         input,
-        Dice::new(count, sides.parse().unwrap(), keep),
+        Dice::new(count, sides.parse().unwrap(), keep, drop),
     ))
 }
 
@@ -127,26 +148,29 @@ mod tests {
     use super::*;
     #[test]
     fn dice_test() {
-        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4, 2))));
-        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40, 20))));
-        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, 8))));
-        assert_eq!(parse_dice("2d20k1"), Ok(("", Dice::new(2, 20, 1))));
-        assert_eq!(parse_dice("100d10k90"), Ok(("", Dice::new(100, 10, 90))));
-        assert_eq!(parse_dice("11d10k10"), Ok(("", Dice::new(11, 10, 10))));
-        assert_eq!(parse_dice("12d10k11"), Ok(("", Dice::new(12, 10, 11))));
-        assert_eq!(parse_dice("12d10k13"), Ok(("", Dice::new(12, 10, 12))));
-        assert_eq!(parse_dice("12d10k0"), Ok(("", Dice::new(12, 10, 12))));
+        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4, 2, 0))));
+        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40, 20, 0))));
+        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, 8, 0))));
+        assert_eq!(parse_dice("2d20k1"), Ok(("", Dice::new(2, 20, 1, 0))));
+        assert_eq!(parse_dice("100d10k90"), Ok(("", Dice::new(100, 10, 90, 0))));
+        assert_eq!(parse_dice("11d10k10"), Ok(("", Dice::new(11, 10, 10, 0))));
+        assert_eq!(parse_dice("12d10k11"), Ok(("", Dice::new(12, 10, 11, 0))));
+        assert_eq!(parse_dice("12d10k13"), Ok(("", Dice::new(12, 10, 12, 0))));
+        assert_eq!(parse_dice("12d10k0"), Ok(("", Dice::new(12, 10, 12, 0))));
+        assert_eq!(parse_dice("20d40d5"), Ok(("", Dice::new(20, 40, 20, 5))));
+        assert_eq!(parse_dice("8d7d9"), Ok(("", Dice::new(8, 7, 8, 0))));
+        assert_eq!(parse_dice("8d7d8"), Ok(("", Dice::new(8, 7, 8, 0))));
     }
 
     #[test]
     fn element_test() {
         assert_eq!(
             parse_element("  \t\n\r\n 8d7 \n"),
-            Ok((" \n", Element::Dice(Dice::new(8, 7, 8))))
+            Ok((" \n", Element::Dice(Dice::new(8, 7, 8, 0))))
         );
         assert_eq!(
             parse_element("  \t\n\r\n 3d20k2 \n"),
-            Ok((" \n", Element::Dice(Dice::new(3, 20, 2))))
+            Ok((" \n", Element::Dice(Dice::new(3, 20, 2, 0))))
         );
         assert_eq!(
             parse_element("  \t\n\r\n 8 \n"),
@@ -168,21 +192,21 @@ mod tests {
             parse_signed_element("  \t\n\r\n- 8d4 \n"),
             Ok((
                 " \n",
-                SignedElement::Negative(Element::Dice(Dice::new(8, 4, 8)))
+                SignedElement::Negative(Element::Dice(Dice::new(8, 4, 8, 0)))
             ))
         );
         assert_eq!(
             parse_signed_element("  \t\n\r\n- 8d4k4 \n"),
             Ok((
                 " \n",
-                SignedElement::Negative(Element::Dice(Dice::new(8, 4, 4)))
+                SignedElement::Negative(Element::Dice(Dice::new(8, 4, 4, 0)))
             ))
         );
         assert_eq!(
             parse_signed_element("  \t\n\r\n+ 8d4 \n"),
             Ok((
                 " \n",
-                SignedElement::Positive(Element::Dice(Dice::new(8, 4, 8)))
+                SignedElement::Positive(Element::Dice(Dice::new(8, 4, 8, 0)))
             ))
         );
     }
@@ -194,7 +218,7 @@ mod tests {
             Ok((
                 "",
                 ElementExpression(vec![SignedElement::Positive(Element::Dice(Dice::new(
-                    8, 4, 8
+                    8, 4, 8, 0
                 )))])
             ))
         );
@@ -203,7 +227,7 @@ mod tests {
             Ok((
                 "",
                 ElementExpression(vec![
-                    SignedElement::Positive(Element::Dice(Dice::new(2, 20, 1))),
+                    SignedElement::Positive(Element::Dice(Dice::new(2, 20, 1, 0))),
                     SignedElement::Positive(Element::Bonus(5)),
                 ])
             ))
@@ -213,20 +237,20 @@ mod tests {
             Ok((
                 " \n ",
                 ElementExpression(vec![SignedElement::Negative(Element::Dice(Dice::new(
-                    8, 4, 8
+                    8, 4, 8, 0
                 )))])
             ))
         );
         assert_eq!(
-            parse_element_expression("\t3d4 + 7 - 5 - 6d12 + 1d1 + 53 1d5 "),
+            parse_element_expression("\t3d4k2 + 7 - 5 - 6d12d3 + 1d1 + 53 1d5 "),
             Ok((
                 " 1d5 ",
                 ElementExpression(vec![
-                    SignedElement::Positive(Element::Dice(Dice::new(3, 4, 3))),
+                    SignedElement::Positive(Element::Dice(Dice::new(3, 4, 2, 0))),
                     SignedElement::Positive(Element::Bonus(7)),
                     SignedElement::Negative(Element::Bonus(5)),
-                    SignedElement::Negative(Element::Dice(Dice::new(6, 12, 6))),
-                    SignedElement::Positive(Element::Dice(Dice::new(1, 1, 1))),
+                    SignedElement::Negative(Element::Dice(Dice::new(6, 12, 6, 3))),
+                    SignedElement::Positive(Element::Dice(Dice::new(1, 1, 1, 0))),
                     SignedElement::Positive(Element::Bonus(53)),
                 ])
             ))

@@ -19,8 +19,8 @@ pub trait Rolled {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-// array of rolls in order, and how many dice to keep
-pub struct DiceRoll (pub Vec<u32>, usize);
+// array of rolls in order, how many dice to keep, and how many to drop
+pub struct DiceRoll (pub Vec<u32>, usize, usize);
 
 impl DiceRoll {
     pub fn rolls(&self) -> &[u32] {
@@ -31,9 +31,13 @@ impl DiceRoll {
         self.1
     }
 
+    pub fn drop(&self) -> usize {
+        self.2
+    }
+
     // only count kept dice in total
     pub fn total(&self) -> u32 {
-        self.0[..self.1].iter().sum()
+        self.0[self.2..self.1].iter().sum()
     }
 }
 
@@ -48,14 +52,19 @@ impl fmt::Display for DiceRoll {
         write!(f, "{}", self.rolled_value())?;
         let rolls = self.rolls();
         let keep  = self.keep();
+        let drop  = self.drop();
         let mut iter = rolls.iter().enumerate();
         if let Some(first) = iter.next() {
-            write!(f, " ({}", first.1)?;
+            if drop != 0 {
+                write!(f, " ([{}]", first.1)?;
+            } else {
+                write!(f, " ({}", first.1)?;
+            }
             for roll in iter {
-                if roll.0 < keep {
-                    write!(f, " + {}", roll.1)?;
-                } else {
+                if roll.0 >= keep || roll.0 < drop {
                     write!(f, " + [{}]", roll.1)?;
+                } else {
+                    write!(f, " + {}", roll.1)?;
                 }
             }
             write!(f, ")")?;
@@ -75,7 +84,7 @@ impl Roll for dice::Dice {
         // sort rolls in descending order
         rolls.sort_by(|a, b| b.cmp(a));
 
-        DiceRoll(rolls,self.keep as usize)
+        DiceRoll(rolls,self.keep as usize, self.drop as usize)
     }
 }
 
@@ -211,22 +220,26 @@ mod tests {
     use super::*;
     #[test]
     fn dice_roll_display_test() {
-        assert_eq!(DiceRoll(vec![1, 3, 4], 3).to_string(), "8 (1 + 3 + 4)");
-        assert_eq!(DiceRoll(vec![], 0).to_string(), "0");
+        assert_eq!(DiceRoll(vec![1, 3, 4], 3, 0).to_string(), "8 (1 + 3 + 4)");
+        assert_eq!(DiceRoll(vec![], 0, 0).to_string(), "0");
         assert_eq!(
-            DiceRoll(vec![4, 7, 2, 10], 4).to_string(),
+            DiceRoll(vec![4, 7, 2, 10], 4, 0).to_string(),
             "23 (4 + 7 + 2 + 10)"
         );
         assert_eq!(
-            DiceRoll(vec![20, 13, 11, 10], 3).to_string(),
+            DiceRoll(vec![20, 13, 11, 10], 3, 0).to_string(),
             "44 (20 + 13 + 11 + [10])"
+        );
+        assert_eq!(
+            DiceRoll(vec![20, 13, 11, 10], 4, 1).to_string(),
+            "34 ([20] + 13 + 11 + 10)"
         );
     }
 
     #[test]
     fn element_roll_display_test() {
         assert_eq!(
-            ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3)).to_string(),
+            ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3, 0)).to_string(),
             "8 (1 + 3 + 4)"
         );
         assert_eq!(ElementRoll::Bonus(7).to_string(), "7");
@@ -235,11 +248,11 @@ mod tests {
     #[test]
     fn signed_element_roll_display_test() {
         assert_eq!(
-            SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3))).to_string(),
+            SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3, 0))).to_string(),
             "8 (1 + 3 + 4)"
         );
         assert_eq!(
-            SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3))).to_string(),
+            SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3, 0))).to_string(),
             "-8 (1 + 3 + 4)"
         );
         assert_eq!(
@@ -256,14 +269,14 @@ mod tests {
     fn element_expression_roll_display_test() {
         assert_eq!(
             ElementExpressionRoll(vec![SignedElementRoll::Positive(ElementRoll::Dice(
-                DiceRoll(vec![1, 3, 4], 3)
+                DiceRoll(vec![1, 3, 4], 3, 0)
             )),])
             .to_string(),
             "8 (1 + 3 + 4)"
         );
         assert_eq!(
             ElementExpressionRoll(vec![SignedElementRoll::Negative(ElementRoll::Dice(
-                DiceRoll(vec![1, 3, 4], 3)
+                DiceRoll(vec![1, 3, 4], 3, 0)
             )),])
             .to_string(),
             "-8 (1 + 3 + 4)"
@@ -280,8 +293,8 @@ mod tests {
         );
         assert_eq!(
             ElementExpressionRoll(vec![
-                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3))),
-                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 2], 2))),
+                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3, 0))),
+                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 2], 2, 0))),
                 SignedElementRoll::Positive(ElementRoll::Bonus(4)),
                 SignedElementRoll::Negative(ElementRoll::Bonus(7)),
             ])
@@ -290,8 +303,8 @@ mod tests {
         );
         assert_eq!(
             ElementExpressionRoll(vec![
-                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3))),
-                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 2], 2))),
+                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![1, 3, 4], 3, 0))),
+                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![1, 2], 2, 0))),
                 SignedElementRoll::Negative(ElementRoll::Bonus(4)),
                 SignedElementRoll::Positive(ElementRoll::Bonus(7)),
             ])
@@ -300,13 +313,23 @@ mod tests {
         );
         assert_eq!(
             ElementExpressionRoll(vec![
-                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![4, 3, 1], 3))),
-                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![12, 2], 1))),
+                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![4, 3, 1], 3, 0))),
+                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![12, 2], 1, 0))),
                 SignedElementRoll::Negative(ElementRoll::Bonus(4)),
                 SignedElementRoll::Positive(ElementRoll::Bonus(7)),
             ])
             .to_string(),
             "7 (-8 (4 + 3 + 1) + 12 (12 + [2]) - 4 + 7)"
+        );
+        assert_eq!(
+            ElementExpressionRoll(vec![
+                SignedElementRoll::Negative(ElementRoll::Dice(DiceRoll(vec![4, 3, 1], 3, 1))),
+                SignedElementRoll::Positive(ElementRoll::Dice(DiceRoll(vec![12, 2], 2, 0))),
+                SignedElementRoll::Negative(ElementRoll::Bonus(4)),
+                SignedElementRoll::Positive(ElementRoll::Bonus(7)),
+            ])
+            .to_string(),
+            "13 (-4 ([4] + 3 + 1) + 14 (12 + 2) - 4 + 7)"
         );
     }
 }

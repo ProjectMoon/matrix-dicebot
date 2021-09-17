@@ -13,21 +13,24 @@ pub struct Dice {
     pub(crate) count: u32,
     pub(crate) sides: u32,
     pub(crate) keep: u32,
+    pub(crate) drop: u32,
 }
 
 impl fmt::Display for Dice {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.keep == self. count {
-            write!(f, "{}d{}", self.count, self.sides)
-        } else {
+        if self.keep != self.count {
             write!(f, "{}d{}k{}", self.count, self.sides, self.keep)
+        } else if self.drop != 0 {
+            write!(f, "{}d{}d{}", self.count, self.sides, self.drop)
+        } else {
+            write!(f, "{}d{}", self.count, self.sides)
         }
     }
 }
 
 impl Dice {
-    pub fn new(count: u32, sides: u32, keep: u32) -> Dice {
-        Dice { count, sides, keep }
+    pub fn new(count: u32, sides: u32, keep: u32, drop: u32) -> Dice {
+        Dice { count, sides, keep, drop }
     }
 }
 
