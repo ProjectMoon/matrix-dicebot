@@ -118,8 +118,16 @@ expressions.
 !r 3d12 - 5d2 + 3 - 7d3 + 20d20
 ```
 
-This system does not yet have the capability to handle things like D&D
-5e advantage or disadvantage.
+#### Keep/Drop Dice
+The bot supports either keeping the highest dice in a roll, or
+dropping the highest dice in a roll.  This allows the bot to handle 
+things like D&D 5e advantage or disadvantage.
+
+```
+!roll 2d20k1
+!r 2d20d1 + 5
+!r 10d10k5 + 10d10d5 - 2
+```
 
 ### Storytelling System
 
