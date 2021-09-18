@@ -19,7 +19,9 @@ pub trait Rolled {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-// array of rolls in order, how many dice to keep, and how many to drop
+/// array of rolls in order, how many dice to keep, and how many to drop
+///   keep indicates how many of the highest dice to keep
+///   drop indicates how many of the highest dice to drop
 pub struct DiceRoll (pub Vec<u32>, usize, usize);
 
 impl DiceRoll {
