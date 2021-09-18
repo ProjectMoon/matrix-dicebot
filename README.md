@@ -125,8 +125,8 @@ things like D&D 5e advantage or disadvantage.
 
 ```
 !roll 2d20k1
-!r 2d20d1 + 5
-!r 10d10k5 + 10d10d5 - 2
+!r 2d20dh1 + 5
+!r 10d10k5 + 10d10dh5 - 2
 ```
 
 ### Storytelling System
