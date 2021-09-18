@@ -31,33 +31,25 @@ enum Sign {
     Minus,
 }
 
-// Parse a dice expression.  Does not eat whitespace
+/// Parse a dice expression.  Does not eat whitespace
 fn parse_dice(input: &str) -> IResult<&str, Dice> {
     // parse main dice expression
-    let (mut input, (count, _, sides)) = tuple((digit1, tag("d"), digit1))(input)?;
+    let (input, (count, _, sides)) = tuple((digit1, tag("d"), digit1))(input)?;
 
-    // check for keep expression (i.e. D&D 5E Advantage)
-    let keep;
-    match tuple::<&str, _, (_, _), _>((tag("k"), digit1))(input) {
+    // check for keep expression to keep highest dice (2d20k1)
+    let (keep, input) = match tuple::<&str, _, (_, _), _>((tag("k"), digit1))(input) {
         // if ok, keep expression is present
-        Ok(r) => {
-            input = r.0;
-            keep  = r.1.1;
-        }
+        Ok(r) => (r.1.1, r.0),
         // otherwise absent and keep all dice
-        Err(_) => keep = count,
+        Err(_) => (input, "")
     };
 
-    // check for drop expression (i.e. D&D 5E Disadvantage)
-    let drop;
-    match tuple::<&str, _, (_, _), _>((tag("d"), digit1))(input) {
-        // if ok, drop expression is present
-        Ok(r) => {
-            input = r.0;
-            drop  = r.1.1;
-        }
+    // check for drop expression to drop highest dice (2d20dh1)
+    let (drop, input) = match tuple::<&str, _, (_, _), _>((tag("dh"), digit1))(input) {
+        // if ok, keep expression is present
+        Ok(r) => (r.1.1, r.0),
         // otherwise absent and keep all dice
-        Err(_) => drop = "0",
+        Err(_) => (input, "")
     };
 
     let count: u32 = count.parse().unwrap();
