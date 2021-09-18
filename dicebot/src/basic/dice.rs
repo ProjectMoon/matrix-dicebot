@@ -12,25 +12,39 @@ use std::ops::{Deref, DerefMut};
 pub struct Dice {
     pub(crate) count: u32,
     pub(crate) sides: u32,
-    pub(crate) keep: u32,
-    pub(crate) drop: u32,
+    pub(crate) keep_drop: KeepOrDrop,
 }
 
 impl fmt::Display for Dice {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.keep != self.count {
-            write!(f, "{}d{}k{}", self.count, self.sides, self.keep)
-        } else if self.drop != 0 {
-            write!(f, "{}d{}d{}", self.count, self.sides, self.drop)
-        } else {
-            write!(f, "{}d{}", self.count, self.sides)
+        match self.keep_drop {
+            KeepOrDrop::Keep(keep) => {
+                if keep != self.count {
+                    write!(f, "{}d{}k{}", self.count, self.sides, keep)
+                } else {
+                    write!(f, "{}d{}", self.count, self.sides)
+                }
+            }
+            KeepOrDrop::Drop(drop) => {
+                if drop != 0 {
+                    write!(f, "{}d{}dh{}", self.count, self.sides, drop)
+                } else {
+                    write!(f, "{}d{}", self.count, self.sides)
+                }
+            }
         }
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum KeepOrDrop {
+    Keep (u32),
+    Drop (u32),
+}
+
 impl Dice {
-    pub fn new(count: u32, sides: u32, keep: u32, drop: u32) -> Dice {
-        Dice { count, sides, keep, drop }
+    pub fn new(count: u32, sides: u32, keep_drop: KeepOrDrop) -> Dice {
+        Dice { count, sides, keep_drop }
     }
 }
 

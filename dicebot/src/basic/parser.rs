@@ -41,7 +41,7 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
         // if ok, keep expression is present
         Ok(r) => (r.1.1, r.0),
         // otherwise absent and keep all dice
-        Err(_) => (count, input)
+        Err(_) => ("", input)
     };
 
     // check for drop expression to drop highest dice (2d20dh1)
@@ -49,26 +49,41 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
         // if ok, keep expression is present
         Ok(r) => (r.1.1, r.0),
         // otherwise absent and keep all dice
-        Err(_) => ("0", input)
+        Err(_) => ("", input)
     };
 
     let count: u32 = count.parse().unwrap();
 
     // don't allow keep greater than number of dice, and don't allow keep zero
-    let mut keep: u32  = keep.parse().unwrap();
-    if keep > count || keep == 0 {
-        keep = count;
-    }
-
-    // don't allow drop greater than or equal to number of dice
-    let mut drop: u32  = drop.parse().unwrap();
-    if drop >= count {
-        drop = 0;
-    }
+    let keep_drop = match keep.parse::<u32>() {
+        // Ok, there's a keep value, check and create Keep
+        Ok(i) => {
+            if i > count || i == 0 {
+                KeepOrDrop::Keep(count)
+            } else {
+                KeepOrDrop::Keep(i)
+            }
+        },
+        // Err, check if drop works
+        Err(_) => {
+            match drop.parse::<u32>() {
+                // Ok, there's a drop value, check and create Drop
+                Ok(i) => {
+                    if i >= count {
+                        KeepOrDrop::Keep(count)
+                    } else {
+                        KeepOrDrop::Drop(i)
+                    }
+                },
+                // Err, there's neither keep nor drop
+                Err(_) => KeepOrDrop::Keep(count),
+            }
+        },
+    };
 
     Ok((
         input,
-        Dice::new(count, sides.parse().unwrap(), keep, drop),
+        Dice::new(count, sides.parse().unwrap(), keep_drop),
     ))
 }
 
@@ -140,29 +155,29 @@ mod tests {
     use super::*;
     #[test]
     fn dice_test() {
-        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4, 2, 0))));
-        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40, 20, 0))));
-        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, 8, 0))));
-        assert_eq!(parse_dice("2d20k1"), Ok(("", Dice::new(2, 20, 1, 0))));
-        assert_eq!(parse_dice("100d10k90"), Ok(("", Dice::new(100, 10, 90, 0))));
-        assert_eq!(parse_dice("11d10k10"), Ok(("", Dice::new(11, 10, 10, 0))));
-        assert_eq!(parse_dice("12d10k11"), Ok(("", Dice::new(12, 10, 11, 0))));
-        assert_eq!(parse_dice("12d10k13"), Ok(("", Dice::new(12, 10, 12, 0))));
-        assert_eq!(parse_dice("12d10k0"), Ok(("", Dice::new(12, 10, 12, 0))));
-        assert_eq!(parse_dice("20d40dh5"), Ok(("", Dice::new(20, 40, 20, 5))));
-        assert_eq!(parse_dice("8d7dh9"), Ok(("", Dice::new(8, 7, 8, 0))));
-        assert_eq!(parse_dice("8d7dh8"), Ok(("", Dice::new(8, 7, 8, 0))));
+        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4, KeepOrDrop::Keep(2)))));
+        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40, KeepOrDrop::Keep(20)))));
+        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, KeepOrDrop::Keep(8)))));
+        assert_eq!(parse_dice("2d20k1"), Ok(("", Dice::new(2, 20, KeepOrDrop::Keep(1)))));
+        assert_eq!(parse_dice("100d10k90"), Ok(("", Dice::new(100, 10, KeepOrDrop::Keep(90)))));
+        assert_eq!(parse_dice("11d10k10"), Ok(("", Dice::new(11, 10, KeepOrDrop::Keep(10)))));
+        assert_eq!(parse_dice("12d10k11"), Ok(("", Dice::new(12, 10, KeepOrDrop::Keep(11)))));
+        assert_eq!(parse_dice("12d10k13"), Ok(("", Dice::new(12, 10, KeepOrDrop::Keep(12)))));
+        assert_eq!(parse_dice("12d10k0"), Ok(("", Dice::new(12, 10, KeepOrDrop::Keep(12)))));
+        assert_eq!(parse_dice("20d40dh5"), Ok(("", Dice::new(20, 40, KeepOrDrop::Drop(5)))));
+        assert_eq!(parse_dice("8d7dh9"), Ok(("", Dice::new(8, 7, KeepOrDrop::Keep(8)))));
+        assert_eq!(parse_dice("8d7dh8"), Ok(("", Dice::new(8, 7, KeepOrDrop::Keep(8)))));
     }
 
     #[test]
     fn element_test() {
         assert_eq!(
             parse_element("  \t\n\r\n 8d7 \n"),
-            Ok((" \n", Element::Dice(Dice::new(8, 7, 8, 0))))
+            Ok((" \n", Element::Dice(Dice::new(8, 7, KeepOrDrop::Keep(8)))))
         );
         assert_eq!(
             parse_element("  \t\n\r\n 3d20k2 \n"),
-            Ok((" \n", Element::Dice(Dice::new(3, 20, 2, 0))))
+            Ok((" \n", Element::Dice(Dice::new(3, 20, KeepOrDrop::Keep(2)))))
         );
         assert_eq!(
             parse_element("  \t\n\r\n 8 \n"),
@@ -184,21 +199,21 @@ mod tests {
             parse_signed_element("  \t\n\r\n- 8d4 \n"),
             Ok((
                 " \n",
-                SignedElement::Negative(Element::Dice(Dice::new(8, 4, 8, 0)))
+                SignedElement::Negative(Element::Dice(Dice::new(8, 4, KeepOrDrop::Keep(8))))
             ))
         );
         assert_eq!(
             parse_signed_element("  \t\n\r\n- 8d4k4 \n"),
             Ok((
                 " \n",
-                SignedElement::Negative(Element::Dice(Dice::new(8, 4, 4, 0)))
+                SignedElement::Negative(Element::Dice(Dice::new(8, 4, KeepOrDrop::Keep(4))))
             ))
         );
         assert_eq!(
             parse_signed_element("  \t\n\r\n+ 8d4 \n"),
             Ok((
                 " \n",
-                SignedElement::Positive(Element::Dice(Dice::new(8, 4, 8, 0)))
+                SignedElement::Positive(Element::Dice(Dice::new(8, 4, KeepOrDrop::Keep(8))))
             ))
         );
     }
@@ -210,7 +225,7 @@ mod tests {
             Ok((
                 "",
                 ElementExpression(vec![SignedElement::Positive(Element::Dice(Dice::new(
-                    8, 4, 8, 0
+                    8, 4, KeepOrDrop::Keep(8)
                 )))])
             ))
         );
@@ -219,7 +234,7 @@ mod tests {
             Ok((
                 "",
                 ElementExpression(vec![
-                    SignedElement::Positive(Element::Dice(Dice::new(2, 20, 1, 0))),
+                    SignedElement::Positive(Element::Dice(Dice::new(2, 20, KeepOrDrop::Keep(1)))),
                     SignedElement::Positive(Element::Bonus(5)),
                 ])
             ))
@@ -229,7 +244,7 @@ mod tests {
             Ok((
                 " \n ",
                 ElementExpression(vec![SignedElement::Negative(Element::Dice(Dice::new(
-                    8, 4, 8, 0
+                    8, 4, KeepOrDrop::Keep(8)
                 )))])
             ))
         );
@@ -238,11 +253,11 @@ mod tests {
             Ok((
                 " 1d5 ",
                 ElementExpression(vec![
-                    SignedElement::Positive(Element::Dice(Dice::new(3, 4, 2, 0))),
+                    SignedElement::Positive(Element::Dice(Dice::new(3, 4, KeepOrDrop::Keep(2)))),
                     SignedElement::Positive(Element::Bonus(7)),
                     SignedElement::Negative(Element::Bonus(5)),
-                    SignedElement::Negative(Element::Dice(Dice::new(6, 12, 6, 3))),
-                    SignedElement::Positive(Element::Dice(Dice::new(1, 1, 1, 0))),
+                    SignedElement::Negative(Element::Dice(Dice::new(6, 12, KeepOrDrop::Drop(3)))),
+                    SignedElement::Positive(Element::Dice(Dice::new(1, 1, KeepOrDrop::Keep(1)))),
                     SignedElement::Positive(Element::Bonus(53)),
                 ])
             ))

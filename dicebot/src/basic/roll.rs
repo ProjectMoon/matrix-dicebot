@@ -4,6 +4,7 @@
  * project.
  */
 use crate::basic::dice;
+use crate::basic::dice::KeepOrDrop;
 use rand::prelude::*;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
@@ -86,7 +87,10 @@ impl Roll for dice::Dice {
         // sort rolls in descending order
         rolls.sort_by(|a, b| b.cmp(a));
 
-        DiceRoll(rolls,self.keep as usize, self.drop as usize)
+        match self.keep_drop {
+            KeepOrDrop::Keep(k)  => DiceRoll(rolls,k as usize, 0),
+            KeepOrDrop::Drop(dh) => DiceRoll(rolls,self.count as usize, dh as usize),
+        }
     }
 }
 
