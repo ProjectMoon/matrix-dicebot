@@ -41,7 +41,7 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
         // if ok, keep expression is present
         Ok(r) => (r.1.1, r.0),
         // otherwise absent and keep all dice
-        Err(_) => (input, "")
+        Err(_) => (count, input)
     };
 
     // check for drop expression to drop highest dice (2d20dh1)
@@ -49,7 +49,7 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
         // if ok, keep expression is present
         Ok(r) => (r.1.1, r.0),
         // otherwise absent and keep all dice
-        Err(_) => (input, "")
+        Err(_) => ("0", input)
     };
 
     let count: u32 = count.parse().unwrap();
@@ -149,9 +149,9 @@ mod tests {
         assert_eq!(parse_dice("12d10k11"), Ok(("", Dice::new(12, 10, 11, 0))));
         assert_eq!(parse_dice("12d10k13"), Ok(("", Dice::new(12, 10, 12, 0))));
         assert_eq!(parse_dice("12d10k0"), Ok(("", Dice::new(12, 10, 12, 0))));
-        assert_eq!(parse_dice("20d40d5"), Ok(("", Dice::new(20, 40, 20, 5))));
-        assert_eq!(parse_dice("8d7d9"), Ok(("", Dice::new(8, 7, 8, 0))));
-        assert_eq!(parse_dice("8d7d8"), Ok(("", Dice::new(8, 7, 8, 0))));
+        assert_eq!(parse_dice("20d40dh5"), Ok(("", Dice::new(20, 40, 20, 5))));
+        assert_eq!(parse_dice("8d7dh9"), Ok(("", Dice::new(8, 7, 8, 0))));
+        assert_eq!(parse_dice("8d7dh8"), Ok(("", Dice::new(8, 7, 8, 0))));
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
             ))
         );
         assert_eq!(
-            parse_element_expression("\t3d4k2 + 7 - 5 - 6d12d3 + 1d1 + 53 1d5 "),
+            parse_element_expression("\t3d4k2 + 7 - 5 - 6d12dh3 + 1d1 + 53 1d5 "),
             Ok((
                 " 1d5 ",
                 ElementExpression(vec![
