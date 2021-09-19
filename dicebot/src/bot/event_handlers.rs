@@ -2,18 +2,12 @@ use super::DiceBot;
 use crate::db::sqlite::Database;
 use crate::db::Rooms;
 use crate::error::BotError;
-use async_trait::async_trait;
 use log::{debug, error, info, warn};
-use matrix_sdk::{
-    self,
-    events::{
-        room::member::MemberEventContent,
-        room::message::{MessageEventContent, MessageType, TextMessageEventContent},
-        StrippedStateEvent, SyncMessageEvent,
-    },
-    room::Room,
-    EventHandler,
-};
+use matrix_sdk::ruma::events::room::member::MemberEventContent;
+use matrix_sdk::ruma::events::room::message::{MessageType, TextMessageEventContent};
+use matrix_sdk::ruma::events::{StrippedStateEvent, SyncMessageEvent};
+use matrix_sdk::Client;
+use matrix_sdk::{self, room::Room, ruma::events::room::message::MessageEventContent};
 use std::ops::Sub;
 use std::time::{Duration, SystemTime};
 use std::{clone::Clone, time::UNIX_EPOCH};
@@ -101,58 +95,56 @@ async fn should_process_event(db: &Database, room_id: &str, event_id: &str) -> b
         })
 }
 
-/// This event emitter listens for messages with dice rolling commands.
-/// Originally adapted from the matrix-rust-sdk examples.
-#[async_trait]
-impl EventHandler for DiceBot {
-    async fn on_stripped_state_member(
-        &self,
-        room: Room,
-        event: &StrippedStateEvent<MemberEventContent>,
-        _: Option<MemberEventContent>,
-    ) {
-        let room = match room {
-            Room::Invited(invited_room) => invited_room,
-            _ => return,
-        };
+pub(super) async fn on_stripped_state_member(
+    event: StrippedStateEvent<MemberEventContent>,
+    client: Client,
+    room: Room,
+) {
+    let room = match room {
+        Room::Invited(invited_room) => invited_room,
+        _ => return,
+    };
 
-        if room.own_user_id().as_str() != event.state_key {
-            return;
-        }
-
-        info!(
-            "Autojoining room {}",
-            room.display_name().await.ok().unwrap_or_default()
-        );
-
-        if let Err(e) = self.client.join_room_by_id(&room.room_id()).await {
-            warn!("Could not join room: {}", e.to_string())
-        }
+    if room.own_user_id().as_str() != event.state_key {
+        return;
     }
 
-    async fn on_room_message(&self, room: Room, event: &SyncMessageEvent<MessageEventContent>) {
-        let room = match room {
-            Room::Joined(joined_room) => joined_room,
-            _ => return,
+    info!(
+        "Autojoining room {}",
+        room.display_name().await.ok().unwrap_or_default()
+    );
+
+    if let Err(e) = client.join_room_by_id(&room.room_id()).await {
+        warn!("Could not join room: {}", e.to_string())
+    }
+}
+
+pub(super) async fn on_room_message(
+    event: SyncMessageEvent<MessageEventContent>,
+    room: Room,
+    bot: DiceBot,
+) {
+    let room = match room {
+        Room::Joined(joined_room) => joined_room,
+        _ => return,
+    };
+
+    let room_id = room.room_id().as_str();
+    if !should_process_event(&bot.db, room_id, event.event_id.as_str()).await {
+        return;
+    }
+
+    let (msg_body, sender_username) =
+        if let Ok((msg_body, sender_username)) = should_process_message(&bot, &event).await {
+            (msg_body, sender_username)
+        } else {
+            return;
         };
 
-        let room_id = room.room_id().as_str();
-        if !should_process_event(&self.db, room_id, event.event_id.as_str()).await {
-            return;
-        }
+    let results = bot
+        .execute_commands(&room, &sender_username, &msg_body)
+        .await;
 
-        let (msg_body, sender_username) =
-            if let Ok((msg_body, sender_username)) = should_process_message(self, &event).await {
-                (msg_body, sender_username)
-            } else {
-                return;
-            };
-
-        let results = self
-            .execute_commands(&room, &sender_username, &msg_body)
-            .await;
-
-        self.handle_results(&room, &sender_username, event.event_id.clone(), results)
-            .await;
-    }
+    bot.handle_results(&room, &sender_username, event.event_id.clone(), results)
+        .await;
 }

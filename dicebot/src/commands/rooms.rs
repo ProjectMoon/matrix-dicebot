@@ -6,7 +6,7 @@ use crate::matrix;
 use async_trait::async_trait;
 use fuse_rust::{Fuse, FuseProperty, Fuseable};
 use futures::stream::{self, StreamExt, TryStreamExt};
-use matrix_sdk::{identifiers::UserId, Client};
+use matrix_sdk::{ruma::UserId, Client};
 use std::convert::TryFrom;
 
 /// Holds matrix room ID and display name as strings, for use with

@@ -39,9 +39,6 @@ pub enum BotError {
     #[error("uncategorized matrix SDK error: {0}")]
     MatrixError(#[from] matrix_sdk::Error),
 
-    #[error("uncategorized matrix SDK base error: {0}")]
-    MatrixBaseError(#[from] matrix_sdk::BaseError),
-
     #[error("future canceled")]
     FutureCanceledError,
 
@@ -80,7 +77,7 @@ pub enum BotError {
     TryFromIntError(#[from] std::num::TryFromIntError),
 
     #[error("identifier error: {0}")]
-    IdentifierError(#[from] matrix_sdk::identifiers::Error),
+    IdentifierError(#[from] matrix_sdk::ruma::identifiers::Error),
 
     #[error("password creation error: {0}")]
     PasswordCreationError(argon2::Error),

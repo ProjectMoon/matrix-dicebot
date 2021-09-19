@@ -4,7 +4,8 @@ use crate::matrix;
 use crate::{config::Config, db::sqlite::Database};
 use futures::stream;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
-use matrix_sdk::{identifiers::UserId, room::Joined, Client};
+use matrix_sdk::ruma::UserId;
+use matrix_sdk::{room::Joined, Client};
 use std::convert::TryFrom;
 use std::sync::Arc;
 use tenebrous_rpc::protos::dicebot::{

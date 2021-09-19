@@ -8,12 +8,8 @@ use crate::{
     models::Account,
 };
 use futures::stream::{self, StreamExt};
-use matrix_sdk::{
-    self,
-    identifiers::{EventId, RoomId},
-    room::Joined,
-    Client,
-};
+use matrix_sdk::ruma::{EventId, RoomId};
+use matrix_sdk::{self, room::Joined, Client};
 use std::clone::Clone;
 use std::convert::TryFrom;
 

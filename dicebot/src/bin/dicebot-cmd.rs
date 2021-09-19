@@ -1,4 +1,4 @@
-use matrix_sdk::identifiers::room_id;
+use matrix_sdk::ruma::identifiers::room_id;
 use matrix_sdk::Client;
 use tenebrous_dicebot::commands;
 use tenebrous_dicebot::commands::ResponseExtractor;

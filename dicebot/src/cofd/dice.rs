@@ -332,7 +332,7 @@ mod tests {
     macro_rules! dummy_room {
         () => {
             crate::context::RoomContext {
-                id: &matrix_sdk::identifiers::room_id!("!fakeroomid:example.com"),
+                id: &matrix_sdk::ruma::identifiers::room_id!("!fakeroomid:example.com"),
                 display_name: "displayname".to_owned(),
                 secure: false,
             }

@@ -5,7 +5,11 @@ use crate::db::DbState;
 use crate::error::BotError;
 use crate::state::DiceBotState;
 use log::info;
-use matrix_sdk::{self, identifiers::EventId, room::Joined, Client, SyncSettings};
+use matrix_sdk::room::Room;
+use matrix_sdk::ruma::events::room::message::MessageEventContent;
+use matrix_sdk::ruma::events::SyncMessageEvent;
+use matrix_sdk::ruma::EventId;
+use matrix_sdk::{self, room::Joined, Client, SyncSettings};
 use std::clone::Clone;
 use std::sync::{Arc, RwLock};
 
@@ -18,6 +22,7 @@ const MAX_COMMANDS_PER_MESSAGE: usize = 50;
 
 /// The DiceBot struct represents an active dice bot. The bot is not
 /// connected to Matrix until its run() function is called.
+#[derive(Clone)]
 pub struct DiceBot {
     /// A reference to the configuration read in on application start.
     config: Arc<Config>,
@@ -79,14 +84,32 @@ impl DiceBot {
         Ok(())
     }
 
+    async fn bind_events(&self) {
+        //on room message: need closure to pass bot ref in.
+        self.client
+            .register_event_handler({
+                let bot: DiceBot = self.clone();
+                move |event: SyncMessageEvent<MessageEventContent>, room: Room| {
+                    let bot = bot.clone();
+                    async move { event_handlers::on_room_message(event, room, bot).await }
+                }
+            })
+            .await;
+
+        //auto-join handler
+        self.client
+            .register_event_handler(event_handlers::on_stripped_state_member)
+            .await;
+    }
+
     /// Logs the bot in to Matrix and listens for events until program
     /// terminated, or a panic occurs. Originally adapted from the
     /// matrix-rust-sdk command bot example.
     pub async fn run(self) -> Result<(), BotError> {
         let client = self.client.clone();
         self.login(&client).await?;
+        self.bind_events().await;
 
-        client.set_event_handler(Box::new(self)).await;
         info!("Listening for commands");
 
         // TODO replace with sync_with_callback for cleaner shutdown

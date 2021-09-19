@@ -2,15 +2,12 @@ use std::path::PathBuf;
 
 use futures::stream::{self, StreamExt, TryStreamExt};
 use log::error;
-use matrix_sdk::{events::room::message::NoticeMessageEventContent, room::Joined, ClientConfig};
-use matrix_sdk::{
-    events::room::message::{InReplyTo, Relation},
-    events::room::message::{MessageEventContent, MessageType},
-    events::AnyMessageEventContent,
-    identifiers::EventId,
-    Error as MatrixError,
-};
-use matrix_sdk::{identifiers::RoomId, identifiers::UserId, Client};
+use matrix_sdk::ruma::events::room::message::{InReplyTo, MessageEventContent, Relation};
+use matrix_sdk::ruma::events::AnyMessageEventContent;
+use matrix_sdk::ruma::{EventId, RoomId, UserId};
+use matrix_sdk::Client;
+use matrix_sdk::Error as MatrixError;
+use matrix_sdk::{room::Joined, ClientConfig};
 use url::Url;
 
 use crate::{config::Config, error::BotError};
@@ -95,9 +92,7 @@ pub async fn send_message(
         _ => return,
     };
 
-    let mut content = MessageEventContent::new(MessageType::Notice(
-        NoticeMessageEventContent::html(plain.trim(), html),
-    ));
+    let mut content = MessageEventContent::notice_html(plain.trim(), html);
 
     content.relates_to = reply_to.map(|event_id| Relation::Reply {
         in_reply_to: InReplyTo::new(event_id),
