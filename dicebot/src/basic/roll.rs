@@ -90,6 +90,7 @@ impl Roll for dice::Dice {
         match self.keep_drop {
             KeepOrDrop::Keep(k)  => DiceRoll(rolls,k as usize, 0),
             KeepOrDrop::Drop(dh) => DiceRoll(rolls,self.count as usize, dh as usize),
+            KeepOrDrop::None     => DiceRoll(rolls,self.count as usize, 0),
         }
     }
 }

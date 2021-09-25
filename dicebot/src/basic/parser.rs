@@ -39,7 +39,7 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
     // check for keep expression to keep highest dice (2d20k1)
     let (keep, input) = match tuple::<&str, _, (_, _), _>((tag("k"), digit1))(input) {
         // if ok, keep expression is present
-        Ok(r) => (r.1.1, r.0),
+        Ok((rest, (_, keep_amount))) => (keep_amount, rest),
         // otherwise absent and keep all dice
         Err(_) => ("", input)
     };
@@ -47,7 +47,7 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
     // check for drop expression to drop highest dice (2d20dh1)
     let (drop, input) = match tuple::<&str, _, (_, _), _>((tag("dh"), digit1))(input) {
         // if ok, keep expression is present
-        Ok(r) => (r.1.1, r.0),
+        Ok((rest, (_, drop_amount))) => (drop_amount, rest),
         // otherwise absent and keep all dice
         Err(_) => ("", input)
     };
@@ -57,26 +57,20 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
     // don't allow keep greater than number of dice, and don't allow keep zero
     let keep_drop = match keep.parse::<u32>() {
         // Ok, there's a keep value, check and create Keep
-        Ok(i) => {
-            if i > count || i == 0 {
-                KeepOrDrop::Keep(count)
-            } else {
-                KeepOrDrop::Keep(i)
-            }
+        Ok(i) => match i {
+            _i if _i > count || _i == 0 => KeepOrDrop::None,
+            i => KeepOrDrop::Keep(i),
         },
         // Err, check if drop works
         Err(_) => {
             match drop.parse::<u32>() {
                 // Ok, there's a drop value, check and create Drop
-                Ok(i) => {
-                    if i >= count {
-                        KeepOrDrop::Keep(count)
-                    } else {
-                        KeepOrDrop::Drop(i)
-                    }
+                Ok(i) => match i {
+                    _i if i >= count => KeepOrDrop::None,
+                    i => KeepOrDrop::Drop(i),
                 },
                 // Err, there's neither keep nor drop
-                Err(_) => KeepOrDrop::Keep(count),
+                Err(_) => KeepOrDrop::None,
             }
         },
     };
@@ -155,25 +149,25 @@ mod tests {
     use super::*;
     #[test]
     fn dice_test() {
-        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4, KeepOrDrop::Keep(2)))));
-        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40, KeepOrDrop::Keep(20)))));
-        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, KeepOrDrop::Keep(8)))));
+        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4, KeepOrDrop::None))));
+        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40, KeepOrDrop::None))));
+        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, KeepOrDrop::None))));
         assert_eq!(parse_dice("2d20k1"), Ok(("", Dice::new(2, 20, KeepOrDrop::Keep(1)))));
         assert_eq!(parse_dice("100d10k90"), Ok(("", Dice::new(100, 10, KeepOrDrop::Keep(90)))));
         assert_eq!(parse_dice("11d10k10"), Ok(("", Dice::new(11, 10, KeepOrDrop::Keep(10)))));
         assert_eq!(parse_dice("12d10k11"), Ok(("", Dice::new(12, 10, KeepOrDrop::Keep(11)))));
-        assert_eq!(parse_dice("12d10k13"), Ok(("", Dice::new(12, 10, KeepOrDrop::Keep(12)))));
-        assert_eq!(parse_dice("12d10k0"), Ok(("", Dice::new(12, 10, KeepOrDrop::Keep(12)))));
+        assert_eq!(parse_dice("12d10k13"), Ok(("", Dice::new(12, 10, KeepOrDrop::None))));
+        assert_eq!(parse_dice("12d10k0"), Ok(("", Dice::new(12, 10, KeepOrDrop::None))));
         assert_eq!(parse_dice("20d40dh5"), Ok(("", Dice::new(20, 40, KeepOrDrop::Drop(5)))));
-        assert_eq!(parse_dice("8d7dh9"), Ok(("", Dice::new(8, 7, KeepOrDrop::Keep(8)))));
-        assert_eq!(parse_dice("8d7dh8"), Ok(("", Dice::new(8, 7, KeepOrDrop::Keep(8)))));
+        assert_eq!(parse_dice("8d7dh9"), Ok(("", Dice::new(8, 7, KeepOrDrop::None))));
+        assert_eq!(parse_dice("8d7dh8"), Ok(("", Dice::new(8, 7, KeepOrDrop::None))));
     }
 
     #[test]
     fn element_test() {
         assert_eq!(
             parse_element("  \t\n\r\n 8d7 \n"),
-            Ok((" \n", Element::Dice(Dice::new(8, 7, KeepOrDrop::Keep(8)))))
+            Ok((" \n", Element::Dice(Dice::new(8, 7, KeepOrDrop::None))))
         );
         assert_eq!(
             parse_element("  \t\n\r\n 3d20k2 \n"),
@@ -199,7 +193,7 @@ mod tests {
             parse_signed_element("  \t\n\r\n- 8d4 \n"),
             Ok((
                 " \n",
-                SignedElement::Negative(Element::Dice(Dice::new(8, 4, KeepOrDrop::Keep(8))))
+                SignedElement::Negative(Element::Dice(Dice::new(8, 4, KeepOrDrop::None)))
             ))
         );
         assert_eq!(
@@ -213,7 +207,7 @@ mod tests {
             parse_signed_element("  \t\n\r\n+ 8d4 \n"),
             Ok((
                 " \n",
-                SignedElement::Positive(Element::Dice(Dice::new(8, 4, KeepOrDrop::Keep(8))))
+                SignedElement::Positive(Element::Dice(Dice::new(8, 4, KeepOrDrop::None)))
             ))
         );
     }
@@ -225,7 +219,7 @@ mod tests {
             Ok((
                 "",
                 ElementExpression(vec![SignedElement::Positive(Element::Dice(Dice::new(
-                    8, 4, KeepOrDrop::Keep(8)
+                    8, 4, KeepOrDrop::None
                 )))])
             ))
         );
@@ -244,7 +238,7 @@ mod tests {
             Ok((
                 " \n ",
                 ElementExpression(vec![SignedElement::Negative(Element::Dice(Dice::new(
-                    8, 4, KeepOrDrop::Keep(8)
+                    8, 4, KeepOrDrop::None
                 )))])
             ))
         );
@@ -257,7 +251,7 @@ mod tests {
                     SignedElement::Positive(Element::Bonus(7)),
                     SignedElement::Negative(Element::Bonus(5)),
                     SignedElement::Negative(Element::Dice(Dice::new(6, 12, KeepOrDrop::Drop(3)))),
-                    SignedElement::Positive(Element::Dice(Dice::new(1, 1, KeepOrDrop::Keep(1)))),
+                    SignedElement::Positive(Element::Dice(Dice::new(1, 1, KeepOrDrop::None))),
                     SignedElement::Positive(Element::Bonus(53)),
                 ])
             ))

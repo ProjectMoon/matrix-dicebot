@@ -18,20 +18,9 @@ pub struct Dice {
 impl fmt::Display for Dice {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.keep_drop {
-            KeepOrDrop::Keep(keep) => {
-                if keep != self.count {
-                    write!(f, "{}d{}k{}", self.count, self.sides, keep)
-                } else {
-                    write!(f, "{}d{}", self.count, self.sides)
-                }
-            }
-            KeepOrDrop::Drop(drop) => {
-                if drop != 0 {
-                    write!(f, "{}d{}dh{}", self.count, self.sides, drop)
-                } else {
-                    write!(f, "{}d{}", self.count, self.sides)
-                }
-            }
+            KeepOrDrop::Keep(keep) => write!(f, "{}d{}k{}", self.count, self.sides, keep),
+            KeepOrDrop::Drop(drop) => write!(f, "{}d{}dh{}", self.count, self.sides, drop),
+            KeepOrDrop::None       => write!(f, "{}d{}", self.count, self.sides),
         }
     }
 }
@@ -40,6 +29,7 @@ impl fmt::Display for Dice {
 pub enum KeepOrDrop {
     Keep (u32),
     Drop (u32),
+    None,
 }
 
 impl Dice {
