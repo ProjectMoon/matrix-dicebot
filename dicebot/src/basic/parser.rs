@@ -4,6 +4,8 @@
  * project.
  */
 use nom::bytes::complete::take_while;
+use nom::error::ErrorKind as NomErrorKind;
+use nom::Err as NomErr;
 use nom::{
     alt, bytes::complete::tag, character::complete::digit1, complete, many0, named,
     sequence::tuple, tag, IResult,
@@ -31,6 +33,12 @@ enum Sign {
     Minus,
 }
 
+macro_rules! too_big {
+    ($input: expr) => {
+        NomErr::Error(($input, NomErrorKind::TooLarge))
+    };
+}
+
 /// Parse a dice expression.  Does not eat whitespace
 fn parse_dice(input: &str) -> IResult<&str, Dice> {
     // parse main dice expression
@@ -41,7 +49,7 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
         // if ok, keep expression is present
         Ok((rest, (_, keep_amount))) => (keep_amount, rest),
         // otherwise absent and keep all dice
-        Err(_) => ("", input)
+        Err(_) => ("", input),
     };
 
     // check for drop expression to drop highest dice (2d20dh1)
@@ -49,10 +57,10 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
         // if ok, keep expression is present
         Ok((rest, (_, drop_amount))) => (drop_amount, rest),
         // otherwise absent and keep all dice
-        Err(_) => ("", input)
+        Err(_) => ("", input),
     };
 
-    let count: u32 = count.parse().unwrap();
+    let count: u32 = count.parse().map_err(|_| too_big!(count))?;
 
     // don't allow keep greater than number of dice, and don't allow keep zero
     let keep_drop = match keep.parse::<u32>() {
@@ -72,13 +80,11 @@ fn parse_dice(input: &str) -> IResult<&str, Dice> {
                 // Err, there's neither keep nor drop
                 Err(_) => KeepOrDrop::None,
             }
-        },
+        }
     };
 
-    Ok((
-        input,
-        Dice::new(count, sides.parse().unwrap(), keep_drop),
-    ))
+    let sides = sides.parse().map_err(|_| too_big!(sides))?;
+    Ok((input, Dice::new(count, sides, keep_drop)))
 }
 
 // Parse a single digit expression.  Does not eat whitespace
@@ -149,18 +155,80 @@ mod tests {
     use super::*;
     #[test]
     fn dice_test() {
-        assert_eq!(parse_dice("2d4"), Ok(("", Dice::new(2, 4, KeepOrDrop::None))));
-        assert_eq!(parse_dice("20d40"), Ok(("", Dice::new(20, 40, KeepOrDrop::None))));
-        assert_eq!(parse_dice("8d7"), Ok(("", Dice::new(8, 7, KeepOrDrop::None))));
-        assert_eq!(parse_dice("2d20k1"), Ok(("", Dice::new(2, 20, KeepOrDrop::Keep(1)))));
-        assert_eq!(parse_dice("100d10k90"), Ok(("", Dice::new(100, 10, KeepOrDrop::Keep(90)))));
-        assert_eq!(parse_dice("11d10k10"), Ok(("", Dice::new(11, 10, KeepOrDrop::Keep(10)))));
-        assert_eq!(parse_dice("12d10k11"), Ok(("", Dice::new(12, 10, KeepOrDrop::Keep(11)))));
-        assert_eq!(parse_dice("12d10k13"), Ok(("", Dice::new(12, 10, KeepOrDrop::None))));
-        assert_eq!(parse_dice("12d10k0"), Ok(("", Dice::new(12, 10, KeepOrDrop::None))));
-        assert_eq!(parse_dice("20d40dh5"), Ok(("", Dice::new(20, 40, KeepOrDrop::Drop(5)))));
-        assert_eq!(parse_dice("8d7dh9"), Ok(("", Dice::new(8, 7, KeepOrDrop::None))));
-        assert_eq!(parse_dice("8d7dh8"), Ok(("", Dice::new(8, 7, KeepOrDrop::None))));
+        assert_eq!(
+            parse_dice("2d4"),
+            Ok(("", Dice::new(2, 4, KeepOrDrop::None)))
+        );
+        assert_eq!(
+            parse_dice("20d40"),
+            Ok(("", Dice::new(20, 40, KeepOrDrop::None)))
+        );
+        assert_eq!(
+            parse_dice("8d7"),
+            Ok(("", Dice::new(8, 7, KeepOrDrop::None)))
+        );
+        assert_eq!(
+            parse_dice("2d20k1"),
+            Ok(("", Dice::new(2, 20, KeepOrDrop::Keep(1))))
+        );
+        assert_eq!(
+            parse_dice("100d10k90"),
+            Ok(("", Dice::new(100, 10, KeepOrDrop::Keep(90))))
+        );
+        assert_eq!(
+            parse_dice("11d10k10"),
+            Ok(("", Dice::new(11, 10, KeepOrDrop::Keep(10))))
+        );
+        assert_eq!(
+            parse_dice("12d10k11"),
+            Ok(("", Dice::new(12, 10, KeepOrDrop::Keep(11))))
+        );
+        assert_eq!(
+            parse_dice("12d10k13"),
+            Ok(("", Dice::new(12, 10, KeepOrDrop::None)))
+        );
+        assert_eq!(
+            parse_dice("12d10k0"),
+            Ok(("", Dice::new(12, 10, KeepOrDrop::None)))
+        );
+        assert_eq!(
+            parse_dice("20d40dh5"),
+            Ok(("", Dice::new(20, 40, KeepOrDrop::Drop(5))))
+        );
+        assert_eq!(
+            parse_dice("8d7dh9"),
+            Ok(("", Dice::new(8, 7, KeepOrDrop::None)))
+        );
+        assert_eq!(
+            parse_dice("8d7dh8"),
+            Ok(("", Dice::new(8, 7, KeepOrDrop::None)))
+        );
+    }
+
+    #[test]
+    fn big_number_of_dice_doesnt_crash_test() {
+        let res = parse_dice("64378631476346123874527551481376547657868536d4");
+        assert!(res.is_err());
+        match res {
+            Err(NomErr::Error((input, kind))) => {
+                assert_eq!(kind, NomErrorKind::TooLarge);
+                assert_eq!(input, "64378631476346123874527551481376547657868536");
+            }
+            _ => panic!("Got success, expected error"),
+        }
+    }
+
+    #[test]
+    fn big_number_of_sides_doesnt_crash_test() {
+        let res = parse_dice("1d423562312587425472658956278456298376234876");
+        assert!(res.is_err());
+        match res {
+            Err(NomErr::Error((input, kind))) => {
+                assert_eq!(kind, NomErrorKind::TooLarge);
+                assert_eq!(input, "423562312587425472658956278456298376234876");
+            }
+            _ => panic!("Got success, expected error"),
+        }
     }
 
     #[test]
@@ -219,7 +287,9 @@ mod tests {
             Ok((
                 "",
                 ElementExpression(vec![SignedElement::Positive(Element::Dice(Dice::new(
-                    8, 4, KeepOrDrop::None
+                    8,
+                    4,
+                    KeepOrDrop::None
                 )))])
             ))
         );
@@ -238,7 +308,9 @@ mod tests {
             Ok((
                 " \n ",
                 ElementExpression(vec![SignedElement::Negative(Element::Dice(Dice::new(
-                    8, 4, KeepOrDrop::None
+                    8,
+                    4,
+                    KeepOrDrop::None
                 )))])
             ))
         );
