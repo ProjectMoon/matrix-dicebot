@@ -33,6 +33,14 @@ enum Sign {
     Minus,
 }
 
+/// Intermediate parsed value for a keep-drop expression to indicate
+/// which one it is.
+enum ParsedKeepOrDrop<'a> {
+    Keep(&'a str),
+    Drop(&'a str),
+    NotPresent,
+}
+
 macro_rules! too_big {
     ($input: expr) => {
         NomErr::Error(($input, NomErrorKind::TooLarge))
@@ -41,50 +49,58 @@ macro_rules! too_big {
 
 /// Parse a dice expression.  Does not eat whitespace
 fn parse_dice(input: &str) -> IResult<&str, Dice> {
-    // parse main dice expression
     let (input, (count, _, sides)) = tuple((digit1, tag("d"), digit1))(input)?;
-
-    // check for keep expression to keep highest dice (2d20k1)
-    let (keep, input) = match tuple::<&str, _, (_, _), _>((tag("k"), digit1))(input) {
-        // if ok, keep expression is present
-        Ok((rest, (_, keep_amount))) => (keep_amount, rest),
-        // otherwise absent and keep all dice
-        Err(_) => ("", input),
-    };
-
-    // check for drop expression to drop highest dice (2d20dh1)
-    let (drop, input) = match tuple::<&str, _, (_, _), _>((tag("dh"), digit1))(input) {
-        // if ok, keep expression is present
-        Ok((rest, (_, drop_amount))) => (drop_amount, rest),
-        // otherwise absent and keep all dice
-        Err(_) => ("", input),
-    };
-
     let count: u32 = count.parse().map_err(|_| too_big!(count))?;
+    let sides = sides.parse().map_err(|_| too_big!(sides))?;
+    let (input, keep_drop) = parse_keep_or_drop(input, count)?;
+    Ok((input, Dice::new(count, sides, keep_drop)))
+}
 
-    // don't allow keep greater than number of dice, and don't allow keep zero
-    let keep_drop = match keep.parse::<u32>() {
-        // Ok, there's a keep value, check and create Keep
-        Ok(i) => match i {
-            _i if _i > count || _i == 0 => KeepOrDrop::None,
-            i => KeepOrDrop::Keep(i),
+/// Extract keep/drop number as a string. Fails if the value is not a
+/// string.
+fn parse_keep_or_drop_text<'a>(
+    symbol: &'a str,
+    input: &'a str,
+) -> IResult<&'a str, ParsedKeepOrDrop<'a>> {
+    let (parsed_kd, input) = match tuple::<&str, _, (_, _), _>((tag(symbol), digit1))(input) {
+        // if ok, one of the expressions is present
+        Ok((rest, (_, kd_expr))) => match symbol {
+            "k" => (ParsedKeepOrDrop::Keep(kd_expr), rest),
+            "dh" => (ParsedKeepOrDrop::Drop(kd_expr), rest),
+            _ => panic!("Unrecogized keep-drop symbol: {}", symbol),
         },
-        // Err, check if drop works
-        Err(_) => {
-            match drop.parse::<u32>() {
-                // Ok, there's a drop value, check and create Drop
-                Ok(i) => match i {
-                    _i if i >= count => KeepOrDrop::None,
-                    i => KeepOrDrop::Drop(i),
-                },
-                // Err, there's neither keep nor drop
-                Err(_) => KeepOrDrop::None,
-            }
-        }
+        // otherwise absent (attempt to keep all dice)
+        Err(_) => (ParsedKeepOrDrop::NotPresent, input),
     };
 
-    let sides = sides.parse().map_err(|_| too_big!(sides))?;
-    Ok((input, Dice::new(count, sides, keep_drop)))
+    Ok((input, parsed_kd))
+}
+
+/// Parse keep/drop expression, which consits of "k" or "dh" following
+/// a dice expression. For example, "1d4h3" or "1d4dh2".
+fn parse_keep_or_drop<'a>(input: &'a str, count: u32) -> IResult<&'a str, KeepOrDrop> {
+    let (input, keep) = parse_keep_or_drop_text("k", input)?;
+    let (input, drop) = parse_keep_or_drop_text("dh", input)?;
+
+    use ParsedKeepOrDrop::*;
+    let keep_drop: KeepOrDrop = match (keep, drop) {
+        //Potential valid Keep expression.
+        (Keep(keep), NotPresent) => match keep.parse().map_err(|_| too_big!(input))? {
+            _i if _i > count || _i == 0 => Ok(KeepOrDrop::None),
+            i => Ok(KeepOrDrop::Keep(i)),
+        },
+        //Potential valid Drop expression.
+        (NotPresent, Drop(drop)) => match drop.parse().map_err(|_| too_big!(input))? {
+            _i if _i >= count => Ok(KeepOrDrop::None),
+            i => Ok(KeepOrDrop::Drop(i)),
+        },
+        //No Keep or Drop specified; regular behavior.
+        (NotPresent, NotPresent) => Ok(KeepOrDrop::None),
+        //Anything else is an error.
+        _ => Err(NomErr::Error((input, NomErrorKind::Many1))),
+    }?;
+
+    Ok((input, keep_drop))
 }
 
 // Parse a single digit expression.  Does not eat whitespace
@@ -203,6 +219,18 @@ mod tests {
             parse_dice("8d7dh8"),
             Ok(("", Dice::new(8, 7, KeepOrDrop::None)))
         );
+    }
+
+    #[test]
+    fn cant_have_both_keep_and_drop_test() {
+        let res = parse_dice("1d4k3dh2");
+        assert!(res.is_err());
+        match res {
+            Err(NomErr::Error((_, kind))) => {
+                assert_eq!(kind, NomErrorKind::Many1);
+            }
+            _ => panic!("Got success, expected error"),
+        }
     }
 
     #[test]
