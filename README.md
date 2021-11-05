@@ -278,6 +278,7 @@ The most basic plans are:
 * Perhaps some sort of character sheet integration. But for that, we
   would need a sheet service.
 * Use environment variables instead of config file in Docker image.
+* Per-system game rules.
 
 ## Credits
 
