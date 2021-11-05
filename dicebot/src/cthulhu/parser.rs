@@ -4,16 +4,13 @@ use crate::parser::dice::DiceParsingError;
 //TOOD convert these to use parse_amounts from the common dice code.
 
 fn parse_modifier(input: &str) -> Result<DiceRollModifier, DiceParsingError> {
-    if input.ends_with("bb") {
-        Ok(DiceRollModifier::TwoBonus)
-    } else if input.ends_with("b") {
-        Ok(DiceRollModifier::OneBonus)
-    } else if input.ends_with("pp") {
-        Ok(DiceRollModifier::TwoPenalty)
-    } else if input.ends_with("p") {
-        Ok(DiceRollModifier::OnePenalty)
-    } else {
-        Ok(DiceRollModifier::Normal)
+    match input.trim() {
+        "bb" => Ok(DiceRollModifier::TwoBonus),
+        "b" => Ok(DiceRollModifier::OneBonus),
+        "pp" => Ok(DiceRollModifier::TwoPenalty),
+        "p" => Ok(DiceRollModifier::OnePenalty),
+        "" => Ok(DiceRollModifier::Normal),
+        _ => Err(DiceParsingError::InvalidModifiers),
     }
 }
 
@@ -21,32 +18,70 @@ fn parse_modifier(input: &str) -> Result<DiceRollModifier, DiceParsingError> {
 //Split based on :, send first part to parse_modifier.
 //Send second part to parse_amounts
 pub fn parse_regular_roll(input: &str) -> Result<DiceRoll, DiceParsingError> {
-    let input: Vec<&str> = input.trim().split(":").collect();
-
-    let (modifiers_str, amounts_str) = match input[..] {
-        [amounts] => Ok(("", amounts)),
-        [modifiers, amounts] => Ok((modifiers, amounts)),
-        _ => Err(DiceParsingError::UnconsumedInput),
-    }?;
-
+    let (amount, modifiers_str) = crate::parser::dice::parse_single_amount(input)?;
     let modifier = parse_modifier(modifiers_str)?;
-    let amount = crate::parser::dice::parse_single_amount(amounts_str)?;
     Ok(DiceRoll { modifier, amount })
 }
 
 pub fn parse_advancement_roll(input: &str) -> Result<AdvancementRoll, DiceParsingError> {
     let input = input.trim();
-    let amounts = crate::parser::dice::parse_single_amount(input)?;
+    let (amounts, unconsumed_input) = crate::parser::dice::parse_single_amount(input)?;
 
-    Ok(AdvancementRoll {
-        existing_skill: amounts,
-    })
+    if unconsumed_input.len() == 0 {
+        Ok(AdvancementRoll {
+            existing_skill: amounts,
+        })
+    } else {
+        Err(DiceParsingError::InvalidAmount)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::dice::{Amount, Element, Operator};
+    use crate::parser::dice::{Amount, DiceParsingError, Element, Operator};
+
+    #[test]
+    fn parse_modifier_rejects_bad_value() {
+        let modifier = parse_modifier("qqq");
+        assert!(matches!(modifier, Err(DiceParsingError::InvalidModifiers)))
+    }
+
+    #[test]
+    fn parse_modifier_accepts_one_bonus() {
+        let modifier = parse_modifier("b");
+        assert!(matches!(modifier, Ok(DiceRollModifier::OneBonus)))
+    }
+
+    #[test]
+    fn parse_modifier_accepts_two_bonus() {
+        let modifier = parse_modifier("bb");
+        assert!(matches!(modifier, Ok(DiceRollModifier::TwoBonus)))
+    }
+
+    #[test]
+    fn parse_modifier_accepts_two_penalty() {
+        let modifier = parse_modifier("pp");
+        assert!(matches!(modifier, Ok(DiceRollModifier::TwoPenalty)))
+    }
+
+    #[test]
+    fn parse_modifier_accepts_one_penalty() {
+        let modifier = parse_modifier("p");
+        assert!(matches!(modifier, Ok(DiceRollModifier::OnePenalty)))
+    }
+
+    #[test]
+    fn parse_modifier_accepts_normal() {
+        let modifier = parse_modifier("");
+        assert!(matches!(modifier, Ok(DiceRollModifier::Normal)))
+    }
+
+    #[test]
+    fn parse_modifier_accepts_normal_unaffected_by_whitespace() {
+        let modifier = parse_modifier("         ");
+        assert!(matches!(modifier, Ok(DiceRollModifier::Normal)))
+    }
 
     #[test]
     fn regular_roll_accepts_single_number() {
@@ -72,7 +107,7 @@ mod tests {
 
     #[test]
     fn regular_roll_accepts_two_bonus() {
-        let result = parse_regular_roll("bb:60");
+        let result = parse_regular_roll("60 bb");
         assert!(result.is_ok());
         assert_eq!(
             DiceRoll {
@@ -88,7 +123,7 @@ mod tests {
 
     #[test]
     fn regular_roll_accepts_one_bonus() {
-        let result = parse_regular_roll("b:60");
+        let result = parse_regular_roll("60 b");
         assert!(result.is_ok());
         assert_eq!(
             DiceRoll {
@@ -104,7 +139,7 @@ mod tests {
 
     #[test]
     fn regular_roll_accepts_two_penalty() {
-        let result = parse_regular_roll("pp:60");
+        let result = parse_regular_roll("60 pp");
         assert!(result.is_ok());
         assert_eq!(
             DiceRoll {
@@ -120,7 +155,7 @@ mod tests {
 
     #[test]
     fn regular_roll_accepts_one_penalty() {
-        let result = parse_regular_roll("p:60");
+        let result = parse_regular_roll("60 p");
         assert!(result.is_ok());
         assert_eq!(
             DiceRoll {
@@ -140,21 +175,21 @@ mod tests {
         assert!(parse_regular_roll("   60").is_ok());
         assert!(parse_regular_roll("   60    ").is_ok());
 
-        assert!(parse_regular_roll("bb:60     ").is_ok());
-        assert!(parse_regular_roll("   bb:60").is_ok());
-        assert!(parse_regular_roll("   bb:60    ").is_ok());
+        assert!(parse_regular_roll("60bb     ").is_ok());
+        assert!(parse_regular_roll("   60 bb").is_ok());
+        assert!(parse_regular_roll("   60   bb    ").is_ok());
 
-        assert!(parse_regular_roll("b:60     ").is_ok());
-        assert!(parse_regular_roll("   b:60").is_ok());
-        assert!(parse_regular_roll("   b:60    ").is_ok());
+        assert!(parse_regular_roll("60b     ").is_ok());
+        assert!(parse_regular_roll("   60 b").is_ok());
+        assert!(parse_regular_roll("   60  b    ").is_ok());
 
-        assert!(parse_regular_roll("pp:60     ").is_ok());
-        assert!(parse_regular_roll("   pp:60").is_ok());
-        assert!(parse_regular_roll("   pp:60    ").is_ok());
+        assert!(parse_regular_roll("60pp     ").is_ok());
+        assert!(parse_regular_roll("   60 pp").is_ok());
+        assert!(parse_regular_roll("   60 pp   ").is_ok());
 
-        assert!(parse_regular_roll("p:60     ").is_ok());
-        assert!(parse_regular_roll("   p:60").is_ok());
-        assert!(parse_regular_roll("   p:60    ").is_ok());
+        assert!(parse_regular_roll("60p     ").is_ok());
+        assert!(parse_regular_roll("   60p  ").is_ok());
+        assert!(parse_regular_roll("   60  p    ").is_ok());
     }
 
     #[test]

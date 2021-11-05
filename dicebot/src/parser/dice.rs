@@ -178,20 +178,15 @@ pub fn parse_amounts(input: &str) -> ParseResult<(Vec<Amount>, &str)> {
 /// Parse an expression that expects a single number or variable. No
 /// operators are allowed. This function is common to systems that
 /// don't deal with XdY rolls. Currently. this function does not
-/// support parsing negative numbers.
-pub fn parse_single_amount(input: &str) -> ParseResult<Amount> {
+/// support parsing negative numbers. Returns the parsed amount and
+/// any unconsumed input (useful for dice roll modifiers).
+pub fn parse_single_amount(input: &str) -> ParseResult<(Amount, &str)> {
     // TODO add support for negative numbers, as technically they
     // should be allowed.
     let input = input.trim();
     let mut parser = first_amount_parser().map(|amount: ParseResult<Amount>| amount);
-
     let (result, rest) = parser.parse(input)?;
-
-    if rest.len() == 0 {
-        result
-    } else {
-        Err(DiceParsingError::UnconsumedInput)
-    }
+    Ok((result?, rest))
 }
 
 #[cfg(test)]
@@ -204,10 +199,13 @@ mod parse_single_amount_tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            Amount {
-                operator: Operator::Plus,
-                element: Element::Variable("abc".to_string())
-            }
+            (
+                Amount {
+                    operator: Operator::Plus,
+                    element: Element::Variable("abc".to_string())
+                },
+                ""
+            )
         )
     }
 
@@ -231,23 +229,14 @@ mod parse_single_amount_tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            Amount {
-                operator: Operator::Plus,
-                element: Element::Number(1)
-            }
+            (
+                Amount {
+                    operator: Operator::Plus,
+                    element: Element::Number(1)
+                },
+                ""
+            )
         )
-    }
-
-    #[test]
-    fn parse_multiple_elements_test() {
-        let result = parse_single_amount("1+abc");
-        assert!(result.is_err());
-
-        let result = parse_single_amount("abc+1");
-        assert!(result.is_err());
-
-        let result = parse_single_amount("-1-abc");
-        assert!(result.is_err());
     }
 }
 
