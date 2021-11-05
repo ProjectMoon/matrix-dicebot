@@ -151,8 +151,9 @@ where
 /// should not have an operator, but every one after that should.
 /// Accepts expressions like "8", "10 + variablename", "variablename -
 /// 3", etc. This function is currently common to systems that don't
-/// deal with XdY rolls. Support for that will be added later.
-pub fn parse_amounts(input: &str) -> ParseResult<Vec<Amount>> {
+/// deal with XdY rolls. Support for that will be added later. Returns
+/// parsed amounts and unconsumed input (e.g. roll modifiers).
+pub fn parse_amounts(input: &str) -> ParseResult<(Vec<Amount>, &str)> {
     let input = input.trim();
 
     let remaining_amounts = many(amount_parser()).map(|amounts: Vec<ParseResult<Amount>>| amounts);
@@ -169,12 +170,9 @@ pub fn parse_amounts(input: &str) -> ParseResult<Vec<Amount>> {
             (amounts, results.1)
         })?;
 
-    if rest.len() == 0 {
-        // Any ParseResult errors will short-circuit the collect.
-        results.into_iter().collect()
-    } else {
-        Err(DiceParsingError::UnconsumedInput)
-    }
+    // Any ParseResult errors will short-circuit the collect.
+    let results: Vec<Amount> = results.into_iter().collect::<ParseResult<_>>()?;
+    Ok((results, rest))
 }
 
 /// Parse an expression that expects a single number or variable. No
@@ -263,20 +261,26 @@ mod parse_many_amounts_tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            vec![Amount {
-                operator: Operator::Plus,
-                element: Element::Number(1)
-            }]
+            (
+                vec![Amount {
+                    operator: Operator::Plus,
+                    element: Element::Number(1)
+                }],
+                ""
+            )
         );
 
         let result = parse_amounts("10");
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            vec![Amount {
-                operator: Operator::Plus,
-                element: Element::Number(10)
-            }]
+            (
+                vec![Amount {
+                    operator: Operator::Plus,
+                    element: Element::Number(10)
+                }],
+                ""
+            )
         );
     }
 
@@ -295,20 +299,26 @@ mod parse_many_amounts_tests {
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            vec![Amount {
-                operator: Operator::Plus,
-                element: Element::Variable("asdf".to_string())
-            }]
+            (
+                vec![Amount {
+                    operator: Operator::Plus,
+                    element: Element::Variable("asdf".to_string())
+                }],
+                ""
+            )
         );
 
         let result = parse_amounts("nosis");
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
-            vec![Amount {
-                operator: Operator::Plus,
-                element: Element::Variable("nosis".to_string())
-            }]
+            (
+                vec![Amount {
+                    operator: Operator::Plus,
+                    element: Element::Variable("nosis".to_string())
+                }],
+                ""
+            )
         );
     }
 

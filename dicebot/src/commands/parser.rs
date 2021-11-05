@@ -221,9 +221,9 @@ mod tests {
 
     #[test]
     fn pool_whitespace_test() {
-        parse_command("!pool ns3:8   ").expect("was error");
-        parse_command("   !pool ns3:8").expect("was error");
-        parse_command("   !pool ns3:8   ").expect("was error");
+        parse_command("!pool 8   ns3    ").expect("was error");
+        parse_command("   !pool 8 ns3").expect("was error");
+        parse_command("   !pool 8   ns3    ").expect("was error");
     }
 
     #[test]

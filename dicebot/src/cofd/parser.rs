@@ -45,13 +45,13 @@ pub fn parse_modifiers(input: &str) -> Result<DicePoolModifiers, DiceParsingErro
     let (result, rest) = parser.parse(input)?;
 
     if rest.len() == 0 {
-        convert_to_info(&result)
+        convert_to_modifiers(&result)
     } else {
         Err(DiceParsingError::UnconsumedInput)
     }
 }
 
-fn convert_to_info(parsed: &Vec<ParsedInfo>) -> Result<DicePoolModifiers, DiceParsingError> {
+fn convert_to_modifiers(parsed: &Vec<ParsedInfo>) -> Result<DicePoolModifiers, DiceParsingError> {
     use ParsedInfo::*;
     if parsed.len() == 0 {
         Ok(DicePoolModifiers::default())
@@ -79,19 +79,8 @@ fn convert_to_info(parsed: &Vec<ParsedInfo>) -> Result<DicePoolModifiers, DicePa
 }
 
 pub fn parse_dice_pool(input: &str) -> Result<DicePool, BotError> {
-    //The "modifiers:" part is optional. Assume amounts if no modifier
-    //section found.
-    let split = input.split(":").collect::<Vec<_>>();
-    let (modifiers_str, amounts_str) = (match split[..] {
-        [amounts] => Ok(("", amounts)),
-        [modifiers, amounts] => Ok((modifiers, amounts)),
-        _ => Err(BotError::DiceParsingError(
-            DiceParsingError::UnconsumedInput,
-        )),
-    })?;
-
+    let (amounts, modifiers_str) = parse_amounts(input)?;
     let modifiers = parse_modifiers(modifiers_str)?;
-    let amounts = parse_amounts(&amounts_str)?;
     Ok(DicePool::new(amounts, modifiers))
 }
 
@@ -175,7 +164,7 @@ mod tests {
 
     #[test]
     fn dice_pool_number_with_quality() {
-        let result = parse_dice_pool("n:8");
+        let result = parse_dice_pool("8 n");
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
@@ -186,7 +175,7 @@ mod tests {
     #[test]
     fn dice_pool_number_with_success_change() {
         let modifiers = DicePoolModifiers::custom_exceptional_on(3);
-        let result = parse_dice_pool("s3:8");
+        let result = parse_dice_pool("8 s3");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), DicePool::easy_with_modifiers(8, modifiers));
     }
@@ -194,7 +183,7 @@ mod tests {
     #[test]
     fn dice_pool_with_quality_and_success_change() {
         let modifiers = DicePoolModifiers::custom(DicePoolQuality::Rote, 3);
-        let result = parse_dice_pool("rs3:8");
+        let result = parse_dice_pool("8 rs3");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), DicePool::easy_with_modifiers(8, modifiers));
     }
@@ -224,20 +213,20 @@ mod tests {
 
         let expected = DicePool::new(amounts, modifiers);
 
-        let result = parse_dice_pool("rs3:8+10-2+varname");
+        let result = parse_dice_pool("8+10-2+varname rs3");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), expected);
 
-        let result = parse_dice_pool("rs3:8+10-   2 + varname");
+        let result = parse_dice_pool("8+10-   2 + varname      rs3");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), expected);
 
-        let result = parse_dice_pool("rs3  :  8+ 10 -2 + varname");
+        let result = parse_dice_pool("8+ 10 -2 + varname           rs3");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), expected);
 
         //This one has tabs in it.
-        let result = parse_dice_pool("  r	s3  :	8	+ 10 -2 + varname");
+        let result = parse_dice_pool(" 	8	+ 10 -2 + varname	r	s3");
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), expected);
     }
