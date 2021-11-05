@@ -3,7 +3,7 @@ name: build-and-test
 
 steps:
 - name: test
-  image: rust:1.51
+  image: rust:1.54
   commands:
   - apt-get update
   - apt-get install -y cmake
