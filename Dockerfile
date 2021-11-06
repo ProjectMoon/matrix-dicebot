@@ -1,16 +1,13 @@
 # Builder image with development dependencies.
-FROM bougyman/voidlinux:glibc as builder
+FROM ghcr.io/void-linux/void-linux:latest-mini-x86_64 as builder
 RUN xbps-install -Syu
-RUN xbps-install -Sy base-devel rustup cargo cmake wget gnupg
+RUN xbps-install -Sy base-devel rustup cmake wget gnupg
 RUN xbps-install -Sy openssl-devel libstdc++-devel
 RUN rustup-init -qy
 
 # Install tini for signal processing and zombie killing
 ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/local/bin/tini
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini.asc /tini.asc
-RUN gpg --batch --keyserver hkp://keyserver.ubuntu.com --recv-keys 595E85A6B1B4779EA4DAAEC70B588DFF0527A9B7 \
- && gpg --batch --verify /tini.asc /usr/local/bin/tini
 RUN chmod +x /usr/local/bin/tini
 
 # Build dicebot
@@ -20,7 +17,7 @@ ADD . ./
 RUN . /root/.cargo/env && cargo build --release
 
 # Final image
-FROM bougyman/voidlinux:tiny
+FROM ghcr.io/void-linux/void-linux:latest-mini-x86_64
 RUN xbps-install -Sy ca-certificates libstdc++
 COPY --from=builder \
     /root/src/target/release/dicebot \
