@@ -5,7 +5,7 @@ use sqlx::ConnectOptions;
 use std::str::FromStr;
 use thiserror::Error;
 
-pub mod migrations;
+//pub mod migrations;
 
 #[derive(Error, Debug)]
 pub enum MigrationError {
@@ -14,6 +14,11 @@ pub enum MigrationError {
 
     #[error("refinery migration error: {0}")]
     RefineryError(#[from] refinery::Error),
+}
+
+mod embedded {
+    use refinery::embed_migrations;
+    embed_migrations!("src/db/sqlite/migrator/migrations");
 }
 
 /// Run database migrations against the sqlite database.
@@ -28,6 +33,6 @@ pub async fn migrate(db_path: &str) -> Result<(), MigrationError> {
 
     let mut conn = Config::new(ConfigDbType::Sqlite).set_db_path(db_path);
     info!("Running migrations");
-    migrations::runner().run(&mut conn)?;
+    embedded::migrations::runner().run(&mut conn)?;
     Ok(())
 }
